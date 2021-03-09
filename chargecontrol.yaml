@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: chargecontrol
-          image: stephanme/chargecontrol
+          image: stephanme/pv-chargecontrol
           command:
             - python
             - ./chargecontrol.py
