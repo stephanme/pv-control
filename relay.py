@@ -16,7 +16,8 @@ Relay_Ch1 = 26
 GPIO.setwarnings(True)
 GPIO.setmode(GPIO.BCM)
 
-GPIO.setup(Relay_Ch1,GPIO.OUT, initial=GPIO.HIGH)
+# no initial value = keep state (on reboot: behaves as if GPIO.HIGH)
+GPIO.setup(Relay_Ch1, GPIO.OUT)
 # GPIO.setup(Relay_Ch2,GPIO.OUT)
 # GPIO.setup(Relay_Ch3,GPIO.OUT)
 

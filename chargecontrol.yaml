@@ -22,6 +22,8 @@ spec:
             - containerPort: 8080
           securityContext:
             privileged: true
+      strategy:
+        type: Recreate
       nodeSelector:
         kubernetes.io/hostname: pi1
 
