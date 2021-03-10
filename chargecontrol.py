@@ -20,7 +20,7 @@ def hello():
 def get_charge_control():
     ch = relay.readChannel1()
     return jsonify({
-        'phases': 1 if ch == 1 else 3
+        'phases': 1 if ch else 3
     })
 
 
@@ -29,10 +29,8 @@ def get_charge_control():
 def put_charge_control():
     v = request.json
     if v == 1 or v == 3:
-        if (v == 3):
-            relay.writeChannel1(0)
-        else:
-            relay.writeChannel1(1)
+        # relay ON = 1 phase
+        relay.writeChannel1(v == 1)
         return jsonify_no_content()
     else:
         abort(400)
@@ -41,4 +39,5 @@ def put_charge_control():
 if __name__ == '__main__':
     logging.info('Starting chargecontrol')
     app.run(host='0.0.0.0', port=8080)
+    relay.cleanup()
     logging.info('Stopped chargecontrol')
