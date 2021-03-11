@@ -22,7 +22,7 @@ jobs:
       working-directory: ./ui
     - name: Build UI
       # base-href must match ingress path
-      run: ng build --prod --base-href /chargecontrol
+      run: ng build --prod --base-href /chargecontrol/
       working-directory: ./ui
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
