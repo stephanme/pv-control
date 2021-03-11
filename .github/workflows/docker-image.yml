@@ -21,7 +21,8 @@ jobs:
       run: ng lint
       working-directory: ./ui
     - name: Build UI
-      run: ng build --prod
+      # base-href must match ingress path
+      run: ng build --prod --base-href /chargecontrol
       working-directory: ./ui
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1

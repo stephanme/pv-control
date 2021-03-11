@@ -15,7 +15,7 @@ def jsonify_no_content():
 
 @app.route('/')
 def index():
-    return redirect('/index.html')
+    return send_from_directory('ui/dist/ui', 'index.html')
 
 @app.route('/<path:path>')
 def send_static_content(path):
