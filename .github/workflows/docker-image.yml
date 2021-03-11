@@ -7,11 +7,20 @@ on:
 jobs:
 
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+    - run: npm ci
+      working-directory: ./ui
+    - name: Lint UI
+      run: ng lint
+    - name: Build UI
+      run: ng build --prod
+      working-directory: ./ui
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
     - name: Set up Docker Buildx
@@ -21,7 +30,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Build and push
+    - name: Build and push docker images
       uses: docker/build-push-action@v2
       with:
         context: .

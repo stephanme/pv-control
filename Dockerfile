@@ -14,7 +14,8 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt-get/lists/*
 
-COPY ./*.py ./
+COPY *.py ./
+COPY /ui/dist/ui ./ui/dist/ui/
 
 CMD [ "python", "./chargecontrol.py" ]
 EXPOSE 8080

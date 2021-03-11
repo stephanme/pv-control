@@ -7,6 +7,8 @@ spec:
     matchLabels:
       app: chargecontrol
   replicas: 1
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -22,8 +24,6 @@ spec:
             - containerPort: 8080
           securityContext:
             privileged: true
-      strategy:
-        type: Recreate
       nodeSelector:
         kubernetes.io/hostname: pi1
 

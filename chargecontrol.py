@@ -1,7 +1,7 @@
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
 
-from flask import Flask, jsonify, request, make_response, abort
+from flask import Flask, jsonify, request, make_response, abort, send_from_directory, redirect, url_for
 import relay
 
 
@@ -12,9 +12,15 @@ def jsonify_no_content():
     response.mimetype = app.config['JSONIFY_MIMETYPE']
     return response
 
+
 @app.route('/')
-def hello():
-    return 'Charge Control'
+def index():
+    return redirect('/index.html')
+
+@app.route('/<path:path>')
+def send_static_content(path):
+    return send_from_directory('ui/dist/ui', path)
+
 
 @app.route('/api/chargecontrol')
 def get_charge_control():
