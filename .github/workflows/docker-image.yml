@@ -14,7 +14,8 @@ jobs:
     - uses: actions/setup-node@v2
       with:
         node-version: '14'
-    - run: npm ci
+    - name: Install UI deps
+      run: npm install -g @angular/cli && npm ci
       working-directory: ./ui
     - name: Lint UI
       run: ng lint
