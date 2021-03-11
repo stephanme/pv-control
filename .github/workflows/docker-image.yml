@@ -18,6 +18,7 @@ jobs:
       working-directory: ./ui
     - name: Lint UI
       run: ng lint
+      working-directory: ./ui
     - name: Build UI
       run: ng build --prod
       working-directory: ./ui
