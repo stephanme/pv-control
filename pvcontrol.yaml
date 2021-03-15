@@ -1,29 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: chargecontrol-deployment
+  name: pvcontrol-deployment
 spec:
   selector:
     matchLabels:
-      app: chargecontrol
+      app: pvcontrol
   replicas: 1
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: chargecontrol
+        app: pvcontrol
     spec:
       containers:
-        - name: chargecontrol
-          image: stephanme/pv-chargecontrol
+        - name: pvcontrol
+          image: stephanme/pv-control:main
           command:
             - python
-            - ./chargecontrol.py
+            - ./pvcontrol.py
           ports:
             - containerPort: 8080
           securityContext:
             privileged: true
+      imagePullPolicy: Always # for :main, remove when versioned
       nodeSelector:
         kubernetes.io/hostname: pi1
 
@@ -31,19 +32,19 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: chargecontrol-service
+  name: pvcontrol-service
 spec:
   ports:
     - port: 8080
       targetPort: 8080
       name: tcp
   selector:
-    app: chargecontrol
+    app: pvcontrol
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: chargecontrol-ingress
+  name: pvcontrol-ingress
   annotations:
     kubernetes.io/ingress.class: "traefik"
     traefik.ingress.kubernetes.io/rewrite-target: /
@@ -51,10 +52,10 @@ spec:
   rules:
     - http:
         paths:
-          - path: /chargecontrol
+          - path: /pvcontrol
             pathType: Prefix
             backend:
               service:
-                name: chargecontrol-service
+                name: pvcontrol-service
                 port:
                   number: 8080

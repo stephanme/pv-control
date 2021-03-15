@@ -1,4 +1,4 @@
-import platform, sys, logging
+import platform, logging
 
 logger = logging.getLogger(__name__)
 

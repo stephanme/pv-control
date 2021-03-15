@@ -1,7 +1,7 @@
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
 
-from flask import Flask, jsonify, request, make_response, abort, send_from_directory, redirect, url_for
+from flask import Flask, jsonify, request, make_response, abort, send_from_directory
 import relay
 
 
@@ -22,7 +22,7 @@ def send_static_content(path):
     return send_from_directory('ui/dist/ui', path)
 
 
-@app.route('/api/chargecontrol')
+@app.route('/api/pvcontrol')
 def get_charge_control():
     ch = relay.readChannel1()
     return jsonify({
@@ -30,8 +30,8 @@ def get_charge_control():
     })
 
 
-# curl -X PUT http://localhost:8080/api/chargecontrol/phases -H 'Content-Type: application/json' --data '1'
-@app.route('/api/chargecontrol/phases', methods=['PUT'])
+# curl -X PUT http://localhost:8080/api/pvcontrol/phases -H 'Content-Type: application/json' --data '1'
+@app.route('/api/pvcontrol/phases', methods=['PUT'])
 def put_charge_control():
     v = request.json
     if v == 1 or v == 3:
@@ -43,7 +43,7 @@ def put_charge_control():
 
 
 if __name__ == '__main__':
-    logging.info('Starting chargecontrol')
+    logging.info('Starting pvcontrol')
     app.run(host='0.0.0.0', port=8080)
     relay.cleanup()
-    logging.info('Stopped chargecontrol')
+    logging.info('Stopped pvcontrol')

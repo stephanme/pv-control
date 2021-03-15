@@ -2,7 +2,10 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - '**'
+    tags:
+      - 'v*'
 
 jobs:
 
@@ -22,8 +25,13 @@ jobs:
       working-directory: ./ui
     - name: Build UI
       # base-href must match ingress path
-      run: ng build --prod --base-href /chargecontrol/
+      run: ng build --prod --base-href /pvcontrol/
       working-directory: ./ui
+    - name: Docker meta
+      id: docker_meta
+      uses: crazy-max/ghaction-docker-meta@v1
+      with:
+        images: stephanme/pv-control
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
     - name: Set up Docker Buildx
@@ -38,5 +46,6 @@ jobs:
       with:
         context: .
         platforms: linux/amd64,linux/arm/v7
-        push: true
-        tags: stephanme/pv-chargecontrol:latest
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.docker_meta.outputs.tags }}
+        labels: ${{ steps.docker_meta.outputs.labels }}

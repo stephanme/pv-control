@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 
-export interface ChargeControl {
+export interface PvControl {
   phases: number;
 }
 
@@ -15,15 +15,15 @@ const httpOptions = {
 @Injectable({
   providedIn: 'root'
 })
-export class ChargeControlService {
+export class PvControlService {
 
   constructor(private http: HttpClient) { }
 
-  public getChargeControl(): Observable<ChargeControl> {
-    return this.http.get<ChargeControl>('./api/chargecontrol');
+  public getPvControl(): Observable<PvControl> {
+    return this.http.get<PvControl>('./api/pvcontrol');
   }
 
-  public putChargeControlPhases(phases: number): Observable<void> {
-    return this.http.put<void>('./api/chargecontrol/phases', phases, httpOptions);
+  public putPvControlPhases(phases: number): Observable<void> {
+    return this.http.put<void>('./api/pvcontrol/phases', phases, httpOptions);
   }
 }

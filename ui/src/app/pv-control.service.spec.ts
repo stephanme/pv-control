@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ChargeControlService } from './charge-control.service';
+import { PvControlService } from './pv-control.service';
 
 describe('ChargeControlServiceService', () => {
-  let service: ChargeControlService;
+  let service: PvControlService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(ChargeControlService);
+    service = TestBed.inject(PvControlService);
   });
 
   it('should be created', () => {

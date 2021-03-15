@@ -3,7 +3,7 @@ import { FormBuilder } from '@angular/forms';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { Subject } from 'rxjs';
 
-import { ChargeControl, ChargeControlService } from './charge-control.service';
+import { PvControlService } from './pv-control.service';
 
 @Component({
   selector: 'app-root',
@@ -18,7 +18,7 @@ export class AppComponent implements OnInit, OnDestroy {
     onePhaseSelector: [false]
   });
 
-  constructor(private fb: FormBuilder, private chargeControlService: ChargeControlService) {}
+  constructor(private fb: FormBuilder, private pvControlService: PvControlService) {}
 
   ngOnInit(): void {
     this.refresh();
@@ -30,7 +30,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void {
-    this.chargeControlService.getChargeControl().subscribe(cc => {
+    this.pvControlService.getPvControl().subscribe(cc => {
       // console.log(`Refresh: phases = ${cc.phases}`);
       this.formGroup.patchValue(cc);
       this.formGroup.get('onePhaseSelector')?.setValue(cc.phases === 1);
@@ -40,7 +40,7 @@ export class AppComponent implements OnInit, OnDestroy {
   onPhaseChange(event: MatSlideToggleChange): void {
     const phases = event.checked ? 1 : 3;
     // console.log(`onPhaseChange = ${phases}`);
-    this.chargeControlService.putChargeControlPhases(phases).subscribe(
+    this.pvControlService.putPvControlPhases(phases).subscribe(
       () => this.refresh()
     );
   }

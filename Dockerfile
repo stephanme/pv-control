@@ -17,5 +17,5 @@ RUN apt-get update \
 COPY *.py ./
 COPY /ui/dist/ui ./ui/dist/ui/
 
-CMD [ "python", "./chargecontrol.py" ]
+CMD [ "python", "./pvcontrol.py" ]
 EXPOSE 8080
