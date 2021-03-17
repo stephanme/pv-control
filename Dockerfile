@@ -14,8 +14,8 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt-get/lists/*
 
-COPY *.py ./
+COPY ./pvcontrol/*.py ./pvcontrol/
 COPY /ui/dist/ui ./ui/dist/ui/
 
-CMD [ "python", "./pvcontrol.py" ]
+CMD [ "python", "-m", "pvcontrol" ]
 EXPOSE 8080

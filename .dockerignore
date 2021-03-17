@@ -1,5 +1,5 @@
 *
 
 !requirements.txt
-!*.py
+!pvcontrol
 !ui/dist/ui

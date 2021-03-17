@@ -17,14 +17,15 @@ spec:
       containers:
         - name: pvcontrol
           image: stephanme/pv-control:main
+          imagePullPolicy: Always # for :main, remove when versioned
           command:
             - python
-            - ./pvcontrol.py
+            - -m
+            - pvcontrol
           ports:
             - containerPort: 8080
           securityContext:
             privileged: true
-      imagePullPolicy: Always # for :main, remove when versioned
       nodeSelector:
         kubernetes.io/hostname: pi1
 
