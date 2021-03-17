@@ -1,7 +1,7 @@
 <mat-toolbar color="primary">
   <span>PV Control</span>
   <span class="spacer"></span>
-  <button mat-icon-button aria-label="Refresh" (click)="refresh()">
+  <button id="refresh" mat-icon-button aria-label="Refresh" (click)="refresh()">
     <mat-icon>sync</mat-icon>
   </button>
 </mat-toolbar>
@@ -13,7 +13,7 @@
         <mat-label>Phases</mat-label>
         <input matInput [readonly]="true" formControlName="phases">
       </mat-form-field>
-      <mat-slide-toggle formControlName="onePhaseSelector" (change)="onPhaseChange($event)">Single phase charging</mat-slide-toggle>
+      <mat-slide-toggle id="onePhaseSelector" formControlName="onePhaseSelector" (change)="onPhaseChange($event)">Single phase charging</mat-slide-toggle>
     </form>
   </mat-card-content>
 </mat-card>

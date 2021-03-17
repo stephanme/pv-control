@@ -30,6 +30,9 @@ jobs:
       # base-href must match ingress path
       run: ng build --prod --base-href /pvcontrol/
       working-directory: ./ui
+    - name: Test UI
+      run: npm run test
+      working-directory: ./ui
 
     - name: Install Python dependencies
       run: |
