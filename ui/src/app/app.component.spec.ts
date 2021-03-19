@@ -121,7 +121,7 @@ describe('AppComponent', () => {
     await fixture.whenStable();
 
     const snackbar = await loader.getHarness(MatSnackBarHarness);
-    expect(await snackbar.getMessage()).toBe('HTTP 500 Internal Server Error - GET ./api/pvcontrol')
+    expect(await snackbar.getMessage()).toBe('HTTP 500 Internal Server Error - GET ./api/pvcontrol');
   });
 
   it('should allow to switch to one phase charging', async () => {

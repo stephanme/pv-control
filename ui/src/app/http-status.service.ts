@@ -13,29 +13,29 @@ export class HttpStatusService {
 
   constructor() { }
 
-  incBusy() {
+  incBusy(): void {
     this.busyCnt++;
     if (this.busyCnt === 1) {
       this.busySubject.next(true);
     }
   }
 
-  decBusy() {
+  decBusy(): void {
     this.busyCnt--;
     if (this.busyCnt === 0) {
       this.busySubject.next(false);
     }
   }
 
-  notifyHttpError(msg: string) {
+  notifyHttpError(msg: string): void {
     this.httpErrorSubject.next(msg);
   }
 
-  busy() {
+  busy(): Observable<boolean> {
     return this.busySubject.asObservable();
   }
 
-  httpError() {
+  httpError(): Observable<string> {
     return this.httpErrorSubject.asObservable();
   }
 }
@@ -51,9 +51,9 @@ export class HttpStatusInterceptor {
       tap(() => null, errEvent => {
         let msg: string;
         if (errEvent instanceof HttpErrorResponse) {
-          msg = `HTTP ${errEvent.status} ${errEvent.statusText} - ${req.method} ${req.url}`
+          msg = `HTTP ${errEvent.status} ${errEvent.statusText} - ${req.method} ${req.url}`;
         } else {
-          msg = `Unknown error - ${req.method} ${req.url}`
+          msg = `Unknown error - ${req.method} ${req.url}`;
         }
         console.log(`Http request failed: ${msg}`);
         this.httpStatusService.notifyHttpError(msg);
