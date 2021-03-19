@@ -1,7 +1,10 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
+import {MatSnackBar} from '@angular/material/snack-bar';
 import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { HttpStatusService } from './http-status.service';
 
 import { PvControlService } from './pv-control.service';
 
@@ -17,10 +20,17 @@ export class AppComponent implements OnInit, OnDestroy {
     phases: [0],
     onePhaseSelector: [false]
   });
+  busy$ = this.httpStatusService.busy();
 
-  constructor(private fb: FormBuilder, private pvControlService: PvControlService) {}
+  constructor(private fb: FormBuilder, private snackBar: MatSnackBar, private httpStatusService: HttpStatusService, private pvControlService: PvControlService) { }
 
   ngOnInit(): void {
+    this.httpStatusService.httpError().pipe(takeUntil(this.unsubscribe)).subscribe(errmsg => {
+      console.log(`httpError: ${errmsg}`);
+      this.snackBar.open(errmsg, 'Dismiss', {
+        duration: 10000
+      })
+    });
     this.refresh();
   }
 

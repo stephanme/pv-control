@@ -2,7 +2,7 @@
   <span>PV Control</span>
   <span class="spacer"></span>
   <button id="refresh" mat-icon-button aria-label="Refresh" (click)="refresh()">
-    <mat-icon>sync</mat-icon>
+    <mat-icon [class.spin]="busy$ | async">autorenew</mat-icon>
   </button>
 </mat-toolbar>
 <mat-card>
