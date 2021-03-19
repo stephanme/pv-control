@@ -108,7 +108,7 @@ describe('AppComponent', () => {
     expect(refreshIcon.className).not.toContain('spin');
   });
 
-  xit('should show an error msg on http problems', async () => {
+  it('should show an error msg on http problems', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
     await refreshButton.click();
@@ -117,10 +117,8 @@ describe('AppComponent', () => {
       statusText: 'Internal Server Error'
     });
 
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const snackbar = await loader.getHarness(MatSnackBarHarness);
+    // snack bar is not below root element of fixture -> can't use loader
+    const snackbar = await TestbedHarnessEnvironment.documentRootLoader(fixture).getHarness(MatSnackBarHarness);
     expect(await snackbar.getMessage()).toBe('HTTP 500 Internal Server Error - GET ./api/pvcontrol');
   });
 

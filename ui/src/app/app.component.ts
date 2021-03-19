@@ -46,14 +46,17 @@ export class AppComponent implements OnInit, OnDestroy {
       // console.log(`Refresh: phases = ${cc.phases}`);
       this.formGroup.patchValue(cc);
       this.formGroup.get('onePhaseSelector')?.setValue(cc.phases === 1);
-    });
+    },
+      () => { }
+    );
   }
 
   onPhaseChange(event: MatSlideToggleChange): void {
     const phases = event.checked ? 1 : 3;
     // console.log(`onPhaseChange = ${phases}`);
     this.pvControlService.putPvControlPhases(phases).subscribe(
-      () => this.refresh()
+      () => this.refresh(),
+      () => { }
     );
   }
 }

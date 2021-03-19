@@ -51,7 +51,7 @@ describe('HttpStatusService', () => {
   });
 
   it('should report http errors', () => {
-    http.get('/').subscribe(() => {});
+    http.get('/').subscribe(() => {}, () => {});
     const req = httpMock.expectOne('/');
     req.flush('', {
       status: 500,
