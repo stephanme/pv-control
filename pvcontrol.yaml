@@ -22,6 +22,7 @@ spec:
             - python
             - -m
             - pvcontrol
+            - --simulate-meter
           ports:
             - containerPort: 8080
           securityContext:

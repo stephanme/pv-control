@@ -5,8 +5,7 @@ import unittest
 
 class ChargerTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.charger = Charger()
-        Charger._simulation = True
+        self.charger = Charger(simulation=True)
 
     @classmethod
     def calcMeterData(cls, pv: float, home: float, c: ChargerData):

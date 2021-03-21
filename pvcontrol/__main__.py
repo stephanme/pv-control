@@ -15,16 +15,14 @@ parser.add_argument("-c", "--simulate-charger", default=False, action="store_tru
 args = parser.parse_args()
 
 logger.info("Starting pvcontrol")
-meter = Meter()
-Meter._simulation = args.simulate_meter
-charger = Charger()
-Charger._simulation = args.simulate_charger
-logger.debug(f"Meter simulation  : {Meter._simulation}")
-logger.debug(f"Charger simulation: {Charger._simulation}")
+meter = Meter(simulation=args.simulate_meter)
+charger = Charger(simulation=args.simulate_charger)
+logger.debug(f"Meter simulation  : {meter.is_simulated()}")
+logger.debug(f"Charger simulation: {charger.is_simulated()}")
 
 
 def controlloop():
-    if Meter._simulation:
+    if meter.is_simulated():
         c = charger.get_charger_data()
         meter.set_charger_data_for_simulation(c.phases * c.current_setpoint * 230)
     m = meter.read_meter()

@@ -13,10 +13,10 @@ class ChargerData:
 
 # TODO: read from go-e box
 class Charger:
-    _simulation = False
-
-    def __init__(self):
+    def __init__(self, simulation=False):
+        """ simulation=True -> no access to relay and wallbox, car power is simulated """
         self._charger_data = ChargerData(3, 0, 0)
+        self._simulation = simulation
 
     def get_charger_data(self) -> ChargerData:
         """ Get last cached charger data. """
@@ -27,7 +27,7 @@ class Charger:
 
         # simulate last measurement from wallbox
         power_car = self._charger_data.current_setpoint * self._charger_data.phases * 230
-        if Charger._simulation:
+        if self._simulation:
             ch = self._charger_data.phases == 1
         else:
             ch = relay.readChannel1()
@@ -47,3 +47,6 @@ class Charger:
         # relay ON = 1 phase
         relay.writeChannel1(phases == 1)
         self._charger_data.phases = phases
+
+    def is_simulated(self):
+        return self._simulation

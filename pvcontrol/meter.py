@@ -12,11 +12,11 @@ class MeterData:
 
 
 class Meter:
-    _simulation = False
-
-    def __init__(self):
+    def __init__(self, simulation=False):
+        """ simulation=True -> no access to Kostal but meter data is simulated """
         self._meter_data = MeterData(0, 0, 0)
         self._power_car = 0
+        self._simulation = simulation
 
     def get_meter_data(self) -> MeterData:
         """ Get last cached meter data. """
@@ -34,6 +34,9 @@ class Meter:
         consumption = 500 + math.floor(500 * math.fabs(math.sin(2 * math.pi * t / (60 * 5)))) + self._power_car
         grid = consumption - pv
         return MeterData(pv, consumption, grid)
+
+    def is_simulated(self):
+        return self._simulation
 
     def set_charger_data_for_simulation(self, power_car: float):
         """ only for simulation """
