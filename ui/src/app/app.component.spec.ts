@@ -90,7 +90,7 @@ describe('AppComponent', () => {
   it('should render the app', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.phasesControl.value).toBe(3);
+    expect(component.pvControl).toEqual(pvControlData);
     expect(component.onePhaseSelectorControl.value).toBe(false);
     expect(await onePhaseSelector.isChecked()).toBeFalse();
   });
@@ -102,7 +102,7 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     expect(refreshIcon.className).not.toContain('spin');
-    expect(component.phasesControl.value).toBe(3);
+    expect(component.pvControl).toEqual(pvControlData);
     expect(component.onePhaseSelectorControl.value).toBe(false);
 
     pvControlData.charger.phases = 1;
@@ -111,7 +111,7 @@ describe('AppComponent', () => {
     expect(refreshIcon.className).toContain('spin');
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.phasesControl.value).toBe(1);
+    expect(component.pvControl).toEqual(pvControlData);
     expect(component.onePhaseSelectorControl.value).toBe(true);
     expect(await onePhaseSelector.isChecked()).toBeTrue();
     expect(refreshIcon.className).not.toContain('spin');
@@ -134,7 +134,7 @@ describe('AppComponent', () => {
   it('should allow to switch to one phase charging', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.phasesControl.value).toBe(3);
+    expect(component.pvControl).toEqual(pvControlData);
     await onePhaseSelector.toggle();
 
     const req = httpMock.expectOne('./api/pvcontrol/charger/phases');
@@ -145,7 +145,7 @@ describe('AppComponent', () => {
     pvControlData.charger.phases = 1;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.phasesControl.value).toBe(1);
+    expect(component.pvControl).toEqual(pvControlData);
     expect(component.onePhaseSelectorControl.value).toBe(true);
     expect(await onePhaseSelector.isChecked()).toBeTrue();
   });

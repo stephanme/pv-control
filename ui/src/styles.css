@@ -3,6 +3,37 @@
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
+.aligned-with-icon-relative {
+  position: relative;
+  top: -3px;
+  margin-left: 5px; /* optional */
+}
+
+/* margins */
+.ml-1 {
+  margin-left: 1em;
+}
+
+/* colors */
+
+.col-primary {
+  color: #3f51b5
+}
+.col-grey {
+  color: rgba(0,0,0,.38)
+}
+.col-yellow {
+  color: #ffc107;
+}
+.col-green {
+  color: #28a745;
+}
+.col-red {
+  color: #dc3545;
+}
+
+/* others */
+
 .spin {
   -webkit-animation: spin 2s infinite linear;
   animation: spin 2s infinite linear;

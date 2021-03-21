@@ -6,7 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { HttpStatusService } from './http-status.service';
 
-import { PvControlService } from './pv-control.service';
+import { PvControl, PvControlService } from './pv-control.service';
 
 @Component({
   selector: 'app-root',
@@ -16,9 +16,20 @@ import { PvControlService } from './pv-control.service';
 export class AppComponent implements OnInit, OnDestroy {
   private unsubscribe: Subject<void> = new Subject();
 
-  phasesControl = this.fb.control([0]);
-  onePhaseSelectorControl = this.fb.control([false]);
   busy$ = this.httpStatusService.busy();
+  pvControl: PvControl = {
+    meter: {
+      power_pv: 0,
+      power_consumption: 0,
+      power_grid: 0,
+    },
+    charger: {
+      phases: 3,
+      current_setpoint: 0,
+      power_car: 0
+    }
+  };
+  onePhaseSelectorControl = this.fb.control([false]);
 
   constructor(
     private fb: FormBuilder, private snackBar: MatSnackBar,
@@ -42,7 +53,7 @@ export class AppComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.pvControlService.getPvControl().subscribe(cc => {
       // console.log(`Refresh: phases = ${cc.phases}`);
-      this.phasesControl.setValue(cc.charger.phases);
+      this.pvControl = cc;
       this.onePhaseSelectorControl.setValue(cc.charger.phases === 1);
     },
       () => { }

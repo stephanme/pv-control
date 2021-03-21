@@ -6,12 +6,21 @@
   </button>
 </mat-toolbar>
 <mat-card>
+  <mat-card-title>PV</mat-card-title>
+  <mat-card-content>
+    <div class="mat-h1">
+      <mat-icon [inline]="true" class="col-yellow">wb_sunny</mat-icon><span class="aligned-with-icon-relative">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span>
+      <mat-icon [inline]="true" class="ml-1" [class.col-green]="pvControl.meter.power_grid <= 0" [class.col-red]="pvControl.meter.power_grid > 0">power</mat-icon><span class="aligned-with-icon-relative">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span>
+      <mat-icon [inline]="true" class="ml-1" color="primary">home</mat-icon><span class="aligned-with-icon-relative">{{pvControl.meter.power_consumption/1000|number:'1.1-1'}} kW</span>
+    </div>
+  </mat-card-content>
+</mat-card>
+<mat-card>
   <mat-card-title>Car Charging</mat-card-title>
   <mat-card-content>
-    <mat-form-field appearance="standard">
-      <mat-label>Phases</mat-label>
-      <input matInput [readonly]="true" [formControl]="phasesControl">
-    </mat-form-field>
+    <div class="mat-h1">
+      <mat-icon [inline]="true" color="primary">electric_car</mat-icon><span class="aligned-with-icon-relative">{{pvControl.charger.power_car/1000|number:'1.1-1'}} kW, {{pvControl.charger.phases === 3 ? '3x' : ''}} {{pvControl.charger.current_setpoint}} A</span>
+    </div>
     <mat-slide-toggle id="onePhaseSelector" [formControl]="onePhaseSelectorControl" (change)="onPhaseChange($event)">Single phase charging</mat-slide-toggle>
   </mat-card-content>
 </mat-card>
