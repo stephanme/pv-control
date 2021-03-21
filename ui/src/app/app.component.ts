@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, FormControl } from '@angular/forms';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Subject } from 'rxjs';
@@ -16,10 +16,8 @@ import { PvControlService } from './pv-control.service';
 export class AppComponent implements OnInit, OnDestroy {
   private unsubscribe: Subject<void> = new Subject();
 
-  formGroup = this.fb.group({
-    phases: [0],
-    onePhaseSelector: [false]
-  });
+  phasesControl = this.fb.control([0]);
+  onePhaseSelectorControl = this.fb.control([false]);
   busy$ = this.httpStatusService.busy();
 
   constructor(
@@ -44,8 +42,8 @@ export class AppComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.pvControlService.getPvControl().subscribe(cc => {
       // console.log(`Refresh: phases = ${cc.phases}`);
-      this.formGroup.patchValue(cc);
-      this.formGroup.get('onePhaseSelector')?.setValue(cc.phases === 1);
+      this.phasesControl.setValue(cc.charger.phases);
+      this.onePhaseSelectorControl.setValue(cc.charger.phases === 1);
     },
       () => { }
     );

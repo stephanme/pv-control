@@ -67,7 +67,16 @@ describe('AppComponent', () => {
     httpMock = TestBed.inject(HttpTestingController);
 
     pvControlData = {
-      phases: 3
+      meter: {
+        power_pv: 5000,
+        power_consumption: 3000,
+        power_grid: 2000
+      },
+      charger: {
+        phases: 3,
+        power_car: 2000,
+        current_setpoint: 8
+      }
     };
 
     onePhaseSelector = await loader.getHarness(MatSlideToggleHarness.with({selector: '#onePhaseSelector'}));
@@ -81,8 +90,8 @@ describe('AppComponent', () => {
   it('should render the app', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.formGroup.get('phases')?.value).toBe(3);
-    expect(component.formGroup.get('onePhaseSelector')?.value).toBe(false);
+    expect(component.phasesControl.value).toBe(3);
+    expect(component.onePhaseSelectorControl.value).toBe(false);
     expect(await onePhaseSelector.isChecked()).toBeFalse();
   });
 
@@ -93,17 +102,17 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     expect(refreshIcon.className).not.toContain('spin');
-    expect(component.formGroup.get('phases')?.value).toBe(3);
-    expect(component.formGroup.get('onePhaseSelector')?.value).toBe(false);
+    expect(component.phasesControl.value).toBe(3);
+    expect(component.onePhaseSelectorControl.value).toBe(false);
 
-    pvControlData.phases = 1;
+    pvControlData.charger.phases = 1;
     await refreshButton.click();
 
     expect(refreshIcon.className).toContain('spin');
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.formGroup.get('phases')?.value).toBe(1);
-    expect(component.formGroup.get('onePhaseSelector')?.value).toBe(true);
+    expect(component.phasesControl.value).toBe(1);
+    expect(component.onePhaseSelectorControl.value).toBe(true);
     expect(await onePhaseSelector.isChecked()).toBeTrue();
     expect(refreshIcon.className).not.toContain('spin');
   });
@@ -125,19 +134,19 @@ describe('AppComponent', () => {
   it('should allow to switch to one phase charging', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.formGroup.get('phases')?.value).toBe(3);
+    expect(component.phasesControl.value).toBe(3);
     await onePhaseSelector.toggle();
 
-    const req = httpMock.expectOne('./api/pvcontrol/phases');
+    const req = httpMock.expectOne('./api/pvcontrol/charger/phases');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toBe(1);
     req.flush(null);
 
-    pvControlData.phases = 1;
+    pvControlData.charger.phases = 1;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.formGroup.get('phases')?.value).toBe(1);
-    expect(component.formGroup.get('onePhaseSelector')?.value).toBe(true);
+    expect(component.phasesControl.value).toBe(1);
+    expect(component.onePhaseSelectorControl.value).toBe(true);
     expect(await onePhaseSelector.isChecked()).toBeTrue();
   });
 });

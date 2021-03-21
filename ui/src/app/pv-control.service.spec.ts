@@ -19,7 +19,16 @@ describe('ChargeControlServiceService', () => {
     httpMock = TestBed.inject(HttpTestingController);
 
     pvControlData = {
-      phases: 3
+      meter: {
+        power_pv: 5000,
+        power_consumption: 3000,
+        power_grid: 2000
+      },
+      charger: {
+        phases: 3,
+        power_car: 2000,
+        current_setpoint: 8
+      }
     };
   });
 
@@ -37,7 +46,7 @@ describe('ChargeControlServiceService', () => {
   it('should putPvControlPhases()', () => {
     service.putPvControlPhases(1).subscribe();
 
-    const req = httpMock.expectOne('./api/pvcontrol/phases');
+    const req = httpMock.expectOne('./api/pvcontrol/charger/phases');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toBe(1);
     req.flush(null);
