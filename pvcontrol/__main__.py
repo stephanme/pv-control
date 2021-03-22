@@ -25,12 +25,14 @@ logger.debug(f"Charger simulation: {charger.is_simulated()}")
 
 
 # metrics
-metrics_pvc_meter_power = prometheus_client.Gauge('pvcontrol_meter_power_watts', 'Power from pv or grid', ["source"])
-metrics_pvc_meter_power_consumption_total = prometheus_client.Gauge('pvcontrol_meter_power_consumption_total_watts', 'Total home power consumption')
-metrics_pvc_charger_power = prometheus_client.Gauge('pvcontrol_charger_power_watts', 'Charger power')
-metrics_pvc_charger_phases = prometheus_client.Gauge('pvcontrol_charger_phases', 'Number of used current phases for charger (1 or 3)')
-metrics_pvc_charger_max_current = prometheus_client.Gauge('pvcontrol_charger_max_current_amperes', 'Max charger current per phase')
-metrics_pvc_processing = prometheus_client.Summary('pvcontrol_processing_seconds', 'Time spent processing control loop')
+metrics_pvc_meter_power = prometheus_client.Gauge("pvcontrol_meter_power_watts", "Power from pv or grid", ["source"])
+metrics_pvc_meter_power_consumption_total = prometheus_client.Gauge(
+    "pvcontrol_meter_power_consumption_total_watts", "Total home power consumption"
+)
+metrics_pvc_charger_power = prometheus_client.Gauge("pvcontrol_charger_power_watts", "Charger power")
+metrics_pvc_charger_phases = prometheus_client.Gauge("pvcontrol_charger_phases", "Number of used current phases for charger (1 or 3)")
+metrics_pvc_charger_max_current = prometheus_client.Gauge("pvcontrol_charger_max_current_amperes", "Max charger current per phase")
+metrics_pvc_processing = prometheus_client.Summary("pvcontrol_processing_seconds", "Time spent processing control loop")
 
 
 @metrics_pvc_processing.time()
