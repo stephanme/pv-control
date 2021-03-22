@@ -9,7 +9,7 @@ class ChargerTest(unittest.TestCase):
 
     @classmethod
     def calcMeterData(cls, pv: float, home: float, c: ChargerData):
-        car = c.phases * c.current_setpoint * 230
+        car = c.phases * c.max_current * 230
         return MeterData(pv, home + car, home + car - pv)
 
     def test_read_charger_and_calc_setpoint(self):

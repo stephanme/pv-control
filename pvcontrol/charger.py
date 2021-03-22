@@ -8,7 +8,7 @@ from pvcontrol.meter import MeterData
 class ChargerData:
     phases: int  # 1 or 3
     power_car: float  # [W]
-    current_setpoint: int  # [A]
+    max_current: int  # [A]
 
 
 # TODO: read from go-e box
@@ -26,7 +26,7 @@ class Charger:
         """ Read charger data from wallbox and calculate set point """
 
         # simulate last measurement from wallbox
-        power_car = self._charger_data.current_setpoint * self._charger_data.phases * 230
+        power_car = self._charger_data.max_current * self._charger_data.phases * 230
         if self._simulation:
             ch = self._charger_data.phases == 1
         else:

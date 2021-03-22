@@ -27,7 +27,7 @@ describe('ChargeControlServiceService', () => {
       charger: {
         phases: 3,
         power_car: 2000,
-        current_setpoint: 8
+        max_current: 8
       }
     };
   });

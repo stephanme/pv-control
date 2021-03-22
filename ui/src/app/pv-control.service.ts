@@ -11,7 +11,7 @@ export interface Meter {
 export interface Charger {
   phases: number;
   power_car: number;
-  current_setpoint: number;
+  max_current: number;
 }
 
 export interface PvControl {

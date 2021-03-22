@@ -25,7 +25,7 @@ export class AppComponent implements OnInit, OnDestroy {
     },
     charger: {
       phases: 3,
-      current_setpoint: 0,
+      max_current: 0,
       power_car: 0
     }
   };
