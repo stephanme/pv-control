@@ -6,7 +6,9 @@ from pvcontrol import relay
 # TODO: more metrics: car status etc
 metrics_pvc_wallbox_power = prometheus_client.Gauge("pvcontrol_wallbox_power_watts", "Wallbox total power")
 metrics_pvc_wallbox_phases_in = prometheus_client.Gauge("pvcontrol_wallbox_phases_in", "Number of phases before wallbox (0..3)")
-metrics_pvc_wallbox_phases_out = prometheus_client.Gauge("pvcontrol_wallbox_phases_out", "Number of phases for charging after wallbox (0..3)")
+metrics_pvc_wallbox_phases_out = prometheus_client.Gauge(
+    "pvcontrol_wallbox_phases_out", "Number of phases for charging after wallbox (0..3)"
+)
 metrics_pvc_wallbox_max_current = prometheus_client.Gauge("pvcontrol_wallbox_max_current_amperes", "Max current per phase")
 metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("metrics_pvc_wallbox_allow_charging", "Wallbox allows charging")
 
