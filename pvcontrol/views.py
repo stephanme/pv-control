@@ -2,7 +2,8 @@ import logging
 import flask
 import flask.views
 from pvcontrol.meter import Meter
-from pvcontrol.charger import Charger
+from pvcontrol.wallbox import Wallbox
+from pvcontrol.chargecontroller import ChargeController, ChargeMode
 
 logger = logging.getLogger(__name__)
 
@@ -19,27 +20,30 @@ class StaticResourcesView(flask.views.MethodView):
 
 
 class PvControlView(flask.views.MethodView):
-    def __init__(self, meter: Meter, charger: Charger):
+    def __init__(self, meter: Meter, wb: Wallbox, controller: ChargeController):
         self._meter = meter
-        self._charger = charger
+        self._wb = wb
+        self._controller = controller
 
     def get(self) -> flask.Response:
         res = {
-            "meter": self._meter.get_meter_data(),
-            "charger": self._charger.get_charger_data(),
+            "controller": self._controller.get_data(),
+            "meter": self._meter.get_data(),
+            "wallbox": self._wb.get_data(),
         }
         return flask.jsonify(res)
 
 
-# curl -X PUT http://localhost:8080/api/pvcontrol/charger/phases -H 'Content-Type: application/json' --data '1'
-class PvControlChargerPhasesView(flask.views.MethodView):
-    def __init__(self, charger: Charger):
-        self._charger = charger
+# curl -X PUT http://localhost:8080/api/pvcontrol/controller/desired_mode -H 'Content-Type: application/json' --data 'PV_ONLY'
+class PvControlChargeModeView(flask.views.MethodView):
+    def __init__(self, controller: ChargeController):
+        self._controller = controller
 
     def put(self):
         v = flask.request.json
-        if v == 1 or v == 3:
-            self._charger.set_phases(v)
+        try:
+            mode = ChargeMode(v)
+            self._controller.set_desired_mode(mode)
             return jsonify_no_content()
-        else:
+        except ValueError:
             flask.abort(400)

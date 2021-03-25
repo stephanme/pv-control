@@ -8,15 +8,32 @@ export interface Meter {
   power_grid: number;
 }
 
-export interface Charger {
-  phases: number;
-  power_car: number;
+export interface Wallbox {
+  car_status?: number;
   max_current: number;
+  allow_charging: boolean;
+  phases_in: number;
+  phases_out: number;
+  power: number;
+}
+
+export enum ChargeMode {
+  INIT = 'INIT',
+  OFF_1P = 'OFF_1P',  // off = controller is off, wallbox may charge via app
+  OFF_3P = 'OFF_3P',
+  PV_ONLY = 'PV_ONLY',
+  PV_ALL = 'PV_ALL',
+}
+
+export interface ChargerController {
+  mode: ChargeMode;
+  desired_mode: ChargeMode;
 }
 
 export interface PvControl {
   meter: Meter;
-  charger: Charger;
+  wallbox: Wallbox;
+  controller: ChargerController;
 }
 
 const httpOptions = {
@@ -35,7 +52,8 @@ export class PvControlService {
     return this.http.get<PvControl>('./api/pvcontrol');
   }
 
-  public putPvControlPhases(phases: number): Observable<void> {
-    return this.http.put<void>('./api/pvcontrol/charger/phases', phases, httpOptions);
+  public putPvControlDesiredChargeMode(mode: ChargeMode): Observable<void> {
+    // Note: explicit json converion otherwise it is sent as plain text -> 400
+    return this.http.put<void>('./api/pvcontrol/controller/desired_mode', JSON.stringify(mode), httpOptions);
   }
 }

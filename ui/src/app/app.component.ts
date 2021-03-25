@@ -6,7 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { HttpStatusService } from './http-status.service';
 
-import { PvControl, PvControlService } from './pv-control.service';
+import { ChargeMode, PvControl, PvControlService } from './pv-control.service';
 
 @Component({
   selector: 'app-root',
@@ -23,10 +23,16 @@ export class AppComponent implements OnInit, OnDestroy {
       power_consumption: 0,
       power_grid: 0,
     },
-    charger: {
-      phases: 3,
+    wallbox: {
+      allow_charging: false,
       max_current: 0,
-      power_car: 0
+      phases_in: 3,
+      phases_out: 0,
+      power: 0,
+    },
+    controller: {
+      mode: ChargeMode.OFF_3P,
+      desired_mode: ChargeMode.OFF_3P
     }
   };
   onePhaseSelectorControl = this.fb.control([false]);
@@ -51,19 +57,17 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void {
-    this.pvControlService.getPvControl().subscribe(cc => {
-      // console.log(`Refresh: phases = ${cc.phases}`);
-      this.pvControl = cc;
-      this.onePhaseSelectorControl.setValue(cc.charger.phases === 1);
+    this.pvControlService.getPvControl().subscribe(pv => {
+      this.pvControl = pv;
+      this.onePhaseSelectorControl.setValue(pv.controller.desired_mode === ChargeMode.OFF_1P); // TODO
     },
       () => { }
     );
   }
 
   onPhaseChange(event: MatSlideToggleChange): void {
-    const phases = event.checked ? 1 : 3;
-    // console.log(`onPhaseChange = ${phases}`);
-    this.pvControlService.putPvControlPhases(phases).subscribe(
+    const desiredMode = event.checked ? ChargeMode.OFF_1P : ChargeMode.OFF_3P;
+    this.pvControlService.putPvControlDesiredChargeMode(desiredMode).subscribe(
       () => this.refresh(),
       () => { }
     );

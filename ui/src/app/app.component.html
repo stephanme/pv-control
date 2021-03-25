@@ -19,7 +19,7 @@
   <mat-card-title>Car Charging</mat-card-title>
   <mat-card-content>
     <div class="mat-h1">
-      <mat-icon [inline]="true" color="primary">electric_car</mat-icon><span class="aligned-with-icon-relative">{{pvControl.charger.power_car/1000|number:'1.1-1'}} kW, {{pvControl.charger.phases === 3 ? '3x' : ''}} {{pvControl.charger.max_current}} A</span>
+      <mat-icon [inline]="true" color="primary">electric_car</mat-icon><span class="aligned-with-icon-relative">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW, {{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
     </div>
     <mat-slide-toggle id="onePhaseSelector" [formControl]="onePhaseSelectorControl" (change)="onPhaseChange($event)">Single phase charging</mat-slide-toggle>
   </mat-card-content>

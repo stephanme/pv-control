@@ -21,7 +21,7 @@ import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 
 import { AppComponent } from './app.component';
-import { PvControl } from './pv-control.service';
+import { ChargeMode, PvControl } from './pv-control.service';
 import { HttpStatusInterceptor } from './http-status.service';
 
 
@@ -72,10 +72,16 @@ describe('AppComponent', () => {
         power_consumption: 3000,
         power_grid: 2000
       },
-      charger: {
-        phases: 3,
-        power_car: 2000,
-        max_current: 8
+      wallbox: {
+        allow_charging: true,
+        max_current: 8,
+        phases_in: 3,
+        phases_out: 3,
+        power: 2000,
+      },
+      controller: {
+        mode: ChargeMode.OFF_3P,
+        desired_mode: ChargeMode.OFF_3P
       }
     };
 
@@ -105,7 +111,8 @@ describe('AppComponent', () => {
     expect(component.pvControl).toEqual(pvControlData);
     expect(component.onePhaseSelectorControl.value).toBe(false);
 
-    pvControlData.charger.phases = 1;
+    pvControlData.controller.mode = ChargeMode.OFF_1P;
+    pvControlData.controller.desired_mode = ChargeMode.OFF_1P;
     await refreshButton.click();
 
     expect(refreshIcon.className).toContain('spin');
@@ -137,12 +144,13 @@ describe('AppComponent', () => {
     expect(component.pvControl).toEqual(pvControlData);
     await onePhaseSelector.toggle();
 
-    const req = httpMock.expectOne('./api/pvcontrol/charger/phases');
+    const req = httpMock.expectOne('./api/pvcontrol/controller/desired_mode');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toBe(1);
+    expect(req.request.body).toBe('"OFF_1P"');
     req.flush(null);
 
-    pvControlData.charger.phases = 1;
+    pvControlData.controller.mode = ChargeMode.OFF_1P;
+    pvControlData.controller.desired_mode = ChargeMode.OFF_1P;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
     expect(component.pvControl).toEqual(pvControlData);

@@ -1,9 +1,9 @@
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { PvControl, PvControlService } from './pv-control.service';
+import { ChargeMode, PvControl, PvControlService } from './pv-control.service';
 
-describe('ChargeControlServiceService', () => {
+describe('PvControlServiceService', () => {
   let httpMock: HttpTestingController;
   let service: PvControlService;
 
@@ -24,10 +24,16 @@ describe('ChargeControlServiceService', () => {
         power_consumption: 3000,
         power_grid: 2000
       },
-      charger: {
-        phases: 3,
-        power_car: 2000,
-        max_current: 8
+      wallbox: {
+        allow_charging: true,
+        max_current: 8,
+        phases_in: 3,
+        phases_out: 3,
+        power: 2000,
+      },
+      controller: {
+        mode: ChargeMode.OFF_3P,
+        desired_mode: ChargeMode.PV_ONLY
       }
     };
   });
@@ -43,12 +49,12 @@ describe('ChargeControlServiceService', () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
   });
 
-  it('should putPvControlPhases()', () => {
-    service.putPvControlPhases(1).subscribe();
+  it('should putPvControlDesiredChargeMode()', () => {
+    service.putPvControlDesiredChargeMode(ChargeMode.OFF_1P).subscribe();
 
-    const req = httpMock.expectOne('./api/pvcontrol/charger/phases');
+    const req = httpMock.expectOne('./api/pvcontrol/controller/desired_mode');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toBe(1);
+    expect(req.request.body).toBe('"OFF_1P"');
     req.flush(null);
   });
 });

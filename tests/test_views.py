@@ -2,8 +2,9 @@ import unittest
 import unittest.mock as mock
 import flask
 from pvcontrol import views
-from pvcontrol.charger import ChargerData
 from pvcontrol.meter import MeterData
+from pvcontrol.wallbox import WallboxData
+from pvcontrol.chargecontroller import ChargeControllerData, ChargeMode
 
 
 class StaticResourcesViewTest(unittest.TestCase):
@@ -29,42 +30,47 @@ class PvControlViewTest(unittest.TestCase):
         app.testing = True
         self.app = app.test_client()
         self.meter_data = MeterData(5000, 3000, 2000)
-        self.charger_data = ChargerData(1, 2000, 10)
+        self.wb_data = WallboxData()
+        self.controller_data = ChargeControllerData()
         meter = mock.Mock()
-        meter.get_meter_data.return_value = self.meter_data
-        charger = mock.Mock()
-        charger.get_charger_data.return_value = self.charger_data
-        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", meter, charger))
+        meter.get_data.return_value = self.meter_data
+        wb = mock.Mock()
+        wb.get_data.return_value = self.wb_data
+        controller = mock.Mock()
+        controller.get_data.return_value = self.controller_data
+        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", meter, wb, controller))
 
     def test_pvcontrol_api(self):
         r = self.app.get("/api/pvcontrol")
         self.assertEqual(200, r.status_code)
         self.assertEqual(self.meter_data.__dict__, r.json["meter"])
-        self.assertEqual(self.charger_data.__dict__, r.json["charger"])
+        self.assertEqual(self.wb_data.__dict__, r.json["wallbox"])
+        self.assertEqual(self.controller_data.__dict__, r.json["controller"])
 
 
-class PvControlChargerPhasesView(unittest.TestCase):
+class PvControlChargeModeViewTest(unittest.TestCase):
     def setUp(self):
         app = flask.Flask(__name__)
         app.testing = True
         self.app = app.test_client()
-        self.charger_data = ChargerData(1, 2000, 10)
-        self.charger = mock.Mock()
+        self.charger_data = ChargeControllerData()
+        self.controller = mock.Mock()
         app.add_url_rule(
-            "/api/pvcontrol/charger/phases", view_func=views.PvControlChargerPhasesView.as_view("put_charger_phases", self.charger)
+            "/api/pvcontrol/controller/desired_mode",
+            view_func=views.PvControlChargeModeView.as_view("put_charger_phases", self.controller),
         )
 
     def test_put_charger_phases_api(self):
-        r = self.app.put("/api/pvcontrol/charger/phases", json=1)
+        r = self.app.put("/api/pvcontrol/controller/desired_mode", json="OFF_1P")
         self.assertEqual(204, r.status_code)
-        self.charger.set_phases.assert_called_once_with(1)
-        r = self.app.put("/api/pvcontrol/charger/phases", json=3)
+        self.controller.set_desired_mode.assert_called_once_with(ChargeMode.OFF_1P)
+        r = self.app.put("/api/pvcontrol/controller/desired_mode", json="OFF_3P")
         self.assertEqual(204, r.status_code)
-        self.charger.set_phases.assert_called_with(3)
+        self.controller.set_desired_mode.assert_called_with(ChargeMode.OFF_3P)
 
     def test_put_charger_phases_api_error(self):
-        r = self.app.put("/api/pvcontrol/charger/phases", json=2)
+        r = self.app.put("/api/pvcontrol/controller/desired_mode", json="invalid")
         self.assertEqual(400, r.status_code)
-        r = self.app.put("/api/pvcontrol/charger/phases", data="1")
+        r = self.app.put("/api/pvcontrol/controller/desired_mode", data="invalid")
         self.assertEqual(400, r.status_code)
-        self.charger.set_phases.assert_not_called()
+        self.controller.set_desired_mode.assert_not_called()

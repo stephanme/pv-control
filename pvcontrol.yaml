@@ -22,7 +22,8 @@ spec:
             - python
             - -m
             - pvcontrol
-            - --simulate-meter
+            - --meter SimulatedMeter
+            - --wallbox SimulatedWallboxWithRelay
           ports:
             - containerPort: 8080
           securityContext:
@@ -35,6 +36,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pvcontrol-service
+  labels:
+    app: pvcontrol
 spec:
   ports:
     - port: 8080
