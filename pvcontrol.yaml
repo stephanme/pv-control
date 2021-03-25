@@ -22,8 +22,10 @@ spec:
             - python
             - -m
             - pvcontrol
-            - --meter SimulatedMeter
-            - --wallbox SimulatedWallboxWithRelay
+            - --meter
+            - SimulatedMeter
+            - --wallbox
+            - SimulatedWallboxWithRelay
           ports:
             - containerPort: 8080
           securityContext:

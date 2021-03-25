@@ -50,7 +50,7 @@ class SimulatedMeter(Meter):
     def _read_data(self) -> MeterData:
         t = time.time()
         power_car = self._wallbox.get_data().power
-        pv = math.floor(5000 * math.fabs(math.sin(2 * math.pi * t / (60 * 60))))
+        pv = math.floor(7000 * math.fabs(math.sin(2 * math.pi * t / (60 * 60))))
         consumption = 500 + math.floor(500 * math.fabs(math.sin(2 * math.pi * t / (60 * 5)))) + power_car
         grid = consumption - pv
         return MeterData(pv, consumption, grid)

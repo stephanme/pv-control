@@ -1,8 +1,8 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormControl } from '@angular/forms';
-import { MatSlideToggleChange } from '@angular/material/slide-toggle';
+import { FormBuilder } from '@angular/forms';
+import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Subject } from 'rxjs';
+import { Observable, Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { HttpStatusService } from './http-status.service';
 
@@ -16,7 +16,13 @@ import { ChargeMode, PvControl, PvControlService } from './pv-control.service';
 export class AppComponent implements OnInit, OnDestroy {
   private unsubscribe: Subject<void> = new Subject();
 
+  ChargeMode = ChargeMode;
+
   busy$ = this.httpStatusService.busy();
+  autoRefreshControl = this.fb.control(false);
+  refreshTimer$ = timer(0, 30000).pipe(takeUntil(this.unsubscribe));
+  refreshTimerSubscription: Subscription|null = null;
+
   pvControl: PvControl = {
     meter: {
       power_pv: 0,
@@ -35,7 +41,7 @@ export class AppComponent implements OnInit, OnDestroy {
       desired_mode: ChargeMode.OFF_3P
     }
   };
-  onePhaseSelectorControl = this.fb.control([false]);
+  chargeModeControl = this.fb.control(ChargeMode.OFF_3P);
 
   constructor(
     private fb: FormBuilder, private snackBar: MatSnackBar,
@@ -49,6 +55,13 @@ export class AppComponent implements OnInit, OnDestroy {
       });
     });
     this.refresh();
+    this.autoRefreshControl.valueChanges.subscribe(autoRefresh => {
+      if (autoRefresh) {
+        this.refreshTimerSubscription = this.refreshTimer$.subscribe(_ => this.refresh());
+      } else {
+        this.refreshTimerSubscription?.unsubscribe();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -59,17 +72,17 @@ export class AppComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.pvControlService.getPvControl().subscribe(pv => {
       this.pvControl = pv;
-      this.onePhaseSelectorControl.setValue(pv.controller.desired_mode === ChargeMode.OFF_1P); // TODO
+      this.chargeModeControl.setValue(pv.controller.desired_mode);
     },
       () => { }
     );
   }
 
-  onPhaseChange(event: MatSlideToggleChange): void {
-    const desiredMode = event.checked ? ChargeMode.OFF_1P : ChargeMode.OFF_3P;
+  onChargeModeChange(event: MatButtonToggleChange): void {
+    const desiredMode = event.value;
     this.pvControlService.putPvControlDesiredChargeMode(desiredMode).subscribe(
-      () => this.refresh(),
-      () => { }
+      () => {},
+      () => {}
     );
   }
 }

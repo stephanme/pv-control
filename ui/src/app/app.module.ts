@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 import { AppComponent } from './app.component';
 import { HttpStatusInterceptor } from './http-status.service';
@@ -32,7 +33,8 @@ import { HttpStatusInterceptor } from './http-status.service';
     MatIconModule,
     MatButtonModule,
     MatSlideToggleModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatButtonToggleModule,
   ],
   providers: [
     {

@@ -9,15 +9,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { HarnessLoader } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatButtonHarness } from '@angular/material/button/testing';
-import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
+import { MatButtonToggleGroupHarness, MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 
 import { AppComponent } from './app.component';
@@ -31,7 +32,8 @@ describe('AppComponent', () => {
   let component: AppComponent;
   let fixture: ComponentFixture<AppComponent>;
   let pvControlData: PvControl;
-  let onePhaseSelector: MatSlideToggleHarness;
+  let chargeModeOff1P: MatButtonToggleHarness;
+  let chargeModeOff3P: MatButtonToggleHarness;
   let refreshButton: MatButtonHarness;
 
   beforeEach(async () => {
@@ -46,6 +48,7 @@ describe('AppComponent', () => {
         MatInputModule,
         MatIconModule,
         MatButtonModule,
+        MatButtonToggleModule,
         MatSlideToggleModule,
         MatSnackBarModule,
       ],
@@ -85,7 +88,8 @@ describe('AppComponent', () => {
       }
     };
 
-    onePhaseSelector = await loader.getHarness(MatSlideToggleHarness.with({selector: '#onePhaseSelector'}));
+    chargeModeOff1P = await loader.getHarness(MatButtonToggleHarness.with({selector: '#chargeModeOFF_1P'}));
+    chargeModeOff3P = await loader.getHarness(MatButtonToggleHarness.with({selector: '#chargeModeOFF_3P'}));
     refreshButton = await loader.getHarness(MatButtonHarness.with({selector: '#refresh'}));
   });
 
@@ -97,8 +101,8 @@ describe('AppComponent', () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
     expect(component.pvControl).toEqual(pvControlData);
-    expect(component.onePhaseSelectorControl.value).toBe(false);
-    expect(await onePhaseSelector.isChecked()).toBeFalse();
+    expect(component.chargeModeControl.value).toBe(ChargeMode.OFF_3P);
+    expect(await chargeModeOff3P.isChecked()).toBeTrue();
   });
 
   it('should refresh data', async () => {
@@ -109,7 +113,7 @@ describe('AppComponent', () => {
 
     expect(refreshIcon.className).not.toContain('spin');
     expect(component.pvControl).toEqual(pvControlData);
-    expect(component.onePhaseSelectorControl.value).toBe(false);
+    expect(component.chargeModeControl.value).toBe(ChargeMode.OFF_3P);
 
     pvControlData.controller.mode = ChargeMode.OFF_1P;
     pvControlData.controller.desired_mode = ChargeMode.OFF_1P;
@@ -119,8 +123,8 @@ describe('AppComponent', () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
     expect(component.pvControl).toEqual(pvControlData);
-    expect(component.onePhaseSelectorControl.value).toBe(true);
-    expect(await onePhaseSelector.isChecked()).toBeTrue();
+    expect(component.chargeModeControl.value).toBe(ChargeMode.OFF_1P);
+    expect(await chargeModeOff1P.isChecked()).toBeTrue();
     expect(refreshIcon.className).not.toContain('spin');
   });
 
@@ -142,19 +146,14 @@ describe('AppComponent', () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
     expect(component.pvControl).toEqual(pvControlData);
-    await onePhaseSelector.toggle();
+    await chargeModeOff1P.check();
 
     const req = httpMock.expectOne('./api/pvcontrol/controller/desired_mode');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toBe('"OFF_1P"');
     req.flush(null);
 
-    pvControlData.controller.mode = ChargeMode.OFF_1P;
-    pvControlData.controller.desired_mode = ChargeMode.OFF_1P;
-    httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
-
-    expect(component.pvControl).toEqual(pvControlData);
-    expect(component.onePhaseSelectorControl.value).toBe(true);
-    expect(await onePhaseSelector.isChecked()).toBeTrue();
+    expect(await chargeModeOff1P.isChecked()).toBeTrue();
+    expect(await chargeModeOff3P.isChecked()).toBeFalse();
   });
 });
