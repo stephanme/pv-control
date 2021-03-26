@@ -6,7 +6,7 @@ import prometheus_client
 
 from pvcontrol import views, relay
 from pvcontrol.meter import MeterFactory
-from pvcontrol.chargecontroller import ChargeController
+from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig
 from pvcontrol.wallbox import WallboxFactory
 from pvcontrol.scheduler import Scheduler
 
@@ -23,7 +23,7 @@ logger.info(f"Meter:   {args.meter}")
 logger.info(f"Wallbox: {args.wallbox}")
 wallbox = WallboxFactory.newWallbox(args.wallbox)
 meter = MeterFactory.newMeter(args.meter, wallbox)
-controller = ChargeController(meter, wallbox)
+controller = ChargeController(ChargeControllerConfig(), meter, wallbox)
 
 scheduler = Scheduler(30, controller.run)
 scheduler.start()

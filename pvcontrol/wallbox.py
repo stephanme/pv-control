@@ -13,6 +13,12 @@ metrics_pvc_wallbox_max_current = prometheus_client.Gauge("pvcontrol_wallbox_max
 metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("metrics_pvc_wallbox_allow_charging", "Wallbox allows charging")
 
 
+@dataclass
+class WallboxConfig:
+    min_supported_current: int = 6
+    max_supported_current: int = 16
+
+
 @enum.unique
 class CarStatus(enum.IntEnum):
     NoVehicle = 1  # charging station ready, no vehicle
@@ -36,8 +42,15 @@ class WallboxData:
 class Wallbox:
     """ Base class / interface for wallboxes """
 
-    def __init__(self):
+    def __init__(self, config: WallboxConfig):
         self._wallbox_data = WallboxData()
+        self._config = config
+
+    # config
+    def get_config(self) -> WallboxConfig:
+        return self._config
+
+    # read wallbox data
 
     def get_data(self) -> WallboxData:
         """ Get last cached wallbox data. """
@@ -56,6 +69,8 @@ class Wallbox:
 
     def _read_data(self) -> WallboxData:
         return self._wallbox_data
+
+    # set wallbox registers
 
     def set_phases_in(self, phases: int) -> None:
         pass
@@ -107,8 +122,8 @@ class WallboxFactory:
     @classmethod
     def newWallbox(cls, type: str) -> Wallbox:
         if type == "SimulatedWallbox":
-            return SimulatedWallbox()
+            return SimulatedWallbox(WallboxConfig())
         elif type == "SimulatedWallboxWithRelay":
-            return SimulatedWallboxWithRelay()
+            return SimulatedWallboxWithRelay(WallboxConfig())
         else:
             raise ValueError(f"Bad wallbox type: {type}")

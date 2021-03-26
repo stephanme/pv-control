@@ -28,15 +28,34 @@ class ChargeControllerData:
     desired_mode: ChargeMode = ChargeMode.OFF_3P
 
 
-class ChargeController:
-    LINE_VOLTAGE = 230
-    WB_MIN_CURRENT = 6
-    WB_MAX_CURRENT = 16
+@dataclass
+class ChargeControllerConfig:
+    line_voltage: float = 230  # [V]
+    current_rounding_offset: float = 0.1  # [A] offset for max_current rounding
+    power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
+    pv_all_min_power: float = 500  # [W] min available power for charging in mode PV_ALL
 
-    def __init__(self, meter: Meter, wallbox: Wallbox):
-        self._data = ChargeControllerData()
+
+class ChargeController:
+    def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox):
+        self._config = config
         self._meter = meter
         self._wallbox = wallbox
+        self._data = ChargeControllerData()
+        # config
+        self._min_supported_current = wallbox.get_config().min_supported_current
+        self._max_supported_current = wallbox.get_config().max_supported_current
+        min_power_1phase = self._min_supported_current * self._config.line_voltage
+        max_power_1phase = self._max_supported_current * self._config.line_voltage
+        min_power_3phases = 3 * self._min_supported_current * self._config.line_voltage
+        self._pv_only_on = min_power_1phase + self._config.power_hysteresis
+        self._pv_only_off = min_power_1phase
+        self._pv_only_1_3_phase_theshold = min_power_3phases + self._config.power_hysteresis
+        self._pv_only_3_1_phase_theshold = min_power_3phases
+        self._pv_all_on = self._config.pv_all_min_power
+        self._pv_all_off = max(self._config.pv_all_min_power - self._config.power_hysteresis, 100)
+        self._pv_all_1_3_phase_theshold = max_power_1phase
+        self._pv_all_3_1_phase_theshold = max_power_1phase - self._config.power_hysteresis
 
     def get_data(self) -> ChargeControllerData:
         """ Get last charge controller data. """
@@ -59,8 +78,8 @@ class ChargeController:
         if not self.is_mode_converged():
             self._convergeMode(wb)
 
-        if self._data.mode == ChargeMode.PV_ONLY:
-            self._charge_control_pv_only(m, wb)
+        if self._data.mode == ChargeMode.PV_ONLY or self._data.mode == ChargeMode.PV_ALL:
+            self._charge_control_pv(m, wb)
 
     def _convergeMode(self, wb: WallboxData) -> None:
         mode = self._data.mode
@@ -89,9 +108,9 @@ class ChargeController:
         else:
             logger.error(f"Unsupported desired mode: {desired_mode}")
 
-    def _charge_control_pv_only(self, m: MeterData, wb: WallboxData) -> None:
+    def _charge_control_pv(self, m: MeterData, wb: WallboxData) -> None:
         available_power = -m.power_grid + wb.power
-        desired_phases = ChargeController._desired_phases(available_power, wb.phases_in)
+        desired_phases = self._desired_phases(available_power, wb.phases_in)
         if desired_phases != wb.phases_in:
             # switch phase relay only if charging is off
             if wb.phases_out == 0:
@@ -103,23 +122,61 @@ class ChargeController:
             phases = wb.phases_out
             if phases == 0:
                 phases = wb.phases_in
-            max_current = math.floor(available_power / ChargeController.LINE_VOLTAGE / phases)
-            if max_current < ChargeController.WB_MIN_CURRENT:
+
+            mode = self._data.mode
+            if mode == ChargeMode.PV_ONLY:
+                if not wb.allow_charging and available_power < self._pv_only_on:
+                    max_current = 0
+                else:
+                    max_current = math.floor(available_power / self._config.line_voltage / phases + self._config.current_rounding_offset)
+                    if max_current < self._min_supported_current:
+                        max_current = 0
+            elif mode == ChargeMode.PV_ALL:
+                if (not wb.allow_charging and available_power < self._pv_all_on) or available_power < self._pv_all_off:
+                    max_current = 0
+                else:
+                    max_current = math.ceil(available_power / self._config.line_voltage / phases - self._config.current_rounding_offset)
+                    if max_current < self._min_supported_current:
+                        max_current = self._min_supported_current
+            else:
                 max_current = 0
-            elif max_current > ChargeController.WB_MAX_CURRENT:
-                max_current = ChargeController.WB_MAX_CURRENT
+
+            if max_current > self._max_supported_current:
+                max_current = self._max_supported_current
             if max_current > 0:
                 self._wallbox.set_max_current(max_current)
                 self._wallbox.allow_charging(True)
             else:
                 self._wallbox.allow_charging(False)
 
-    @classmethod
-    def _desired_phases(cls, available_power: float, current_phases: int):
-        # TODO use available_power + current phases + hysteresis
-        # 3 * 6A * 230V = 4140W
-        # 3 * 7A * 230V = 4830W
-        if available_power >= 4140:
-            return 3
-        else:
+    def _desired_phases(self, available_power: float, current_phases: int):
+        # TODO 2 phase charging
+        mode = self._data.mode
+        if mode == ChargeMode.OFF_1P:
             return 1
+        elif mode == ChargeMode.OFF_3P:
+            return 3
+        elif mode == ChargeMode.PV_ONLY:
+            if current_phases == 1:
+                if available_power >= self._pv_only_1_3_phase_theshold:
+                    return 3
+                else:
+                    return 1
+            else:
+                if available_power >= self._pv_only_3_1_phase_theshold:
+                    return 3
+                else:
+                    return 1
+        elif mode == ChargeMode.PV_ALL:
+            if current_phases == 1:
+                if available_power >= self._pv_all_1_3_phase_theshold:
+                    return 3
+                else:
+                    return 1
+            else:
+                if available_power >= self._pv_all_3_1_phase_theshold:
+                    return 3
+                else:
+                    return 1
+        else:
+            return 3
