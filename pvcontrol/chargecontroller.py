@@ -10,9 +10,6 @@ from pvcontrol.wallbox import Wallbox, WallboxData
 
 logger = logging.getLogger(__name__)
 
-# metrics
-metrics_pvc_processing = prometheus_client.Summary("pvcontrol_processing_seconds", "Time spent processing control loop")
-
 
 @enum.unique
 class ChargeMode(str, enum.Enum):
@@ -35,6 +32,15 @@ class ChargeControllerConfig(BaseConfig):
     current_rounding_offset: float = 0.1  # [A] offset for max_current rounding
     power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
     pv_all_min_power: float = 500  # [W] min available power for charging in mode PV_ALL
+
+
+# metrics
+metrics_pvc_controller_processing = prometheus_client.Summary(
+    "pvcontrol_controller_processing_seconds", "Time spent processing control loop"
+)
+metrics_pvc_controller_mode = prometheus_client.Enum(
+    "pvcontrol_controller_mode", "Charge controller mode", states=list(ChargeMode.__members__.values())
+)
 
 
 class ChargeController(BaseService):
@@ -72,7 +78,7 @@ class ChargeController(BaseService):
     def is_mode_converged(self):
         return self._data.mode == self._data.desired_mode
 
-    @metrics_pvc_processing.time()
+    @metrics_pvc_controller_processing.time()
     def run(self) -> None:
         """ Read charger data from wallbox and calculate set point """
 
@@ -82,6 +88,7 @@ class ChargeController(BaseService):
 
         if not self.is_mode_converged():
             self._convergeMode(wb)
+        metrics_pvc_controller_mode.state(self._data.mode)
 
         if self._data.mode == ChargeMode.PV_ONLY or self._data.mode == ChargeMode.PV_ALL:
             self._charge_control_pv(m, wb)
