@@ -1,3 +1,4 @@
+from pvcontrol.service import BaseService
 import unittest
 import unittest.mock as mock
 import flask
@@ -46,6 +47,24 @@ class PvControlViewTest(unittest.TestCase):
         self.assertEqual(self.meter_data.__dict__, r.json["meter"])
         self.assertEqual(self.wb_data.__dict__, r.json["wallbox"])
         self.assertEqual(self.controller_data.__dict__, r.json["controller"])
+
+
+class PvControlConfigDataViewTest(unittest.TestCase):
+    def setUp(self):
+        app = flask.Flask(__name__)
+        app.testing = True
+        self.app = app.test_client()
+        app.add_url_rule(
+            "/api/pvcontrol/controller",
+            view_func=views.PvControlConfigDataView.as_view("get_wallbox", BaseService()),
+        )
+
+    def test_pvcontrol_api(self):
+        r = self.app.get("/api/pvcontrol/controller")
+        self.assertEqual(200, r.status_code)
+        self.assertEqual("BaseService", r.json["type"])
+        self.assertEqual({}, r.json["config"])
+        self.assertEqual({}, r.json["data"])
 
 
 class PvControlChargeModeViewTest(unittest.TestCase):

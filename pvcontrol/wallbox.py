@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import enum
+from pvcontrol.service import BaseConfig, BaseData, BaseService
 import prometheus_client
 from pvcontrol import relay
 
@@ -14,7 +15,7 @@ metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("metrics_pvc_wallbo
 
 
 @dataclass
-class WallboxConfig:
+class WallboxConfig(BaseConfig):
     min_supported_current: int = 6
     max_supported_current: int = 16
 
@@ -28,7 +29,7 @@ class CarStatus(enum.IntEnum):
 
 
 @dataclass
-class WallboxData:
+class WallboxData(BaseData):
     car_status: CarStatus = CarStatus.NoVehicle
     max_current: int = 16  # [A]
     allow_charging: bool = False
@@ -39,7 +40,7 @@ class WallboxData:
     # unlocked_by - RFID card id
 
 
-class Wallbox:
+class Wallbox(BaseService):
     """ Base class / interface for wallboxes """
 
     def __init__(self, config: WallboxConfig):
@@ -120,10 +121,10 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
 
 class WallboxFactory:
     @classmethod
-    def newWallbox(cls, type: str) -> Wallbox:
+    def newWallbox(cls, type: str, **kwargs) -> Wallbox:
         if type == "SimulatedWallbox":
-            return SimulatedWallbox(WallboxConfig())
+            return SimulatedWallbox(WallboxConfig(**kwargs))
         elif type == "SimulatedWallboxWithRelay":
-            return SimulatedWallboxWithRelay(WallboxConfig())
+            return SimulatedWallboxWithRelay(WallboxConfig(**kwargs))
         else:
             raise ValueError(f"Bad wallbox type: {type}")

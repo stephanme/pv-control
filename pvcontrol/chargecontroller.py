@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import logging
 import prometheus_client
 
+from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.meter import Meter, MeterData
 from pvcontrol.wallbox import Wallbox, WallboxData
 
@@ -23,20 +24,20 @@ class ChargeMode(str, enum.Enum):
 
 
 @dataclass
-class ChargeControllerData:
+class ChargeControllerData(BaseData):
     mode: ChargeMode = ChargeMode.INIT
     desired_mode: ChargeMode = ChargeMode.OFF_3P
 
 
 @dataclass
-class ChargeControllerConfig:
+class ChargeControllerConfig(BaseConfig):
     line_voltage: float = 230  # [V]
     current_rounding_offset: float = 0.1  # [A] offset for max_current rounding
     power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
     pv_all_min_power: float = 500  # [W] min available power for charging in mode PV_ALL
 
 
-class ChargeController:
+class ChargeController(BaseService):
     def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox):
         self._config = config
         self._meter = meter
@@ -56,6 +57,10 @@ class ChargeController:
         self._pv_all_off = max(self._config.pv_all_min_power - self._config.power_hysteresis, 100)
         self._pv_all_1_3_phase_theshold = max_power_1phase
         self._pv_all_3_1_phase_theshold = max_power_1phase - self._config.power_hysteresis
+
+    def get_config(self) -> ChargeControllerConfig:
+        """ Get configuration. """
+        return self._config
 
     def get_data(self) -> ChargeControllerData:
         """ Get last charge controller data. """
@@ -180,3 +185,9 @@ class ChargeController:
                     return 1
         else:
             return 3
+
+
+class ChargeControllerFactory:
+    @classmethod
+    def newController(cls, meter: Meter, wb: Wallbox, **kwargs) -> ChargeController:
+        return ChargeController(ChargeControllerConfig(**kwargs), meter, wb)

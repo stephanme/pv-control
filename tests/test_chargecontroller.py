@@ -1,4 +1,5 @@
 import unittest
+import json
 from pvcontrol.wallbox import SimulatedWallbox, WallboxConfig, WallboxData
 from pvcontrol.meter import TestMeter, MeterData
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode
@@ -9,6 +10,12 @@ class ChargeControllerTest(unittest.TestCase):
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(self.wallbox)
         self.controller = ChargeController(ChargeControllerConfig(), self.meter, self.wallbox)
+
+    def test_ChargeControllerConfig(self):
+        c = json.loads('{"power_hysteresis": 150}')
+        cfg = ChargeControllerConfig(**c)
+        self.assertEqual(150, cfg.power_hysteresis)
+        self.assertEqual(ChargeControllerConfig(power_hysteresis=150), cfg)
 
     def test_config(self):
         ctl = self.controller

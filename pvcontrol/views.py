@@ -1,4 +1,5 @@
 import logging
+from pvcontrol.service import BaseService
 import flask
 import flask.views
 from pvcontrol.meter import Meter
@@ -30,6 +31,20 @@ class PvControlView(flask.views.MethodView):
             "controller": self._controller.get_data(),
             "meter": self._meter.get_data(),
             "wallbox": self._wb.get_data(),
+        }
+        return flask.jsonify(res)
+
+
+# shows type, config and data of standard PvControl entities
+class PvControlConfigDataView(flask.views.MethodView):
+    def __init__(self, instance: BaseService):
+        self._instance = instance
+
+    def get(self) -> flask.Response:
+        res = {
+            "type": type(self._instance).__name__,
+            "config": self._instance.get_config(),
+            "data": self._instance.get_data(),
         }
         return flask.jsonify(res)
 
