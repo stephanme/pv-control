@@ -103,7 +103,10 @@ class ChargeController(BaseService):
             self._data.mode = ChargeMode.OFF_1P if wb.phases_in == 1 else ChargeMode.OFF_3P
             self._data.desired_mode = self._data.mode
             # safe state = no charging (e.g. on reboot while in PV mode)
+            # TODO: means that in OFF_3P a restart aborts manualy triggered charging (e.g. via app or wallbox)
+            # See also shutdown procedure in __main__.py
             self._wallbox.allow_charging(False)
+            logger.info(f"mode: {mode} -> {self._data.mode}")
             return
 
         if desired_mode == ChargeMode.OFF_3P or desired_mode == ChargeMode.OFF_1P:
@@ -111,12 +114,14 @@ class ChargeController(BaseService):
             if wb.phases_out == 0:
                 self._wallbox.set_phases_in(1 if desired_mode == ChargeMode.OFF_1P else 3)
                 self._data.mode = desired_mode
+                logger.info(f"mode: {mode} -> {self._data.mode}")
             else:
                 # charging off and wait one cylce
                 self._wallbox.allow_charging(False)
         elif desired_mode == ChargeMode.PV_ALL or desired_mode == ChargeMode.PV_ONLY:
             # control loop takes over
             self._data.mode = desired_mode
+            logger.info(f"mode: {mode} -> {self._data.mode}")
         else:
             logger.error(f"Unsupported desired mode: {desired_mode}")
 

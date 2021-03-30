@@ -17,12 +17,18 @@ Relay_Ch1 = 26
 GPIO.setwarnings(True)
 GPIO.setmode(GPIO.BCM)
 
-# no initial value = keep state (on reboot: behaves as if GPIO.HIGH)
-logger.info(f"Before channel setup: ch1 function={GPIO.gpio_function(Relay_Ch1)}")
-GPIO.setup(Relay_Ch1, GPIO.OUT)
+_ch1_function = GPIO.gpio_function(Relay_Ch1)
+logger.info(f"Before channel setup: ch1 function={_ch1_function}")
+if _ch1_function == GPIO.OUT:
+    # keep state if channel is already OUT (= app restart)
+    GPIO.setup(Relay_Ch1, GPIO.OUT)
+else:
+    # init to GPIO.HIGH = OFF to avoid switching on reboot
+    GPIO.setup(Relay_Ch1, GPIO.OUT, initial=GPIO.HIGH)
+logger.info(f"After channel setup : ch1={GPIO.input(Relay_Ch1)}")
+
 # GPIO.setup(Relay_Ch2,GPIO.OUT)
 # GPIO.setup(Relay_Ch3,GPIO.OUT)
-logger.info(f"After channel setup : ch1={GPIO.input(Relay_Ch1)}")
 
 # https://www.waveshare.com/wiki/RPi_Relay_Board
 # Relay OFF = false = GPIO.HIGH
