@@ -1,4 +1,8 @@
 import logging
+
+# configure logging before initializing further modules
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
+
 import argparse
 import json
 import flask
@@ -7,11 +11,10 @@ import prometheus_client
 
 from pvcontrol import views, relay
 from pvcontrol.meter import MeterFactory
-from pvcontrol.chargecontroller import ChargeControllerFactory
+from pvcontrol.chargecontroller import ChargeControllerFactory, ChargeMode
 from pvcontrol.wallbox import WallboxFactory
 from pvcontrol.scheduler import Scheduler
 
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(description="PV Control")
@@ -53,5 +56,11 @@ app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": prometheus_client
 
 app.run(host="0.0.0.0", port=8080)
 scheduler.stop()
+# graceful shutdown: disable charging in PV modes and in OFF_1P because relay is initialized to 3P on reboot (but no change on app restart)
+# -> OFF_1P doesn't survive a restart, only OFF_3P is really off (= pvcontrol doesn't interfere with wallbox)
+mode = controller.get_data().mode
+if mode != ChargeMode.OFF_3P:
+    logger.info("Set wallbox.allow_charging=False on shutdown.")
+    wallbox.allow_charging(False)
 relay.cleanup()
 logger.info("Stopped pvcontrol")
