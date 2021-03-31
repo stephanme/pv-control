@@ -18,8 +18,9 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { HarnessLoader } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatButtonHarness } from '@angular/material/button/testing';
-import { MatButtonToggleGroupHarness, MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
+import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
+import { FlexLayoutModule } from '@angular/flex-layout';
 
 import { AppComponent } from './app.component';
 import { ChargeMode, PvControl } from './pv-control.service';
@@ -42,6 +43,7 @@ describe('AppComponent', () => {
         BrowserAnimationsModule,
         HttpClientTestingModule,
         ReactiveFormsModule,
+        FlexLayoutModule,
         MatToolbarModule,
         MatCardModule,
         MatFormFieldModule,
@@ -73,7 +75,7 @@ describe('AppComponent', () => {
       meter: {
         power_pv: 5000,
         power_consumption: 3000,
-        power_grid: 2000
+        power_grid: -2000
       },
       wallbox: {
         allow_charging: true,
@@ -88,9 +90,9 @@ describe('AppComponent', () => {
       }
     };
 
-    chargeModeOff1P = await loader.getHarness(MatButtonToggleHarness.with({selector: '#chargeModeOFF_1P'}));
-    chargeModeOff3P = await loader.getHarness(MatButtonToggleHarness.with({selector: '#chargeModeOFF_3P'}));
-    refreshButton = await loader.getHarness(MatButtonHarness.with({selector: '#refresh'}));
+    chargeModeOff1P = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeOFF_1P' }));
+    chargeModeOff3P = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeOFF_3P' }));
+    refreshButton = await loader.getHarness(MatButtonHarness.with({ selector: '#refresh' }));
   });
 
   afterEach(() => {
@@ -103,6 +105,14 @@ describe('AppComponent', () => {
     expect(component.pvControl).toEqual(pvControlData);
     expect(component.chargeModeControl.value).toBe(ChargeMode.OFF_3P);
     expect(await chargeModeOff3P.isChecked()).toBeTrue();
+
+    expect(fixture.debugElement.query(By.css('#card-pv span')).nativeElement.textContent).toContain('5.0 kW');
+    expect(fixture.debugElement.query(By.css('#card-grid span')).nativeElement.textContent).toContain('-2.0 kW');
+    expect(fixture.debugElement.query(By.css('#card-grid mat-icon')).nativeElement.className).toContain('col-green');
+    expect(fixture.debugElement.query(By.css('#card-home span')).nativeElement.textContent).toContain('1.0 kW');
+    expect(fixture.debugElement.query(By.css('#card-car span')).nativeElement.textContent).toContain('2.0 kW');
+
+    expect(fixture.debugElement.query(By.css('#car-max-current')).nativeElement.textContent).toContain('3x 8 A');
   });
 
   it('should refresh data', async () => {

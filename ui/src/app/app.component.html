@@ -6,30 +6,48 @@
     <mat-icon [class.spin]="busy$ | async">autorenew</mat-icon>
   </button>
 </mat-toolbar>
-<mat-card>
-  <mat-card-title>PV</mat-card-title>
-  <mat-card-content>
-    <div class="mat-h1">
-      <mat-icon [inline]="true" class="col-yellow">wb_sunny</mat-icon><span class="aligned-with-icon-relative">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span>
-      <mat-icon [inline]="true" class="ml-1" [class.col-green]="pvControl.meter.power_grid <= 0" [class.col-red]="pvControl.meter.power_grid > 0">power</mat-icon><span class="aligned-with-icon-relative">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span>
-      <mat-icon [inline]="true" class="ml-1" color="primary">home</mat-icon><span class="aligned-with-icon-relative">{{pvControl.meter.power_consumption/1000|number:'1.1-1'}} kW</span>
-    </div>
-  </mat-card-content>
-</mat-card>
-<mat-card>
-  <mat-card-title>Car Charging</mat-card-title>
-  <mat-card-content>
-    <div class="mat-h1">
-      <mat-icon [inline]="true" color="primary">electric_car</mat-icon><span class="aligned-with-icon-relative">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW, {{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+<div class="content">
+  <div gdColumns="1fr 1fr" gdColumns.gt-xs="300px 300px" fxLayoutAlign="center" gdGap="10px">
+    <div>
+      <mat-card id="card-pv" class="mat-elevation-z4">
+        <mat-card-title><mat-icon [inline]="true" class="col-yellow">wb_sunny</mat-icon><span fxFlex="grow" class="text-right">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span></mat-card-title>
+      </mat-card>
     </div>
     <div>
-      <mat-button-toggle-group id="chargeModeToogle" class="mr-1" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">
-        <mat-button-toggle id="chargeModeOFF_1P" [value]="ChargeMode.OFF_1P">Off (1 phase)</mat-button-toggle>
-        <mat-button-toggle id="chargeModeOFF_3P" [value]="ChargeMode.OFF_3P">Off (3 phases)</mat-button-toggle>
-        <mat-button-toggle id="chargeModePV_ONLY" [value]="ChargeMode.PV_ONLY">PV only</mat-button-toggle>
-        <mat-button-toggle id="chargeModePV_ALL" [value]="ChargeMode.PV_ALL">PV all</mat-button-toggle>
-      </mat-button-toggle-group>
-      ChargeMode = {{pvControl.controller.mode}}
+      <mat-card id="card-grid" class="mat-elevation-z4">
+        <mat-card-title><mat-icon [inline]="true" [class.col-green]="pvControl.meter.power_grid <= 0" [class.col-red]="pvControl.meter.power_grid > 0">power</mat-icon><span fxFlex="grow" class="text-right">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span></mat-card-title>
+      </mat-card>
     </div>
-  </mat-card-content>
-</mat-card>
+    <div>
+      <mat-card id="card-home" class="mat-elevation-z4">
+          <mat-card-title><mat-icon [inline]="true" color="primary">home</mat-icon><span fxFlex="grow" class="text-right">{{(pvControl.meter.power_consumption - pvControl.wallbox.power)/1000|number:'1.1-1'}} kW</span></mat-card-title>
+      </mat-card>
+    </div>
+    <div>
+      <mat-card id="card-car" class="mat-elevation-z4">
+          <mat-card-title><mat-icon [inline]="true" color="primary">electric_car</mat-icon><span fxFlex="grow" class="text-right">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span></mat-card-title>
+      </mat-card>
+    </div>
+
+    <div gdColumn="span 2">
+      <mat-card id="card-chargemode" class="mat-elevation-z4">
+        <mat-card-title fxLayoutAlign="space">
+          <mat-icon fxFlex="grow" [inline]="true" color="primary">ev_station</mat-icon>
+          <span class="">Charging</span>
+          <span id="car-max-current" *ngIf="!pvControl.wallbox.allow_charging" fxFlex="grow" class="text-right">Off</span>
+          <span id="car-max-current" *ngIf="pvControl.wallbox.allow_charging" fxFlex="grow" class="text-right">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+        </mat-card-title>
+        <mat-card-content>
+          <div fxLayout="row" fxLayoutAlign="center">
+            <mat-button-toggle-group fxFlex="none" id="chargeModeToogle" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">
+              <mat-button-toggle id="chargeModeOFF_1P" [value]="ChargeMode.OFF_1P" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.OFF_1P">Manual 1P</mat-button-toggle>
+              <mat-button-toggle id="chargeModeOFF_3P" [value]="ChargeMode.OFF_3P" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.OFF_3P">Manual 3P</mat-button-toggle>
+              <mat-button-toggle id="chargeModePV_ONLY" [value]="ChargeMode.PV_ONLY" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.PV_ONLY">PV only</mat-button-toggle>
+              <mat-button-toggle id="chargeModePV_ALL" [value]="ChargeMode.PV_ALL" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.PV_ALL">PV all</mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
