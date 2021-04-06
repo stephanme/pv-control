@@ -4,7 +4,7 @@ import flask
 import flask.views
 from pvcontrol.meter import Meter
 from pvcontrol.wallbox import Wallbox
-from pvcontrol.chargecontroller import ChargeController, ChargeMode
+from pvcontrol.chargecontroller import ChargeController, ChargeMode, PhaseMode
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,21 @@ class PvControlChargeModeView(flask.views.MethodView):
         try:
             mode = ChargeMode(v)
             self._controller.set_desired_mode(mode)
+            return jsonify_no_content()
+        except ValueError:
+            flask.abort(400)
+
+
+# curl -X PUT http://localhost:8080/api/pvcontrol/controller/phase_mode -H 'Content-Type: application/json' --data 'CHARGE_1P'
+class PvControlPhaseModeView(flask.views.MethodView):
+    def __init__(self, controller: ChargeController):
+        self._controller = controller
+
+    def put(self):
+        v = flask.request.json
+        try:
+            mode = PhaseMode(v)
+            self._controller.set_phase_mode(mode)
             return jsonify_no_content()
         except ValueError:
             flask.abort(400)

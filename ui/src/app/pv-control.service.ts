@@ -19,15 +19,21 @@ export interface Wallbox {
 
 export enum ChargeMode {
   INIT = 'INIT',
-  OFF_1P = 'OFF_1P',  // off = controller is off, wallbox may charge via app
-  OFF_3P = 'OFF_3P',
+  MANUAL = 'MANUAL',  // off = controller is off, wallbox may charge via app
   PV_ONLY = 'PV_ONLY',
   PV_ALL = 'PV_ALL',
+}
+
+export enum PhaseMode {
+  AUTO = 'AUTO',
+  CHARGE_1P = 'CHARGE_1P',
+  CHARGE_3P = 'CHARGE_3P',
 }
 
 export interface ChargerController {
   mode: ChargeMode;
   desired_mode: ChargeMode;
+  phase_mode: PhaseMode;
 }
 
 export interface PvControl {
@@ -55,5 +61,10 @@ export class PvControlService {
   public putPvControlDesiredChargeMode(mode: ChargeMode): Observable<void> {
     // Note: explicit json converion otherwise it is sent as plain text -> 400
     return this.http.put<void>('./api/pvcontrol/controller/desired_mode', JSON.stringify(mode), httpOptions);
+  }
+
+  public putPvControlPhaseMode(mode: PhaseMode): Observable<void> {
+    // Note: explicit json converion otherwise it is sent as plain text -> 400
+    return this.http.put<void>('./api/pvcontrol/controller/phase_mode', JSON.stringify(mode), httpOptions);
   }
 }

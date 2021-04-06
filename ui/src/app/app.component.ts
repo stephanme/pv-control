@@ -6,7 +6,7 @@ import { Observable, Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { HttpStatusService } from './http-status.service';
 
-import { ChargeMode, PvControl, PvControlService } from './pv-control.service';
+import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control.service';
 
 @Component({
   selector: 'app-root',
@@ -17,6 +17,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private unsubscribe: Subject<void> = new Subject();
 
   ChargeMode = ChargeMode;
+  PhaseMode = PhaseMode;
 
   busy$ = this.httpStatusService.busy();
   autoRefreshControl = this.fb.control(false);
@@ -37,11 +38,13 @@ export class AppComponent implements OnInit, OnDestroy {
       power: 0,
     },
     controller: {
-      mode: ChargeMode.OFF_3P,
-      desired_mode: ChargeMode.OFF_3P
+      mode: ChargeMode.INIT,
+      desired_mode: ChargeMode.MANUAL,
+      phase_mode: PhaseMode.AUTO,
     }
   };
-  chargeModeControl = this.fb.control(ChargeMode.OFF_3P);
+  chargeModeControl = this.fb.control(ChargeMode.MANUAL);
+  phaseModeControl = this.fb.control(PhaseMode.AUTO);
 
   constructor(
     private fb: FormBuilder, private snackBar: MatSnackBar,
@@ -73,6 +76,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pvControlService.getPvControl().subscribe(pv => {
       this.pvControl = pv;
       this.chargeModeControl.setValue(pv.controller.desired_mode);
+      this.phaseModeControl.setValue(pv.controller.phase_mode);
     },
       () => { }
     );
@@ -81,6 +85,14 @@ export class AppComponent implements OnInit, OnDestroy {
   onChargeModeChange(event: MatButtonToggleChange): void {
     const desiredMode = event.value;
     this.pvControlService.putPvControlDesiredChargeMode(desiredMode).subscribe(
+      () => {},
+      () => {}
+    );
+  }
+
+  onPhaseModeChange(event: MatButtonToggleChange): void {
+    const mode = event.value;
+    this.pvControlService.putPvControlPhaseMode(mode).subscribe(
       () => {},
       () => {}
     );

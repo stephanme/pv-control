@@ -2,7 +2,7 @@ import unittest
 import json
 from pvcontrol.wallbox import SimulatedWallbox, WallboxConfig, WallboxData
 from pvcontrol.meter import TestMeter, MeterData
-from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode
+from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode, PhaseMode
 
 
 class ChargeControllerTest(unittest.TestCase):
@@ -31,41 +31,27 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(16 * 230, ctl._pv_all_1_3_phase_theshold)
         self.assertEqual(16 * 230 - hys, ctl._pv_all_3_1_phase_theshold)
 
-    def test_init_3P(self):
+    def test_init(self):
         self.wallbox.set_phases_in(3)
         self.controller.run()
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.OFF_3P, c.desired_mode)
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
-
-    def test_init_1P(self):
-        self.wallbox.set_phases_in(1)
-        self.controller.run()
-        c = self.controller.get_data()
-        self.assertEqual(ChargeMode.OFF_1P, c.desired_mode)
-        self.assertEqual(ChargeMode.OFF_1P, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(PhaseMode.AUTO, c.phase_mode)
 
     def test_desired_phases_INIT(self):
         ctl = self.controller
-        self.assertEqual(3, ctl._desired_phases(0, 1))
+        self.assertEqual(1, ctl._desired_phases(0, 1))
         self.assertEqual(3, ctl._desired_phases(0, 3))
-        self.assertEqual(3, ctl._desired_phases(5000, 1))
+        self.assertEqual(1, ctl._desired_phases(5000, 1))
         self.assertEqual(3, ctl._desired_phases(5000, 3))
 
-    def test_desired_phases_OFF_1P(self):
+    def test_desired_phases_MANUAL(self):
         ctl = self.controller
-        ctl._data.mode = ChargeMode.OFF_1P
+        ctl._data.mode = ChargeMode.MANUAL
         self.assertEqual(1, ctl._desired_phases(0, 1))
-        self.assertEqual(1, ctl._desired_phases(0, 3))
-        self.assertEqual(1, ctl._desired_phases(5000, 1))
-        self.assertEqual(1, ctl._desired_phases(5000, 3))
-
-    def test_desired_phases_OFF_3P(self):
-        ctl = self.controller
-        ctl._data.mode = ChargeMode.OFF_3P
-        self.assertEqual(3, ctl._desired_phases(0, 1))
         self.assertEqual(3, ctl._desired_phases(0, 3))
-        self.assertEqual(3, ctl._desired_phases(5000, 1))
+        self.assertEqual(1, ctl._desired_phases(5000, 1))
         self.assertEqual(3, ctl._desired_phases(5000, 3))
 
     def test_desired_phases_PV_ONLY(self):
@@ -90,8 +76,28 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(3, ctl._desired_phases(p - 200, 3))
         self.assertEqual(1, ctl._desired_phases(p - 201, 3))
 
+    def test_desired_phases_CHARGE_1P(self):
+        ctl = self.controller
+        ctl._data.phase_mode = PhaseMode.CHARGE_1P
+        for mode in [ChargeMode.MANUAL, ChargeMode.PV_ONLY, ChargeMode.PV_ALL]:
+            ctl._data.mode = mode
+            self.assertEqual(1, ctl._desired_phases(0, 1))
+            self.assertEqual(1, ctl._desired_phases(0, 3))
+            self.assertEqual(1, ctl._desired_phases(5000, 1))
+            self.assertEqual(1, ctl._desired_phases(5000, 3))
 
-class ChargeControllerModeTest(unittest.TestCase):
+    def test_desired_phases_CHARGE_3P(self):
+        ctl = self.controller
+        ctl._data.phase_mode = PhaseMode.CHARGE_3P
+        for mode in [ChargeMode.MANUAL, ChargeMode.PV_ONLY, ChargeMode.PV_ALL]:
+            ctl._data.mode = mode
+            self.assertEqual(3, ctl._desired_phases(0, 1))
+            self.assertEqual(3, ctl._desired_phases(0, 3))
+            self.assertEqual(3, ctl._desired_phases(5000, 1))
+            self.assertEqual(3, ctl._desired_phases(5000, 3))
+
+
+class ChargeControllerManualModeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(self.wallbox)
@@ -100,69 +106,72 @@ class ChargeControllerModeTest(unittest.TestCase):
 
     def test_mode_3P_1P_3P(self):
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(PhaseMode.AUTO, c.phase_mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
 
-        self.controller.set_desired_mode(ChargeMode.OFF_1P)
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         self.controller.run()
-        self.assertEqual(ChargeMode.OFF_1P, c.mode)
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
 
-        self.controller.set_desired_mode(ChargeMode.OFF_3P)
-        self.assertEqual(ChargeMode.OFF_1P, c.mode)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
         self.controller.run()
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
 
     def test_mode_3P_1P_while_charging(self):
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(PhaseMode.AUTO, c.phase_mode)
+        wb = self.wallbox.get_data()
+        self.assertEqual(3, wb.phases_in)
 
         self.wallbox.allow_charging(True)
-        self.controller.set_desired_mode(ChargeMode.OFF_1P)
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         self.controller.run()
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
         wb = self.wallbox.get_data()
+        self.assertEqual(3, wb.phases_in)
         self.assertFalse(wb.allow_charging)
 
         self.controller.run()
         wb = self.wallbox.get_data()
+        self.assertEqual(1, wb.phases_in)
         self.assertEqual(0, wb.phases_out)
-        self.assertEqual(ChargeMode.OFF_1P, c.mode)
 
     def test_mode_1P_3P_while_charging(self):
-        self.controller.set_desired_mode(ChargeMode.OFF_1P)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         self.controller.run()
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.OFF_1P, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        wb = self.wallbox.get_data()
+        self.assertEqual(1, wb.phases_in)
 
         self.wallbox.allow_charging(True)
-        self.controller.set_desired_mode(ChargeMode.OFF_3P)
-        self.assertEqual(ChargeMode.OFF_1P, c.mode)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
         self.controller.run()
-        self.assertEqual(ChargeMode.OFF_1P, c.mode)
         wb = self.wallbox.get_data()
+        self.assertEqual(1, wb.phases_in)
         self.assertFalse(wb.allow_charging)
 
         self.controller.run()
         wb = self.wallbox.get_data()
+        self.assertEqual(3, wb.phases_in)
         self.assertEqual(0, wb.phases_out)
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
 
     def test_mode_3P_PV(self):
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
 
         self.controller.set_desired_mode(ChargeMode.PV_ONLY)
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
         self.controller.run()
         self.assertEqual(ChargeMode.PV_ONLY, c.mode)
 
         self.controller.run()
         self.assertEqual(ChargeMode.PV_ONLY, c.mode)
 
-        self.controller.set_desired_mode(ChargeMode.OFF_3P)
+        self.controller.set_desired_mode(ChargeMode.MANUAL)
         self.controller.run()
-        self.assertEqual(ChargeMode.OFF_3P, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
 
 
 class ChargeControllerPVTest(unittest.TestCase):
@@ -184,8 +193,9 @@ class ChargeControllerPVTest(unittest.TestCase):
                 self.assertEqual(d["expected_m"], m)
                 self.assertEqual(d["expected_wb"], wb)
 
-    def test_charge_control_pv_only(self):
+    def test_charge_control_pv_only_auto(self):
         self.controller.set_desired_mode(ChargeMode.PV_ONLY)
+        self.controller.set_phase_mode(PhaseMode.AUTO)
         data = [
             {
                 "test": "Enable Mode, no PV",
@@ -298,6 +308,139 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "expected_m": MeterData(1000, 0, -1000),
                 "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
+            },
+        ]
+        self.runControllerTest(data)
+
+    def test_charge_control_pv_only_1p(self):
+        self.controller.set_desired_mode(ChargeMode.PV_ONLY)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+        data = [
+            {
+                "test": "Enable Mode, no PV",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(0, 0, 0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False),
+            },
+            {
+                "test": "1.4kW PV, off",
+                "pv": 1400,
+                "home": 0,
+                "expected_m": MeterData(1400, 0, -1400),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False),
+            },
+            {
+                "test": "3kW PV, 1x13A",
+                "pv": 3000,
+                "home": 0,
+                "expected_m": MeterData(3000, 2990, -3000 + 2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+            },
+            {
+                "test": "3kW PV, 1x13A *",
+                "pv": 3000,
+                "home": 0,
+                "expected_m": MeterData(3000, 2990, -3000 + 2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+            },
+            {
+                "test": "4kW PV, 1x16A",
+                "pv": 4000,
+                "home": 0,
+                "expected_m": MeterData(4000, 3680, -4000 + 3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+            },
+            {
+                "test": "5kW PV, 1x16A",
+                "pv": 5000,
+                "home": 0,
+                "expected_m": MeterData(5000, 3680, -5000 + 3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+            },
+            {
+                "test": "10kW PV, 1x16A",
+                "pv": 10000,
+                "home": 0,
+                "expected_m": MeterData(10000, 3680, -10000 + 3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+            },
+            {
+                "test": "1.4kW PV, 1x6A",
+                "pv": 1400,
+                "home": 0,
+                "expected_m": MeterData(1400, 1380, -1400 + 1380),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=6, power=1380),
+            },
+            {
+                "test": "1kW PV, off",
+                "pv": 1000,
+                "home": 0,
+                "expected_m": MeterData(1000, 0, -1000),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
+            },
+        ]
+        self.runControllerTest(data)
+
+    def test_charge_control_pv_only_3P(self):
+        self.controller.set_desired_mode(ChargeMode.PV_ONLY)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        data = [
+            {
+                "test": "Enable Mode, no PV",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(0, 0, 0),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False),
+            },
+            {
+                "test": "1.4kW PV, off",
+                "pv": 1400,
+                "home": 0,
+                "expected_m": MeterData(1400, 0, -1400),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False),
+            },
+            {
+                "test": "4.3kW PV, 3x6A",
+                "pv": 4300,
+                "home": 0,
+                "expected_m": MeterData(4300, 4140, -4300 + 4140),
+                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+            },
+            {
+                "test": "6kW PV, 3x8A",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(6000, 5520, -6000 + 5520),
+                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+            },
+            {
+                "test": "4.3kW PV, 3x6A",
+                "pv": 4300,
+                "home": 0,
+                "expected_m": MeterData(4300, 4140, -4300 + 4140),
+                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+            },
+            {
+                "test": "4kW PV, off",
+                "pv": 4000,
+                "home": 0,
+                "expected_m": MeterData(4000, 0, -4000),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+            },
+            {
+                "test": "1.4kW PV, off",
+                "pv": 1400,
+                "home": 0,
+                "expected_m": MeterData(1400, 0, -1400),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+            },
+            {
+                "test": "1kW PV, off",
+                "pv": 1000,
+                "home": 0,
+                "expected_m": MeterData(1000, 0, -1000),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
         ]
         self.runControllerTest(data)

@@ -14,16 +14,23 @@ logger = logging.getLogger(__name__)
 @enum.unique
 class ChargeMode(str, enum.Enum):
     INIT = "INIT"
-    OFF_1P = "OFF_1P"  # off = controller is off, wallbox may charge via app
-    OFF_3P = "OFF_3P"
+    MANUAL = "MANUAL"  # wallbox may be controlled via app
     PV_ONLY = "PV_ONLY"
     PV_ALL = "PV_ALL"
+
+
+@enum.unique
+class PhaseMode(str, enum.Enum):
+    AUTO = "AUTO"  # PV switches between 1 and 3 phases
+    CHARGE_1P = "CHARGE_1P"
+    CHARGE_3P = "CHARGE_3P"
 
 
 @dataclass
 class ChargeControllerData(BaseData):
     mode: ChargeMode = ChargeMode.INIT
-    desired_mode: ChargeMode = ChargeMode.OFF_3P
+    desired_mode: ChargeMode = ChargeMode.MANUAL
+    phase_mode: PhaseMode = PhaseMode.AUTO
 
 
 @dataclass
@@ -75,6 +82,9 @@ class ChargeController(BaseService):
     def set_desired_mode(self, mode: ChargeMode) -> None:
         self._data.desired_mode = mode
 
+    def set_phase_mode(self, mode: PhaseMode) -> None:
+        self._data.phase_mode = mode
+
     def is_mode_converged(self):
         return self._data.mode == self._data.desired_mode
 
@@ -90,34 +100,19 @@ class ChargeController(BaseService):
             self._convergeMode(wb)
         metrics_pvc_controller_mode.state(self._data.mode)
 
-        if self._data.mode == ChargeMode.PV_ONLY or self._data.mode == ChargeMode.PV_ALL:
-            self._charge_control_pv(m, wb)
+        self._charge_control_pv(m, wb)
 
     def _convergeMode(self, wb: WallboxData) -> None:
         mode = self._data.mode
         desired_mode = self._data.desired_mode
 
-        # initialization
-        if mode == ChargeMode.INIT:
-            # goto Off with current # of phases
-            self._data.mode = ChargeMode.OFF_1P if wb.phases_in == 1 else ChargeMode.OFF_3P
-            self._data.desired_mode = self._data.mode
-            # safe state = no charging (e.g. on reboot while in PV mode)
-            # TODO: means that in OFF_3P a restart aborts manualy triggered charging (e.g. via app or wallbox)
+        if desired_mode == ChargeMode.MANUAL:
+            # switch off any running charging
+            # TODO: means that in mode MANUAL a restart aborts a running charging (e.g. triggered via app or wallbox)
             # See also shutdown procedure in __main__.py
             self._wallbox.allow_charging(False)
+            self._data.mode = desired_mode
             logger.info(f"mode: {mode} -> {self._data.mode}")
-            return
-
-        if desired_mode == ChargeMode.OFF_3P or desired_mode == ChargeMode.OFF_1P:
-            # switch phase relay only if charging is off
-            if wb.phases_out == 0:
-                self._wallbox.set_phases_in(1 if desired_mode == ChargeMode.OFF_1P else 3)
-                self._data.mode = desired_mode
-                logger.info(f"mode: {mode} -> {self._data.mode}")
-            else:
-                # charging off and wait one cylce
-                self._wallbox.allow_charging(False)
         elif desired_mode == ChargeMode.PV_ALL or desired_mode == ChargeMode.PV_ONLY:
             # control loop takes over
             self._data.mode = desired_mode
@@ -126,6 +121,7 @@ class ChargeController(BaseService):
             logger.error(f"Unsupported desired mode: {desired_mode}")
 
     def _charge_control_pv(self, m: MeterData, wb: WallboxData) -> None:
+        mode = self._data.mode
         available_power = -m.power_grid + wb.power
         desired_phases = self._desired_phases(available_power, wb.phases_in)
         if desired_phases != wb.phases_in:
@@ -135,12 +131,11 @@ class ChargeController(BaseService):
             else:
                 # charging off and wait one cylce
                 self._wallbox.allow_charging(False)
-        else:
+        elif mode != ChargeMode.MANUAL:
             phases = wb.phases_out
             if phases == 0:
                 phases = wb.phases_in
 
-            mode = self._data.mode
             if mode == ChargeMode.PV_ONLY:
                 if not wb.allow_charging and available_power < self._pv_only_on:
                     max_current = 0
@@ -156,6 +151,7 @@ class ChargeController(BaseService):
                     if max_current < self._min_supported_current:
                         max_current = self._min_supported_current
             else:
+                # should not happen
                 max_current = 0
 
             if max_current > self._max_supported_current:
@@ -169,34 +165,37 @@ class ChargeController(BaseService):
     def _desired_phases(self, available_power: float, current_phases: int):
         # TODO 2 phase charging
         mode = self._data.mode
-        if mode == ChargeMode.OFF_1P:
+        phase_mode = self._data.phase_mode
+
+        if phase_mode == PhaseMode.CHARGE_1P:
             return 1
-        elif mode == ChargeMode.OFF_3P:
+        elif phase_mode == PhaseMode.CHARGE_3P:
             return 3
-        elif mode == ChargeMode.PV_ONLY:
-            if current_phases == 1:
-                if available_power >= self._pv_only_1_3_phase_theshold:
-                    return 3
+        else:  # AUTO
+            if mode == ChargeMode.PV_ONLY:
+                if current_phases == 1:
+                    if available_power >= self._pv_only_1_3_phase_theshold:
+                        return 3
+                    else:
+                        return 1
                 else:
-                    return 1
-            else:
-                if available_power >= self._pv_only_3_1_phase_theshold:
-                    return 3
+                    if available_power >= self._pv_only_3_1_phase_theshold:
+                        return 3
+                    else:
+                        return 1
+            elif mode == ChargeMode.PV_ALL:
+                if current_phases == 1:
+                    if available_power >= self._pv_all_1_3_phase_theshold:
+                        return 3
+                    else:
+                        return 1
                 else:
-                    return 1
-        elif mode == ChargeMode.PV_ALL:
-            if current_phases == 1:
-                if available_power >= self._pv_all_1_3_phase_theshold:
-                    return 3
-                else:
-                    return 1
-            else:
-                if available_power >= self._pv_all_3_1_phase_theshold:
-                    return 3
-                else:
-                    return 1
-        else:
-            return 3
+                    if available_power >= self._pv_all_3_1_phase_theshold:
+                        return 3
+                    else:
+                        return 1
+            else:  # MANUAL
+                return current_phases
 
 
 class ChargeControllerFactory:
