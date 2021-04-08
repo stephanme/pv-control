@@ -1,6 +1,6 @@
 import unittest
 import json
-from pvcontrol.wallbox import SimulatedWallbox, WallboxConfig, WallboxData
+from pvcontrol.wallbox import CarStatus, SimulatedWallbox, WallboxConfig, WallboxData
 from pvcontrol.meter import TestMeter, MeterData
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode, PhaseMode
 
@@ -185,6 +185,8 @@ class ChargeControllerPVTest(unittest.TestCase):
         for idx, d in enumerate(data):
             with self.subTest(idx=idx, test=d["test"]):
                 self.meter.set_data(d["pv"], d["home"])
+                if "car" in d:
+                    self.wallbox.set_car_status(d["car"])
                 self.controller.run()
                 # re-read meter and wallbox to avoid 1 cycle delay -> makes test data easier
                 # order is important: simulated meter needs wallbox data
@@ -444,6 +446,46 @@ class ChargeControllerPVTest(unittest.TestCase):
             },
         ]
         self.runControllerTest(data)
+
+    def test_charge_control_pv_only_manual_after_finished(self):
+        self.controller.set_desired_mode(ChargeMode.PV_ONLY)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        data = [
+            {
+                "test": "Enable Mode, no PV",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(0, 0, 0),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False),
+            },
+            {
+                "test": "6kW PV, 3x8A",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(6000, 5520, -6000 + 5520),
+                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+            },
+            {
+                "test": "6kW PV, 3x8A",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(6000, 5520, -6000 + 5520),
+                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+            },
+            {
+                "test": "6kW PV, 3x8A",
+                "pv": 6000,
+                "home": 0,
+                "car": CarStatus.ChargingFinished,
+                "expected_m": MeterData(6000, 0, -6000),
+                "expected_wb": WallboxData(
+                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0
+                ),
+            },
+        ]
+        self.runControllerTest(data)
+        self.assertEqual(ChargeMode.MANUAL, self.controller.get_data().desired_mode)
+        self.assertEqual(ChargeMode.MANUAL, self.controller.get_data().mode)
 
     def test_charge_control_pv_all(self):
         self.controller.set_desired_mode(ChargeMode.PV_ALL)

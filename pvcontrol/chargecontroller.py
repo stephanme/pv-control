@@ -6,7 +6,7 @@ import prometheus_client
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.meter import Meter, MeterData
-from pvcontrol.wallbox import Wallbox, WallboxData
+from pvcontrol.wallbox import CarStatus, Wallbox, WallboxData
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +85,6 @@ class ChargeController(BaseService):
     def set_phase_mode(self, mode: PhaseMode) -> None:
         self._data.phase_mode = mode
 
-    def is_mode_converged(self):
-        return self._data.mode == self._data.desired_mode
-
     @metrics_pvc_controller_processing.time()
     def run(self) -> None:
         """ Read charger data from wallbox and calculate set point """
@@ -96,29 +93,34 @@ class ChargeController(BaseService):
         wb = self._wallbox.read_data()
         m = self._meter.read_data()
 
-        if not self.is_mode_converged():
-            self._convergeMode(wb)
+        self._convergeMode(wb)
         metrics_pvc_controller_mode.state(self._data.mode)
 
         self._charge_control_pv(m, wb)
 
     def _convergeMode(self, wb: WallboxData) -> None:
+        # switch to manual when car charging finished
+        # TODO: also for NoVehicle?
+        if wb.car_status == CarStatus.ChargingFinished:
+            self.set_desired_mode(ChargeMode.MANUAL)
+
         mode = self._data.mode
         desired_mode = self._data.desired_mode
 
-        if desired_mode == ChargeMode.MANUAL:
-            # switch off any running charging
-            # TODO: means that in mode MANUAL a restart aborts a running charging (e.g. triggered via app or wallbox)
-            # See also shutdown procedure in __main__.py
-            self._wallbox.allow_charging(False)
-            self._data.mode = desired_mode
-            logger.info(f"mode: {mode} -> {self._data.mode}")
-        elif desired_mode == ChargeMode.PV_ALL or desired_mode == ChargeMode.PV_ONLY:
-            # control loop takes over
-            self._data.mode = desired_mode
-            logger.info(f"mode: {mode} -> {self._data.mode}")
-        else:
-            logger.error(f"Unsupported desired mode: {desired_mode}")
+        if mode != desired_mode:
+            if desired_mode == ChargeMode.MANUAL:
+                # switch off any running charging
+                # TODO: means that in mode MANUAL a restart aborts a running charging (e.g. triggered via app or wallbox)
+                # See also shutdown procedure in __main__.py
+                self._wallbox.allow_charging(False)
+                self._data.mode = desired_mode
+                logger.info(f"mode: {mode} -> {self._data.mode}")
+            elif desired_mode == ChargeMode.PV_ALL or desired_mode == ChargeMode.PV_ONLY:
+                # control loop takes over
+                self._data.mode = desired_mode
+                logger.info(f"mode: {mode} -> {self._data.mode}")
+            else:
+                logger.error(f"Unsupported desired mode: {desired_mode}")
 
     def _charge_control_pv(self, m: MeterData, wb: WallboxData) -> None:
         mode = self._data.mode

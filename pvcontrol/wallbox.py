@@ -1,8 +1,13 @@
+import logging
 from dataclasses import dataclass
 import enum
-from pvcontrol.service import BaseConfig, BaseData, BaseService
+import typing
+import requests
 import prometheus_client
+from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol import relay
+
+logger = logging.getLogger(__name__)
 
 # TODO: more metrics: car status etc
 metrics_pvc_wallbox_power = prometheus_client.Gauge("pvcontrol_wallbox_power_watts", "Wallbox total power")
@@ -60,16 +65,20 @@ class Wallbox(BaseService):
     def read_data(self) -> WallboxData:
         """ Read wallbox data and report metrics. The data is cached. """
         wb = self._read_data()
+        self._set_data(wb)
+        return wb
+
+    def _read_data(self) -> WallboxData:
+        """ Override in sub classes """
+        return self._wallbox_data
+
+    def _set_data(self, wb: WallboxData) -> None:
         self._wallbox_data = wb
         metrics_pvc_wallbox_power.set(wb.power)
         metrics_pvc_wallbox_phases_in.set(wb.phases_in)
         metrics_pvc_wallbox_phases_out.set(wb.phases_out)
         metrics_pvc_wallbox_max_current.set(wb.max_current)
         metrics_pvc_wallbox_allow_charging.set(wb.allow_charging)
-        return wb
-
-    def _read_data(self) -> WallboxData:
-        return self._wallbox_data
 
     # set wallbox registers
 
@@ -97,6 +106,9 @@ class SimulatedWallbox(Wallbox):
             wb.power = 0
         return wb
 
+    def set_car_status(self, status: CarStatus) -> None:
+        self._wallbox_data.car_status = status
+
     def set_phases_in(self, phases: int) -> None:
         self._wallbox_data.phases_in = phases
 
@@ -119,6 +131,61 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
         relay.writeChannel1(phases == 1)
 
 
+@dataclass
+class GoeWallboxConfig(WallboxConfig):
+    url: str = "http://go-echarger.fritz.box"
+    timeout: int = 5  # request timeout
+
+
+class GoeWallbox(Wallbox):
+    def __init__(self, config: GoeWallboxConfig):
+        super().__init__(config)
+        self._status_url = f"{config.url}/status"
+        self._mqtt_url = f"{config.url}/mqtt"
+        self._timeout = config.timeout
+
+    # config with correct type
+    def get_config(self) -> GoeWallboxConfig:
+        return typing.cast(GoeWallboxConfig, super().get_config())
+
+    def set_phases_in(self, phases: int) -> None:
+        # relay ON = 1 phase
+        relay.writeChannel1(phases == 1)
+        logger.debug(f"set phases_in={phases}")
+
+    def set_max_current(self, max_current: int) -> None:
+        if max_current != self._wallbox_data.max_current:
+            res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"})
+            logger.debug(f"set max_current={max_current}: {res.status_code}")
+            wb = GoeWallbox._json_2_wallbox_data(res.json())
+            self._set_data(wb)
+
+    def allow_charging(self, f: bool) -> None:
+        if f != self._wallbox_data.allow_charging:
+            res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"})
+            logger.debug(f"set allow_charging={f}: {res.status_code}")
+            wb = GoeWallbox._json_2_wallbox_data(res.json())
+            self._set_data(wb)
+
+    def _read_data(self) -> WallboxData:
+        # TODO: error handling
+        res = requests.get(self._status_url, timeout=self._timeout)
+        wb = GoeWallbox._json_2_wallbox_data(res.json())
+        return wb
+
+    @classmethod
+    def _json_2_wallbox_data(cls, json) -> WallboxData:
+        car_status = CarStatus(int(json["car"]))
+        max_current = int(json["amp"])
+        allow_charging = json["alw"] == "1"
+        phases = int(json["pha"])
+        phases_in = (phases >> 3) % 2 + (phases >> 4) % 2 + (phases >> 5) % 2
+        phases_out = phases % 2 + (phases >> 1) % 2 + (phases >> 2) % 2  # TODO use current or power data not phases
+        power = int(json["nrg"][11]) * 10
+        wb = WallboxData(car_status, max_current, allow_charging, phases_in, phases_out, power)
+        return wb
+
+
 class WallboxFactory:
     @classmethod
     def newWallbox(cls, type: str, **kwargs) -> Wallbox:
@@ -126,5 +193,7 @@ class WallboxFactory:
             return SimulatedWallbox(WallboxConfig(**kwargs))
         elif type == "SimulatedWallboxWithRelay":
             return SimulatedWallboxWithRelay(WallboxConfig(**kwargs))
+        elif type == "GoeWallbox":
+            return GoeWallbox(GoeWallboxConfig(**kwargs))
         else:
             raise ValueError(f"Bad wallbox type: {type}")
