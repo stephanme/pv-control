@@ -64,7 +64,7 @@ class PvControlConfigDataViewTest(unittest.TestCase):
         self.assertEqual(200, r.status_code)
         self.assertEqual("BaseService", r.json["type"])
         self.assertEqual({}, r.json["config"])
-        self.assertEqual({}, r.json["data"])
+        self.assertEqual({"error": 0}, r.json["data"])
 
 
 class PvControlChargeModeViewTest(unittest.TestCase):

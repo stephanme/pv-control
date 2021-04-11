@@ -49,6 +49,7 @@ class Wallbox(BaseService):
     """ Base class / interface for wallboxes """
 
     def __init__(self, config: WallboxConfig):
+        super().__init__()
         self._wallbox_data = WallboxData()
         self._config = config
 
@@ -149,29 +150,49 @@ class GoeWallbox(Wallbox):
         return typing.cast(GoeWallboxConfig, super().get_config())
 
     def set_phases_in(self, phases: int) -> None:
-        # relay ON = 1 phase
-        relay.writeChannel1(phases == 1)
-        logger.debug(f"set phases_in={phases}")
+        errcnt = self.get_error_counter()
+        phases_out = self._wallbox_data.phases_out
+        if errcnt == 0 and phases_out == 0:
+            # relay ON = 1 phase
+            relay.writeChannel1(phases == 1)
+            logger.debug(f"set phases_in={phases}")
+        else:
+            logger.warn(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
 
     def set_max_current(self, max_current: int) -> None:
         if max_current != self._wallbox_data.max_current:
-            res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"})
-            logger.debug(f"set max_current={max_current}: {res.status_code}")
-            wb = GoeWallbox._json_2_wallbox_data(res.json())
-            self._set_data(wb)
+            try:
+                logger.debug(f"set max_current={max_current}")
+                res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"})
+                wb = GoeWallbox._json_2_wallbox_data(res.json())
+                self._set_data(wb)
+            except Exception as e:
+                logger.error(e)
 
     def allow_charging(self, f: bool) -> None:
         if f != self._wallbox_data.allow_charging:
-            res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"})
-            logger.debug(f"set allow_charging={f}: {res.status_code}")
-            wb = GoeWallbox._json_2_wallbox_data(res.json())
-            self._set_data(wb)
+            try:
+                logger.debug(f"set allow_charging={f}")
+                res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"})
+                wb = GoeWallbox._json_2_wallbox_data(res.json())
+                self._set_data(wb)
+            except Exception as e:
+                logger.error(e)
 
     def _read_data(self) -> WallboxData:
-        # TODO: error handling
-        res = requests.get(self._status_url, timeout=self._timeout)
-        wb = GoeWallbox._json_2_wallbox_data(res.json())
-        return wb
+        try:
+            res = requests.get(self._status_url, timeout=self._timeout)
+            wb = GoeWallbox._json_2_wallbox_data(res.json())
+            self.reset_error_counter()
+            return wb
+        except Exception as e:
+            logger.error(e)
+            errcnt = self.inc_error_counter()
+            if errcnt > 3:
+                return WallboxData(errcnt)
+            else:
+                self._wallbox_data.error = errcnt
+                return self._wallbox_data
 
     @classmethod
     def _json_2_wallbox_data(cls, json) -> WallboxData:
@@ -182,7 +203,7 @@ class GoeWallbox(Wallbox):
         phases_in = (phases >> 3) % 2 + (phases >> 4) % 2 + (phases >> 5) % 2
         phases_out = phases % 2 + (phases >> 1) % 2 + (phases >> 2) % 2  # TODO use current or power data not phases
         power = int(json["nrg"][11]) * 10
-        wb = WallboxData(car_status, max_current, allow_charging, phases_in, phases_out, power)
+        wb = WallboxData(0, car_status, max_current, allow_charging, phases_in, phases_out, power)
         return wb
 
 

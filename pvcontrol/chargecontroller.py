@@ -52,6 +52,7 @@ metrics_pvc_controller_mode = prometheus_client.Enum(
 
 class ChargeController(BaseService):
     def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox):
+        super().__init__()
         self._config = config
         self._meter = meter
         self._wallbox = wallbox

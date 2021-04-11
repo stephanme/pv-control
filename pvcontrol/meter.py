@@ -19,9 +19,9 @@ metrics_pvc_meter_power_consumption_total = prometheus_client.Gauge(
 
 @dataclass
 class MeterData(BaseData):
-    power_pv: float  # power delivered by PV [W]
-    power_consumption: float  # power consumption [W] (including car charing)
-    power_grid: float  # power from/to grid [W], + from grid, - to grid
+    power_pv: float = 0  # power delivered by PV [W]
+    power_consumption: float = 0  # power consumption [W] (including car charing)
+    power_grid: float = 0  # power from/to grid [W], + from grid, - to grid
     # power_consumption = power_pv + power_grid
 
 
@@ -29,7 +29,8 @@ class Meter(BaseService):
     """ Base class / interface for meters """
 
     def __init__(self):
-        self._meter_data = MeterData(0, 0, 0)
+        super().__init__()
+        self._meter_data = MeterData()
 
     def get_data(self) -> MeterData:
         """ Get last cached meter data. """
@@ -91,7 +92,7 @@ class TestMeter(Meter):
         pv = self._pv
         consumption = self._home + power_car
         grid = consumption - pv
-        return MeterData(pv, consumption, grid)
+        return MeterData(0, pv, consumption, grid)
 
     def set_data(self, pv: float, home: float) -> None:
         self._pv = pv
@@ -131,7 +132,12 @@ class KostalMeter(Meter):
             return MeterData(pv, consumption_grid + consumption_pv, grid)
         else:
             logger.error(f"Modbus error: {self._modbusClient.last_error_txt()}")
-            return self._meter_data
+            errcnt = self.inc_error_counter()
+            if errcnt > 3:
+                return MeterData(errcnt)
+            else:
+                self._meter_data.error = errcnt
+                return self._meter_data
 
 
 class MeterFactory:
