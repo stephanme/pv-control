@@ -50,41 +50,32 @@ metrics_pvc_controller_mode = prometheus_client.Enum(
 )
 
 
-class ChargeController(BaseService):
+class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]):
     def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox):
-        super().__init__()
-        self._config = config
+        super().__init__(config)
         self._meter = meter
         self._wallbox = wallbox
-        self._data = ChargeControllerData()
+        self._set_data(ChargeControllerData())
         # config
         self._min_supported_current = wallbox.get_config().min_supported_current
         self._max_supported_current = wallbox.get_config().max_supported_current
-        min_power_1phase = self._min_supported_current * self._config.line_voltage
-        max_power_1phase = self._max_supported_current * self._config.line_voltage
-        min_power_3phases = 3 * self._min_supported_current * self._config.line_voltage
-        self._pv_only_on = min_power_1phase + self._config.power_hysteresis
+        min_power_1phase = self._min_supported_current * config.line_voltage
+        max_power_1phase = self._max_supported_current * config.line_voltage
+        min_power_3phases = 3 * self._min_supported_current * config.line_voltage
+        self._pv_only_on = min_power_1phase + config.power_hysteresis
         self._pv_only_off = min_power_1phase
-        self._pv_only_1_3_phase_theshold = min_power_3phases + self._config.power_hysteresis
+        self._pv_only_1_3_phase_theshold = min_power_3phases + config.power_hysteresis
         self._pv_only_3_1_phase_theshold = min_power_3phases
-        self._pv_all_on = self._config.pv_all_min_power
-        self._pv_all_off = max(self._config.pv_all_min_power - self._config.power_hysteresis, 100)
+        self._pv_all_on = config.pv_all_min_power
+        self._pv_all_off = max(config.pv_all_min_power - config.power_hysteresis, 100)
         self._pv_all_1_3_phase_theshold = max_power_1phase
-        self._pv_all_3_1_phase_theshold = max_power_1phase - self._config.power_hysteresis
-
-    def get_config(self) -> ChargeControllerConfig:
-        """ Get configuration. """
-        return self._config
-
-    def get_data(self) -> ChargeControllerData:
-        """ Get last charge controller data. """
-        return self._data
+        self._pv_all_3_1_phase_theshold = max_power_1phase - config.power_hysteresis
 
     def set_desired_mode(self, mode: ChargeMode) -> None:
-        self._data.desired_mode = mode
+        self.get_data().desired_mode = mode
 
     def set_phase_mode(self, mode: PhaseMode) -> None:
-        self._data.phase_mode = mode
+        self.get_data().phase_mode = mode
 
     @metrics_pvc_controller_processing.time()
     def run(self) -> None:
@@ -95,7 +86,7 @@ class ChargeController(BaseService):
         m = self._meter.read_data()
 
         self._convergeMode(wb)
-        metrics_pvc_controller_mode.state(self._data.mode)
+        metrics_pvc_controller_mode.state(self.get_data().mode)
 
         self._charge_control_pv(m, wb)
 
@@ -105,8 +96,9 @@ class ChargeController(BaseService):
         if wb.car_status == CarStatus.ChargingFinished:
             self.set_desired_mode(ChargeMode.MANUAL)
 
-        mode = self._data.mode
-        desired_mode = self._data.desired_mode
+        data = self.get_data()
+        mode = data.mode
+        desired_mode = data.desired_mode
 
         if mode != desired_mode:
             if desired_mode == ChargeMode.MANUAL:
@@ -114,17 +106,18 @@ class ChargeController(BaseService):
                 # TODO: means that in mode MANUAL a restart aborts a running charging (e.g. triggered via app or wallbox)
                 # See also shutdown procedure in __main__.py
                 self._wallbox.allow_charging(False)
-                self._data.mode = desired_mode
-                logger.info(f"mode: {mode} -> {self._data.mode}")
+                data.mode = desired_mode
+                logger.info(f"mode: {mode} -> {data.mode}")
             elif desired_mode == ChargeMode.PV_ALL or desired_mode == ChargeMode.PV_ONLY:
                 # control loop takes over
-                self._data.mode = desired_mode
-                logger.info(f"mode: {mode} -> {self._data.mode}")
+                data.mode = desired_mode
+                logger.info(f"mode: {mode} -> {data.mode}")
             else:
                 logger.error(f"Unsupported desired mode: {desired_mode}")
 
     def _charge_control_pv(self, m: MeterData, wb: WallboxData) -> None:
-        mode = self._data.mode
+        config = self.get_config()
+        mode = self.get_data().mode
         available_power = -m.power_grid + wb.power
         desired_phases = self._desired_phases(available_power, wb.phases_in)
         if desired_phases != wb.phases_in:
@@ -143,14 +136,14 @@ class ChargeController(BaseService):
                 if not wb.allow_charging and available_power < self._pv_only_on:
                     max_current = 0
                 else:
-                    max_current = math.floor(available_power / self._config.line_voltage / phases + self._config.current_rounding_offset)
+                    max_current = math.floor(available_power / config.line_voltage / phases + config.current_rounding_offset)
                     if max_current < self._min_supported_current:
                         max_current = 0
             elif mode == ChargeMode.PV_ALL:
                 if (not wb.allow_charging and available_power < self._pv_all_on) or available_power < self._pv_all_off:
                     max_current = 0
                 else:
-                    max_current = math.ceil(available_power / self._config.line_voltage / phases - self._config.current_rounding_offset)
+                    max_current = math.ceil(available_power / config.line_voltage / phases - config.current_rounding_offset)
                     if max_current < self._min_supported_current:
                         max_current = self._min_supported_current
             else:
@@ -167,8 +160,8 @@ class ChargeController(BaseService):
 
     def _desired_phases(self, available_power: float, current_phases: int):
         # TODO 2 phase charging
-        mode = self._data.mode
-        phase_mode = self._data.phase_mode
+        mode = self.get_data().mode
+        phase_mode = self.get_data().phase_mode
 
         if phase_mode == PhaseMode.CHARGE_1P:
             return 1

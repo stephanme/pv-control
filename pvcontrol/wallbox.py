@@ -45,23 +45,15 @@ class WallboxData(BaseData):
     # unlocked_by - RFID card id
 
 
-class Wallbox(BaseService):
+C = typing.TypeVar("C", bound=WallboxConfig)  # type of configuration
+
+
+class Wallbox(BaseService[C, WallboxData]):
     """ Base class / interface for wallboxes """
 
-    def __init__(self, config: WallboxConfig):
-        super().__init__()
-        self._wallbox_data = WallboxData()
-        self._config = config
-
-    # config
-    def get_config(self) -> WallboxConfig:
-        return self._config
-
-    # read wallbox data
-
-    def get_data(self) -> WallboxData:
-        """ Get last cached wallbox data. """
-        return self._wallbox_data
+    def __init__(self, config: C):
+        super().__init__(config)
+        self._set_data(WallboxData())
 
     def read_data(self) -> WallboxData:
         """ Read wallbox data and report metrics. The data is cached. """
@@ -71,10 +63,10 @@ class Wallbox(BaseService):
 
     def _read_data(self) -> WallboxData:
         """ Override in sub classes """
-        return self._wallbox_data
+        return self.get_data()
 
     def _set_data(self, wb: WallboxData) -> None:
-        self._wallbox_data = wb
+        super()._set_data(wb)
         metrics_pvc_wallbox_power.set(wb.power)
         metrics_pvc_wallbox_phases_in.set(wb.phases_in)
         metrics_pvc_wallbox_phases_out.set(wb.phases_out)
@@ -93,11 +85,14 @@ class Wallbox(BaseService):
         pass
 
 
-class SimulatedWallbox(Wallbox):
+class SimulatedWallbox(Wallbox[WallboxConfig]):
     """ A wallbox simulation for testing """
 
+    def __init__(self, config: WallboxConfig):
+        super().__init__(config)
+
     def _read_data(self) -> WallboxData:
-        old = self._wallbox_data
+        old = self.get_data()
         wb = WallboxData(**old.__dict__)
         if wb.allow_charging:
             wb.phases_out = wb.phases_in
@@ -108,16 +103,16 @@ class SimulatedWallbox(Wallbox):
         return wb
 
     def set_car_status(self, status: CarStatus) -> None:
-        self._wallbox_data.car_status = status
+        self.get_data().car_status = status
 
     def set_phases_in(self, phases: int) -> None:
-        self._wallbox_data.phases_in = phases
+        self.get_data().phases_in = phases
 
     def set_max_current(self, max_current: int) -> None:
-        self._wallbox_data.max_current = max_current
+        self.get_data().max_current = max_current
 
     def allow_charging(self, f: bool) -> None:
-        self._wallbox_data.allow_charging = f
+        self.get_data().allow_charging = f
 
 
 class SimulatedWallboxWithRelay(SimulatedWallbox):
@@ -138,29 +133,25 @@ class GoeWallboxConfig(WallboxConfig):
     timeout: int = 5  # request timeout
 
 
-class GoeWallbox(Wallbox):
+class GoeWallbox(Wallbox[GoeWallboxConfig]):
     def __init__(self, config: GoeWallboxConfig):
         super().__init__(config)
         self._status_url = f"{config.url}/status"
         self._mqtt_url = f"{config.url}/mqtt"
         self._timeout = config.timeout
 
-    # config with correct type
-    def get_config(self) -> GoeWallboxConfig:
-        return typing.cast(GoeWallboxConfig, super().get_config())
-
     def set_phases_in(self, phases: int) -> None:
         errcnt = self.get_error_counter()
-        phases_out = self._wallbox_data.phases_out
+        phases_out = self.get_data().phases_out
         if errcnt == 0 and phases_out == 0:
             # relay ON = 1 phase
             relay.writeChannel1(phases == 1)
             logger.debug(f"set phases_in={phases}")
         else:
-            logger.warn(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
+            logger.warning(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
 
     def set_max_current(self, max_current: int) -> None:
-        if max_current != self._wallbox_data.max_current:
+        if max_current != self.get_data().max_current:
             try:
                 logger.debug(f"set max_current={max_current}")
                 res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"})
@@ -170,7 +161,7 @@ class GoeWallbox(Wallbox):
                 logger.error(e)
 
     def allow_charging(self, f: bool) -> None:
-        if f != self._wallbox_data.allow_charging:
+        if f != self.get_data().allow_charging:
             try:
                 logger.debug(f"set allow_charging={f}")
                 res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"})
@@ -191,8 +182,7 @@ class GoeWallbox(Wallbox):
             if errcnt > 3:
                 return WallboxData(errcnt)
             else:
-                self._wallbox_data.error = errcnt
-                return self._wallbox_data
+                return self.get_data()
 
     @classmethod
     def _json_2_wallbox_data(cls, json) -> WallboxData:

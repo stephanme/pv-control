@@ -1,8 +1,8 @@
-from pvcontrol.service import BaseService
 import unittest
 import unittest.mock as mock
 import flask
 from pvcontrol import views
+from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.meter import MeterData
 from pvcontrol.wallbox import WallboxData
 from pvcontrol.chargecontroller import ChargeControllerData, ChargeMode, PhaseMode
@@ -20,9 +20,11 @@ class StaticResourcesViewTest(unittest.TestCase):
         r = self.app.get("/")
         self.assertEqual(200, r.status_code)
         self.assertIn("<title>PV Control</title>", str(r.data))
+        r.close()
         r = self.app.get("/index.html")
         self.assertEqual(200, r.status_code)
         self.assertIn("<title>PV Control</title>", str(r.data))
+        r.close()
 
 
 class PvControlViewTest(unittest.TestCase):
@@ -54,9 +56,11 @@ class PvControlConfigDataViewTest(unittest.TestCase):
         app = flask.Flask(__name__)
         app.testing = True
         self.app = app.test_client()
+        service = BaseService(BaseConfig())
+        service._set_data(BaseData())
         app.add_url_rule(
             "/api/pvcontrol/controller",
-            view_func=views.PvControlConfigDataView.as_view("get_wallbox", BaseService()),
+            view_func=views.PvControlConfigDataView.as_view("get_wallbox", service),
         )
 
     def test_pvcontrol_api(self):

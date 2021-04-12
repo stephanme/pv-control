@@ -41,6 +41,6 @@ class GoeWallboxTest(unittest.TestCase):
 
     @patch("pvcontrol.relay.writeChannel1")
     def test_set_phases_in_charging(self, mock_writeChannel1):
-        self.wallbox._wallbox_data.phases_out = 3
+        self.wallbox.get_data().phases_out = 3
         self.wallbox.set_phases_in(1)
         mock_writeChannel1.assert_not_called()

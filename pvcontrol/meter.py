@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import logging
 import math
 import time
+import typing
 import prometheus_client
 from pyModbusTCP.client import ModbusClient
 import pyModbusTCP.utils as modbusUtils
@@ -25,28 +26,27 @@ class MeterData(BaseData):
     # power_consumption = power_pv + power_grid
 
 
-class Meter(BaseService):
+C = typing.TypeVar("C", bound=BaseConfig)  # type of configuration
+
+
+class Meter(BaseService[C, MeterData]):
     """ Base class / interface for meters """
 
-    def __init__(self):
-        super().__init__()
-        self._meter_data = MeterData()
-
-    def get_data(self) -> MeterData:
-        """ Get last cached meter data. """
-        return self._meter_data
+    def __init__(self, config: C):
+        super().__init__(config)
+        self._set_data(MeterData())
 
     def read_data(self) -> MeterData:
         """ Read meter data and report metrics. The data is cached. """
         m = self._read_data()
-        self._meter_data = m
+        self._set_data(m)
         metrics_pvc_meter_power.labels("pv").set(m.power_pv)
         metrics_pvc_meter_power.labels("grid").set(m.power_grid)
         metrics_pvc_meter_power_consumption_total.set(m.power_consumption)
         return m
 
     def _read_data(self) -> MeterData:
-        return self._meter_data
+        return self.get_data()
 
 
 @dataclass
@@ -58,32 +58,32 @@ class SimulatedMeterConfig(BaseConfig):
     consumption_period: float = 5 * 60  # [s]
 
 
-class SimulatedMeter(Meter):
+class SimulatedMeter(Meter[SimulatedMeterConfig]):
     def __init__(self, config: SimulatedMeterConfig, wallbox: Wallbox):
-        super().__init__()
-        self._config = config
+        super().__init__(config)
         self._wallbox = wallbox
 
     # config
     def get_config(self) -> SimulatedMeterConfig:
-        return self._config
+        return typing.cast(SimulatedMeterConfig, super().get_config())
 
     def _read_data(self) -> MeterData:
         t = time.time()
         power_car = self._wallbox.get_data().power
-        pv = math.floor(self._config.pv_max * math.fabs(math.sin(2 * math.pi * t / (self._config.pv_period))))
+        config = self.get_config()
+        pv = math.floor(config.pv_max * math.fabs(math.sin(2 * math.pi * t / (config.pv_period))))
         consumption = (
-            self._config.consumption_baseline
-            + math.floor(self._config.consumption_max * math.fabs(math.sin(2 * math.pi * t / (self._config.consumption_period))))
+            config.consumption_baseline
+            + math.floor(config.consumption_max * math.fabs(math.sin(2 * math.pi * t / (config.consumption_period))))
             + power_car
         )
         grid = consumption - pv
-        return MeterData(pv, consumption, grid)
+        return MeterData(0, pv, consumption, grid)
 
 
-class TestMeter(Meter):
+class TestMeter(Meter[BaseConfig]):
     def __init__(self, wallbox: Wallbox):
-        super().__init__()
+        super().__init__(BaseConfig())
         self._wallbox = wallbox
         self.set_data(0, 0)
 
@@ -106,15 +106,10 @@ class KostalMeterConfig(BaseConfig):
     unit_id: int = 71
 
 
-class KostalMeter(Meter):
+class KostalMeter(Meter[KostalMeterConfig]):
     def __init__(self, config: KostalMeterConfig):
-        super().__init__()
-        self._config = config
-        self._modbusClient = ModbusClient(host=self._config.host, port=self._config.port, unit_id=self._config.unit_id, auto_open=True)
-
-    # config
-    def get_config(self) -> KostalMeterConfig:
-        return self._config
+        super().__init__(config)
+        self._modbusClient = ModbusClient(host=config.host, port=config.port, unit_id=config.unit_id, auto_open=True)
 
     def _read_data(self) -> MeterData:
         # kpc_home_power_consumption_watts (grid=108, pv=116) -> consumption
@@ -129,15 +124,14 @@ class KostalMeter(Meter):
             consumption_grid = modbusUtils.decode_ieee(consumption_l[0])
             consumption_pv = modbusUtils.decode_ieee(consumption_l[4])
             pv = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_pv)[0])
-            return MeterData(pv, consumption_grid + consumption_pv, grid)
+            return MeterData(0, pv, consumption_grid + consumption_pv, grid)
         else:
             logger.error(f"Modbus error: {self._modbusClient.last_error_txt()}")
             errcnt = self.inc_error_counter()
             if errcnt > 3:
                 return MeterData(errcnt)
             else:
-                self._meter_data.error = errcnt
-                return self._meter_data
+                return self.get_data()
 
 
 class MeterFactory:
