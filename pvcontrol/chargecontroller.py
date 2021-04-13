@@ -35,6 +35,7 @@ class ChargeControllerData(BaseData):
 
 @dataclass
 class ChargeControllerConfig(BaseConfig):
+    enable_phase_switching: bool = True  # set to False of phase relay is not in operation
     line_voltage: float = 230  # [V]
     current_rounding_offset: float = 0.1  # [A] offset for max_current rounding
     power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
@@ -59,6 +60,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         # config
         self._min_supported_current = wallbox.get_config().min_supported_current
         self._max_supported_current = wallbox.get_config().max_supported_current
+        self._allow_phase_switching = config.enable_phase_switching
         min_power_1phase = self._min_supported_current * config.line_voltage
         max_power_1phase = self._max_supported_current * config.line_voltage
         min_power_3phases = 3 * self._min_supported_current * config.line_voltage
@@ -88,7 +90,13 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._convergeMode(wb)
         metrics_pvc_controller_mode.state(self.get_data().mode)
 
-        self._charge_control_pv(m, wb)
+        if self._allow_phase_switching:
+            # skip one cycle whe switching phases
+            if not self._converge_phases(m, wb):
+                self._charge_control_pv(m, wb)
+        else:
+            self.set_phase_mode(PhaseMode.CHARGE_1P if wb.phases_in == 1 else PhaseMode.CHARGE_3P)
+            self._charge_control_pv(m, wb)
 
     def _convergeMode(self, wb: WallboxData) -> None:
         # switch to manual when car charging finished
@@ -114,6 +122,56 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                 logger.info(f"mode: {mode} -> {data.mode}")
             else:
                 logger.error(f"Unsupported desired mode: {desired_mode}")
+
+    # TODO: prevent too fast switching, use energy to grid and time instead of power
+    def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
+        available_power = -m.power_grid + wb.power
+        desired_phases = self._desired_phases(available_power, wb.phases_in)
+        if desired_phases != wb.phases_in:
+            # switch phase relay only if charging is off
+            if wb.phases_out == 0:
+                self._wallbox.set_phases_in(desired_phases)
+            else:
+                # charging off and wait one cylce
+                self._wallbox.allow_charging(False)
+            return True
+        else:
+            return False
+
+    def _desired_phases(self, available_power: float, current_phases: int):
+        # TODO 2 phase charging
+        mode = self.get_data().mode
+        phase_mode = self.get_data().phase_mode
+
+        if phase_mode == PhaseMode.CHARGE_1P:
+            return 1
+        elif phase_mode == PhaseMode.CHARGE_3P:
+            return 3
+        else:  # AUTO
+            if mode == ChargeMode.PV_ONLY:
+                if current_phases == 1:
+                    if available_power >= self._pv_only_1_3_phase_theshold:
+                        return 3
+                    else:
+                        return 1
+                else:
+                    if available_power >= self._pv_only_3_1_phase_theshold:
+                        return 3
+                    else:
+                        return 1
+            elif mode == ChargeMode.PV_ALL:
+                if current_phases == 1:
+                    if available_power >= self._pv_all_1_3_phase_theshold:
+                        return 3
+                    else:
+                        return 1
+                else:
+                    if available_power >= self._pv_all_3_1_phase_theshold:
+                        return 3
+                    else:
+                        return 1
+            else:  # MANUAL
+                return current_phases
 
     def _charge_control_pv(self, m: MeterData, wb: WallboxData) -> None:
         config = self.get_config()
@@ -157,41 +215,6 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                 self._wallbox.allow_charging(True)
             else:
                 self._wallbox.allow_charging(False)
-
-    def _desired_phases(self, available_power: float, current_phases: int):
-        # TODO 2 phase charging
-        mode = self.get_data().mode
-        phase_mode = self.get_data().phase_mode
-
-        if phase_mode == PhaseMode.CHARGE_1P:
-            return 1
-        elif phase_mode == PhaseMode.CHARGE_3P:
-            return 3
-        else:  # AUTO
-            if mode == ChargeMode.PV_ONLY:
-                if current_phases == 1:
-                    if available_power >= self._pv_only_1_3_phase_theshold:
-                        return 3
-                    else:
-                        return 1
-                else:
-                    if available_power >= self._pv_only_3_1_phase_theshold:
-                        return 3
-                    else:
-                        return 1
-            elif mode == ChargeMode.PV_ALL:
-                if current_phases == 1:
-                    if available_power >= self._pv_all_1_3_phase_theshold:
-                        return 3
-                    else:
-                        return 1
-                else:
-                    if available_power >= self._pv_all_3_1_phase_theshold:
-                        return 3
-                    else:
-                        return 1
-            else:  # MANUAL
-                return current_phases
 
 
 class ChargeControllerFactory:

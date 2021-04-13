@@ -106,6 +106,40 @@ class ChargeControllerTest(unittest.TestCase):
             self.assertEqual(3, ctl._desired_phases(5000, 3))
 
 
+class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.wallbox = SimulatedWallbox(WallboxConfig())
+        self.meter = TestMeter(self.wallbox)
+        self.controller = ChargeController(ChargeControllerConfig(enable_phase_switching=False), self.meter, self.wallbox)
+
+    def test_3P(self):
+        self.controller.run()  # init
+
+        c = self.controller.get_data()
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(PhaseMode.CHARGE_3P, c.phase_mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
+
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+        self.controller.run()
+        self.assertEqual(PhaseMode.CHARGE_3P, c.phase_mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
+
+    def test_1P(self):
+        self.wallbox.set_phases_in(1)
+        self.controller.run()  # init
+        c = self.controller.get_data()
+
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(PhaseMode.CHARGE_1P, c.phase_mode)
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
+
+        self.controller.set_phase_mode(PhaseMode.AUTO)
+        self.controller.run()
+        self.assertEqual(PhaseMode.CHARGE_1P, c.phase_mode)
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
+
+
 class ChargeControllerManualModeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.wallbox = SimulatedWallbox(WallboxConfig())
