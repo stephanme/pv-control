@@ -32,7 +32,7 @@ describe('PvControlServiceService', () => {
         power: 2000,
       },
       controller: {
-        mode: ChargeMode.INIT,
+        mode: ChargeMode.OFF,
         desired_mode: ChargeMode.PV_ONLY,
         phase_mode: PhaseMode.AUTO,
       }

@@ -41,15 +41,19 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(16 * 230 - hys, ctl._pv_all_3_1_phase_theshold)
 
     def test_init(self):
+        c = self.controller.get_data()
+        self.assertEqual(ChargeMode.OFF, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+        self.assertEqual(PhaseMode.AUTO, c.phase_mode)
         self.wallbox.set_phases_in(3)
         self.controller.run()
-        c = self.controller.get_data()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
 
-    def test_desired_phases_INIT(self):
+    def test_desired_phases_OFF(self):
         ctl = self.controller
+        ctl.set_desired_mode(ChargeMode.OFF)
         self.assertEqual(1, ctl._desired_phases(0, 1))
         self.assertEqual(3, ctl._desired_phases(0, 3))
         self.assertEqual(1, ctl._desired_phases(5000, 1))
@@ -57,15 +61,23 @@ class ChargeControllerTest(unittest.TestCase):
 
     def test_desired_phases_MANUAL(self):
         ctl = self.controller
-        ctl.get_data().mode = ChargeMode.MANUAL
+        ctl.set_desired_mode(ChargeMode.MANUAL)
         self.assertEqual(1, ctl._desired_phases(0, 1))
         self.assertEqual(3, ctl._desired_phases(0, 3))
         self.assertEqual(1, ctl._desired_phases(5000, 1))
         self.assertEqual(3, ctl._desired_phases(5000, 3))
 
+    def test_desired_phases_FULL_POWER(self):
+        ctl = self.controller
+        ctl.set_desired_mode(ChargeMode.MAX)
+        self.assertEqual(3, ctl._desired_phases(0, 1))
+        self.assertEqual(3, ctl._desired_phases(0, 3))
+        self.assertEqual(3, ctl._desired_phases(5000, 1))
+        self.assertEqual(3, ctl._desired_phases(5000, 3))
+
     def test_desired_phases_PV_ONLY(self):
         ctl = self.controller
-        ctl.get_data().mode = ChargeMode.PV_ONLY
+        ctl.set_desired_mode(ChargeMode.PV_ONLY)
         p = 3 * 6 * 230
         self.assertEqual(1, ctl._desired_phases(0, 1))
         self.assertEqual(1, ctl._desired_phases(p, 1))
@@ -76,7 +88,7 @@ class ChargeControllerTest(unittest.TestCase):
 
     def test_desired_phases_PV_ALL(self):
         ctl = self.controller
-        ctl.get_data().mode = ChargeMode.PV_ALL
+        ctl.set_desired_mode(ChargeMode.PV_ALL)
         p = 16 * 230
         self.assertEqual(1, ctl._desired_phases(0, 1))
         self.assertEqual(1, ctl._desired_phases(p - 1, 1))
@@ -87,9 +99,9 @@ class ChargeControllerTest(unittest.TestCase):
 
     def test_desired_phases_CHARGE_1P(self):
         ctl = self.controller
-        ctl.get_data().phase_mode = PhaseMode.CHARGE_1P
-        for mode in [ChargeMode.MANUAL, ChargeMode.PV_ONLY, ChargeMode.PV_ALL]:
-            ctl.get_data().mode = mode
+        ctl.set_phase_mode(PhaseMode.CHARGE_1P)
+        for mode in ChargeMode:
+            ctl.set_desired_mode(mode)
             self.assertEqual(1, ctl._desired_phases(0, 1))
             self.assertEqual(1, ctl._desired_phases(0, 3))
             self.assertEqual(1, ctl._desired_phases(5000, 1))
@@ -97,9 +109,9 @@ class ChargeControllerTest(unittest.TestCase):
 
     def test_desired_phases_CHARGE_3P(self):
         ctl = self.controller
-        ctl.get_data().phase_mode = PhaseMode.CHARGE_3P
-        for mode in [ChargeMode.MANUAL, ChargeMode.PV_ONLY, ChargeMode.PV_ALL]:
-            ctl.get_data().mode = mode
+        ctl.set_phase_mode(PhaseMode.CHARGE_3P)
+        for mode in ChargeMode:
+            ctl.set_desired_mode(mode)
             self.assertEqual(3, ctl._desired_phases(0, 1))
             self.assertEqual(3, ctl._desired_phases(0, 3))
             self.assertEqual(3, ctl._desired_phases(5000, 1))
@@ -116,7 +128,7 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
         self.controller.run()  # init
 
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.CHARGE_3P, c.phase_mode)
         self.assertEqual(3, self.wallbox.get_data().phases_in)
 
@@ -130,7 +142,7 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
         self.controller.run()  # init
         c = self.controller.get_data()
 
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.CHARGE_1P, c.phase_mode)
         self.assertEqual(1, self.wallbox.get_data().phases_in)
 
@@ -147,9 +159,52 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.controller = ChargeController(ChargeControllerConfig(), self.meter, self.wallbox)
         self.controller.run()  # init
 
+    def test_mode_FULL_POWER(self):
+        c = self.controller.get_data()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+        self.assertEqual(PhaseMode.AUTO, c.phase_mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
+
+        self.controller.set_desired_mode(ChargeMode.MAX)
+        self.controller.run()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.MAX, c.mode)
+
+        self.controller.run()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.MAX, c.mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_out)
+
+    def test_mode_MANUAL_OFF(self):
+        c = self.controller.get_data()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+        self.assertEqual(PhaseMode.AUTO, c.phase_mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
+        self.assertEqual(0, self.wallbox.get_data().phases_out)
+
+        self.wallbox.allow_charging(True)
+        self.wallbox.set_max_current(10)
+        self.controller.run()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_out)
+
+        self.controller.set_desired_mode(ChargeMode.OFF)
+        self.controller.run()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+
+        self.controller.run()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+        self.assertEqual(0, self.wallbox.get_data().phases_out)
+
     def test_mode_3P_1P_3P(self):
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
         self.assertEqual(3, self.wallbox.get_data().phases_in)
 
@@ -163,7 +218,8 @@ class ChargeControllerManualModeTest(unittest.TestCase):
 
     def test_mode_3P_1P_while_charging(self):
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
         wb = self.wallbox.get_data()
         self.assertEqual(3, wb.phases_in)
@@ -179,12 +235,14 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         wb = self.wallbox.get_data()
         self.assertEqual(1, wb.phases_in)
         self.assertEqual(0, wb.phases_out)
+        self.assertEqual(ChargeMode.OFF, c.mode)
 
     def test_mode_1P_3P_while_charging(self):
         self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         self.controller.run()
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
         wb = self.wallbox.get_data()
         self.assertEqual(1, wb.phases_in)
 
@@ -201,20 +259,24 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.assertEqual(0, wb.phases_out)
 
     def test_mode_3P_PV(self):
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
         c = self.controller.get_data()
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
 
         self.controller.set_desired_mode(ChargeMode.PV_ONLY)
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
         self.controller.run()
         self.assertEqual(ChargeMode.PV_ONLY, c.mode)
+        self.assertEqual(ChargeMode.PV_ONLY, c.desired_mode)
 
         self.controller.run()
         self.assertEqual(ChargeMode.PV_ONLY, c.mode)
 
         self.controller.set_desired_mode(ChargeMode.MANUAL)
         self.controller.run()
-        self.assertEqual(ChargeMode.MANUAL, c.mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
 
 
 class ChargeControllerPVTest(unittest.TestCase):
@@ -528,7 +590,7 @@ class ChargeControllerPVTest(unittest.TestCase):
         ]
         self.runControllerTest(data)
         self.assertEqual(ChargeMode.MANUAL, self.controller.get_data().desired_mode)
-        self.assertEqual(ChargeMode.MANUAL, self.controller.get_data().mode)
+        self.assertEqual(ChargeMode.OFF, self.controller.get_data().mode)
 
     def test_charge_control_pv_all(self):
         self.controller.set_desired_mode(ChargeMode.PV_ALL)

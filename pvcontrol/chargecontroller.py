@@ -13,10 +13,26 @@ logger = logging.getLogger(__name__)
 
 @enum.unique
 class ChargeMode(str, enum.Enum):
-    INIT = "INIT"
-    MANUAL = "MANUAL"  # wallbox may be controlled via app
+    """
+    Charge mode
+
+    OFF, MAX and MANUAL
+    Charge controller just switches into this mode but otherwise doesn't interfere.
+    Desired mode is adapted if e.g. the current is changed by go-e app or on the box or if charging finished.
+
+    PV_ONLY
+    Charge controller tries to use only PV for charging. Grid current is avoided even if this means
+    switch of charging.
+
+    PV_ALL
+    Charge controller tries to use all available PV for charging. Grid current is used to fill up so that all PV can be used.
+    """
+
+    OFF = "OFF"
     PV_ONLY = "PV_ONLY"
     PV_ALL = "PV_ALL"
+    MAX = "MAX"  # 1/3x16A
+    MANUAL = "MANUAL"  # wallbox may be controlled via app
 
 
 @enum.unique
@@ -28,8 +44,8 @@ class PhaseMode(str, enum.Enum):
 
 @dataclass
 class ChargeControllerData(BaseData):
-    mode: ChargeMode = ChargeMode.INIT
-    desired_mode: ChargeMode = ChargeMode.MANUAL
+    mode: ChargeMode = ChargeMode.OFF
+    desired_mode: ChargeMode = ChargeMode.OFF
     phase_mode: PhaseMode = PhaseMode.AUTO
 
 
@@ -74,6 +90,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._pv_all_3_1_phase_theshold = max_power_1phase - config.power_hysteresis
 
     def set_desired_mode(self, mode: ChargeMode) -> None:
+        logger.info(f"set_desired_mode: {self.get_data().desired_mode} -> {mode}")
         self.get_data().desired_mode = mode
 
     def set_phase_mode(self, mode: PhaseMode) -> None:
@@ -87,60 +104,45 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         wb = self._wallbox.read_data()
         m = self._meter.read_data()
 
-        self._convergeMode(wb)
+        self._control_charge_mode(wb)
+        # skip one cycle whe switching phases
+        if not self._converge_phases(m, wb):
+            self._control_charging(m, wb)
+
+        # metrics
         metrics_pvc_controller_mode.state(self.get_data().mode)
 
-        if self._allow_phase_switching:
-            # skip one cycle whe switching phases
-            if not self._converge_phases(m, wb):
-                self._charge_control_pv(m, wb)
-        else:
-            self.set_phase_mode(PhaseMode.CHARGE_1P if wb.phases_in == 1 else PhaseMode.CHARGE_3P)
-            self._charge_control_pv(m, wb)
-
-    def _convergeMode(self, wb: WallboxData) -> None:
-        # switch to manual when car charging finished
+    # TODO rename
+    def _control_charge_mode(self, wb: WallboxData) -> None:
+        # switch to OFF when car charging finished
         # TODO: also for NoVehicle?
         if wb.car_status == CarStatus.ChargingFinished:
-            self.set_desired_mode(ChargeMode.MANUAL)
-
-        data = self.get_data()
-        mode = data.mode
-        desired_mode = data.desired_mode
-
-        if mode != desired_mode:
-            if desired_mode == ChargeMode.MANUAL:
-                # switch off any running charging
-                # TODO: means that in mode MANUAL a restart aborts a running charging (e.g. triggered via app or wallbox)
-                # See also shutdown procedure in __main__.py
-                self._wallbox.allow_charging(False)
-                data.mode = desired_mode
-                logger.info(f"mode: {mode} -> {data.mode}")
-            elif desired_mode == ChargeMode.PV_ALL or desired_mode == ChargeMode.PV_ONLY:
-                # control loop takes over
-                data.mode = desired_mode
-                logger.info(f"mode: {mode} -> {data.mode}")
-            else:
-                logger.error(f"Unsupported desired mode: {desired_mode}")
+            self.set_desired_mode(ChargeMode.OFF)
+        # TODO: enable charging when RFID is recognized
+        # !!! RFID sets allow_charging (but a phase switching may be needed)
 
     # TODO: prevent too fast switching, use energy to grid and time instead of power
     def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
-        available_power = -m.power_grid + wb.power
-        desired_phases = self._desired_phases(available_power, wb.phases_in)
-        if desired_phases != wb.phases_in:
-            # switch phase relay only if charging is off
-            if wb.phases_out == 0:
-                self._wallbox.set_phases_in(desired_phases)
+        if self._allow_phase_switching:
+            available_power = -m.power_grid + wb.power
+            desired_phases = self._desired_phases(available_power, wb.phases_in)
+            if desired_phases != wb.phases_in:
+                # switch phase relay only if charging is off
+                if wb.phases_out == 0:
+                    self._wallbox.set_phases_in(desired_phases)
+                else:
+                    # charging off and wait one cylce
+                    self._wallbox.allow_charging(False)
+                return True
             else:
-                # charging off and wait one cylce
-                self._wallbox.allow_charging(False)
-            return True
+                return False
         else:
+            self.set_phase_mode(PhaseMode.CHARGE_1P if wb.phases_in == 1 else PhaseMode.CHARGE_3P)
             return False
 
     def _desired_phases(self, available_power: float, current_phases: int):
         # TODO 2 phase charging
-        mode = self.get_data().mode
+        mode = self.get_data().desired_mode
         phase_mode = self.get_data().phase_mode
 
         if phase_mode == PhaseMode.CHARGE_1P:
@@ -170,25 +172,32 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                         return 3
                     else:
                         return 1
-            else:  # MANUAL
+            elif mode == ChargeMode.MAX:
+                return 3
+            else:  # OFF, MANUAL
                 return current_phases
 
-    def _charge_control_pv(self, m: MeterData, wb: WallboxData) -> None:
-        config = self.get_config()
-        mode = self.get_data().mode
-        available_power = -m.power_grid + wb.power
-        desired_phases = self._desired_phases(available_power, wb.phases_in)
-        if desired_phases != wb.phases_in:
-            # switch phase relay only if charging is off
-            if wb.phases_out == 0:
-                self._wallbox.set_phases_in(desired_phases)
-            else:
-                # charging off and wait one cylce
-                self._wallbox.allow_charging(False)
-        elif mode != ChargeMode.MANUAL:
+    def _control_charging(self, m: MeterData, wb: WallboxData) -> None:
+        mode = self.get_data().desired_mode
+        if mode == ChargeMode.OFF:
+            self._wallbox.allow_charging(False)
+            self.set_desired_mode(ChargeMode.MANUAL)
+        elif mode == ChargeMode.MAX:
+            self._wallbox.set_max_current(self._max_supported_current)
+            self._wallbox.allow_charging(True)
+            self.set_desired_mode(ChargeMode.MANUAL)
+        elif mode == ChargeMode.MANUAL:
+            # calc effective (manual) mode for UI
+            if not wb.allow_charging:
+                mode = ChargeMode.OFF
+            elif wb.max_current == self._max_supported_current:
+                mode = ChargeMode.MAX
+        else:
             phases = wb.phases_out
             if phases == 0:
                 phases = wb.phases_in
+            available_power = -m.power_grid + wb.power
+            config = self.get_config()
 
             if mode == ChargeMode.PV_ONLY:
                 if not wb.allow_charging and available_power < self._pv_only_on:
@@ -206,6 +215,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                         max_current = self._min_supported_current
             else:
                 # should not happen
+                logger.warning(f"Unexpected/unhandled charge mode: {mode}")
                 max_current = 0
 
             if max_current > self._max_supported_current:
@@ -215,6 +225,8 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                 self._wallbox.allow_charging(True)
             else:
                 self._wallbox.allow_charging(False)
+
+        self.get_data().mode = mode
 
 
 class ChargeControllerFactory:

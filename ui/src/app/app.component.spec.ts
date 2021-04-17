@@ -33,8 +33,9 @@ describe('AppComponent', () => {
   let component: AppComponent;
   let fixture: ComponentFixture<AppComponent>;
   let pvControlData: PvControl;
-  let chargeModeManual: MatButtonToggleHarness;
+  let chargeModeOff: MatButtonToggleHarness;
   let chargeModePvOnly: MatButtonToggleHarness;
+  let chargeModeMax: MatButtonToggleHarness;
   let phaseModeAuto: MatButtonToggleHarness;
   let phaseModeCharge1P: MatButtonToggleHarness;
   let refreshButton: MatButtonHarness;
@@ -87,13 +88,14 @@ describe('AppComponent', () => {
         power: 2000,
       },
       controller: {
-        mode: ChargeMode.MANUAL,
-        desired_mode: ChargeMode.MANUAL,
+        mode: ChargeMode.OFF,
+        desired_mode: ChargeMode.OFF,
         phase_mode: PhaseMode.AUTO,
       }
     };
 
-    chargeModeManual = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeMANUAL' }));
+    chargeModeOff = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeOFF' }));
+    chargeModeMax = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeMAX' }));
     chargeModePvOnly = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModePV_ONLY' }));
     phaseModeAuto = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeAUTO' }));
     phaseModeCharge1P = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeCHARGE_1P' }));
@@ -108,8 +110,8 @@ describe('AppComponent', () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
     expect(component.pvControl).toEqual(pvControlData);
-    expect(component.chargeModeControl.value).toBe(ChargeMode.MANUAL);
-    expect(await chargeModeManual.isChecked()).toBeTrue();
+    expect(component.chargeModeControl.value).toBe(ChargeMode.OFF);
+    expect(await chargeModeOff.isChecked()).toBeTrue();
     expect(component.phaseModeControl.value).toBe(PhaseMode.AUTO);
     expect(await phaseModeAuto.isChecked()).toBeTrue();
 
@@ -130,7 +132,7 @@ describe('AppComponent', () => {
 
     expect(refreshIcon.className).not.toContain('spin');
     expect(component.pvControl).toEqual(pvControlData);
-    expect(component.chargeModeControl.value).toBe(ChargeMode.MANUAL);
+    expect(component.chargeModeControl.value).toBe(ChargeMode.OFF);
 
     pvControlData.controller.mode = ChargeMode.PV_ONLY;
     pvControlData.controller.desired_mode = ChargeMode.PV_ONLY;
@@ -174,7 +176,24 @@ describe('AppComponent', () => {
     req.flush(null);
 
     expect(await chargeModePvOnly.isChecked()).toBeTrue();
-    expect(await chargeModeManual.isChecked()).toBeFalse();
+    expect(await chargeModeOff.isChecked()).toBeFalse();
+  });
+
+  it('should show Off in MANUAL mode', async () => {
+    pvControlData.controller.desired_mode = ChargeMode.MANUAL;
+    httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
+
+    expect(component.pvControl).toEqual(pvControlData);
+    expect(await chargeModeOff.isChecked()).toBeTrue();
+  });
+
+  it('should show Max in MANUAL mode', async () => {
+    pvControlData.controller.desired_mode = ChargeMode.MANUAL;
+    pvControlData.controller.mode = ChargeMode.MAX;
+    httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
+
+    expect(component.pvControl).toEqual(pvControlData);
+    expect(await chargeModeMax.isChecked()).toBeTrue();
   });
 
   it('should allow to switch to "1 phase" charging', async () => {

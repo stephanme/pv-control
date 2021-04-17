@@ -18,10 +18,11 @@ export interface Wallbox {
 }
 
 export enum ChargeMode {
-  INIT = 'INIT',
-  MANUAL = 'MANUAL',  // off = controller is off, wallbox may charge via app
+  OFF = 'OFF',
   PV_ONLY = 'PV_ONLY',
   PV_ALL = 'PV_ALL',
+  MAX = 'MAX',
+  MANUAL = 'MANUAL',
 }
 
 export enum PhaseMode {

@@ -38,22 +38,20 @@
           <span id="car-max-current" *ngIf="pvControl.wallbox.allow_charging" fxFlex="grow" class="text-right">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
         </mat-card-title>
         <mat-card-content>
-          <div fxLayout="row" fxLayoutAlign="center">
-            <mat-button-toggle-group fxFlex="none" id="chargeModeToogle" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">
-              <mat-button-toggle id="chargeModeMANUAL" [value]="ChargeMode.MANUAL" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.MANUAL">Manual</mat-button-toggle>
-              <mat-button-toggle id="chargeModePV_ONLY" [value]="ChargeMode.PV_ONLY" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.PV_ONLY">PV only</mat-button-toggle>
-              <mat-button-toggle id="chargeModePV_ALL" [value]="ChargeMode.PV_ALL" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.PV_ALL">PV all</mat-button-toggle>
-            </mat-button-toggle-group>
-          </div>
+          <mat-button-toggle-group id="chargeModeToogle" fxLayout="row" fxLayoutAlign="center" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">
+            <mat-button-toggle id="chargeModeOFF" fxFlex="grow" [value]="ChargeMode.OFF" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.OFF">Off</mat-button-toggle>
+            <mat-button-toggle id="chargeModePV_ONLY" fxFlex="grow" [value]="ChargeMode.PV_ONLY" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.PV_ONLY">PV only</mat-button-toggle>
+            <mat-button-toggle id="chargeModePV_ALL" fxFlex="grow" [value]="ChargeMode.PV_ALL" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.PV_ALL">PV all</mat-button-toggle>
+            <mat-button-toggle id="chargeModeMAX" fxFlex="grow" [value]="ChargeMode.MAX" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.MAX">Max</mat-button-toggle>
+            <mat-button-toggle id="chargeModeMANUAL" fxFlex="grow" [value]="ChargeMode.MANUAL" [class.mat-body-strong]="pvControl.controller.mode==ChargeMode.MANUAL">Manual</mat-button-toggle>
+          </mat-button-toggle-group>
         </mat-card-content>
         <mat-card-content>
-          <div fxLayout="row" fxLayoutAlign="center">
-            <mat-button-toggle-group fxFlex="none" id="phaseModeToogle" [formControl]="phaseModeControl" (change)="onPhaseModeChange($event)" aria-label="Phase Mode">
-              <mat-button-toggle id="phaseModeAUTO" [value]="PhaseMode.AUTO">Auto</mat-button-toggle>
-              <mat-button-toggle id="phaseModeCHARGE_1P" [value]="PhaseMode.CHARGE_1P" [class.mat-body-strong]="pvControl.wallbox.phases_in==1">1 Phase</mat-button-toggle>
-              <mat-button-toggle id="phaseModeCHARGE_3P" [value]="PhaseMode.CHARGE_3P" [class.mat-body-strong]="pvControl.wallbox.phases_in==3">3 Phases</mat-button-toggle>
-            </mat-button-toggle-group>
-          </div>
+          <mat-button-toggle-group fxLayout="row" fxLayoutAlign="center" id="phaseModeToogle" [formControl]="phaseModeControl" (change)="onPhaseModeChange($event)" aria-label="Phase Mode">
+            <mat-button-toggle id="phaseModeAUTO" fxFlex="grow" [value]="PhaseMode.AUTO">Auto</mat-button-toggle>
+            <mat-button-toggle id="phaseModeCHARGE_1P" fxFlex="grow" [value]="PhaseMode.CHARGE_1P" [class.mat-body-strong]="pvControl.wallbox.phases_in==1">1 Phase</mat-button-toggle>
+            <mat-button-toggle id="phaseModeCHARGE_3P" fxFlex="grow" [value]="PhaseMode.CHARGE_3P" [class.mat-body-strong]="pvControl.wallbox.phases_in==3">3 Phases</mat-button-toggle>
+          </mat-button-toggle-group>
         </mat-card-content>
       </mat-card>
     </div>

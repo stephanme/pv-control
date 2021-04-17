@@ -38,12 +38,12 @@ export class AppComponent implements OnInit, OnDestroy {
       power: 0,
     },
     controller: {
-      mode: ChargeMode.INIT,
-      desired_mode: ChargeMode.MANUAL,
+      mode: ChargeMode.OFF,
+      desired_mode: ChargeMode.OFF,
       phase_mode: PhaseMode.AUTO,
     }
   };
-  chargeModeControl = this.fb.control(ChargeMode.MANUAL);
+  chargeModeControl = this.fb.control(ChargeMode.OFF);
   phaseModeControl = this.fb.control(PhaseMode.AUTO);
 
   constructor(
@@ -75,7 +75,12 @@ export class AppComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.pvControlService.getPvControl().subscribe(pv => {
       this.pvControl = pv;
-      this.chargeModeControl.setValue(pv.controller.desired_mode);
+      // map desired_mode==MANUAL to current mode -> show real status if e.g. somebody changes current via app/WB
+      let mode = pv.controller.desired_mode;
+      if (mode === ChargeMode.MANUAL) {
+        mode = pv.controller.mode;
+      }
+      this.chargeModeControl.setValue(mode);
       this.phaseModeControl.setValue(pv.controller.phase_mode);
     },
       () => { }
