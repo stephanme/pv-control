@@ -40,7 +40,7 @@ wallbox = WallboxFactory.newWallbox(args.wallbox, **config["wallbox"])
 meter = MeterFactory.newMeter(args.meter, wallbox, **config["meter"])
 controller = ChargeControllerFactory.newController(meter, wallbox, **config["controller"])
 
-scheduler = Scheduler(30, controller.run)
+scheduler = Scheduler(controller.get_config().cycle_time, controller.run)
 scheduler.start()
 
 app = flask.Flask(__name__)

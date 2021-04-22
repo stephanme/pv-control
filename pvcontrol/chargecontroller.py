@@ -51,11 +51,13 @@ class ChargeControllerData(BaseData):
 
 @dataclass
 class ChargeControllerConfig(BaseConfig):
+    cycle_time: int = 30  # [s] control loop cycle time, used by scheduler
     enable_phase_switching: bool = True  # set to False of phase relay is not in operation
     line_voltage: float = 230  # [V]
     current_rounding_offset: float = 0.1  # [A] offset for max_current rounding
     power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
     pv_all_min_power: float = 500  # [W] min available power for charging in mode PV_ALL
+    pv_allow_charging_delay: int = 120  # [s] min stable allow_charging time before switching on/off (PV modes only)
 
 
 # metrics
@@ -73,6 +75,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._meter = meter
         self._wallbox = wallbox
         self._set_data(ChargeControllerData())
+        self._pv_allow_charging_delay = 0
         # config
         self._min_supported_current = wallbox.get_config().min_supported_current
         self._max_supported_current = wallbox.get_config().max_supported_current
@@ -122,6 +125,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         # !!! RFID sets allow_charging (but a phase switching may be needed)
 
     # TODO: prevent too fast switching, use energy to grid and time instead of power
+    # TODO: sync with allow_charging_delay
     def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
         if self._allow_phase_switching:
             available_power = -m.power_grid + wb.power
@@ -182,9 +186,11 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         if mode == ChargeMode.OFF:
             self._wallbox.allow_charging(False)
             self.set_desired_mode(ChargeMode.MANUAL)
+            self._pv_allow_charging_delay = 0
         elif mode == ChargeMode.MAX:
             self._wallbox.set_max_current(self._max_supported_current)
             self._wallbox.allow_charging(True)
+            self._pv_allow_charging_delay = 0
             self.set_desired_mode(ChargeMode.MANUAL)
         elif mode == ChargeMode.MANUAL:
             # calc effective (manual) mode for UI
@@ -192,6 +198,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                 mode = ChargeMode.OFF
             elif wb.max_current == self._max_supported_current:
                 mode = ChargeMode.MAX
+            self._pv_allow_charging_delay = 0
         else:
             phases = wb.phases_out
             if phases == 0:
@@ -218,13 +225,24 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                 logger.warning(f"Unexpected/unhandled charge mode: {mode}")
                 max_current = 0
 
+            # set max_current
             if max_current > self._max_supported_current:
                 max_current = self._max_supported_current
             if max_current > 0:
-                self._wallbox.set_max_current(max_current)
-                self._wallbox.allow_charging(True)
+                desired_allow_charging = True
             else:
-                self._wallbox.allow_charging(False)
+                max_current = self._min_supported_current
+                desired_allow_charging = False
+            self._wallbox.set_max_current(max_current)
+
+            # set allow_charging if changed for at least allow_charging_delay
+            if wb.allow_charging != desired_allow_charging:
+                self._pv_allow_charging_delay -= config.cycle_time
+                if self._pv_allow_charging_delay <= 0:
+                    self._wallbox.allow_charging(desired_allow_charging)
+                    self._pv_allow_charging_delay = config.pv_allow_charging_delay
+            else:
+                self._pv_allow_charging_delay = config.pv_allow_charging_delay
 
         self.get_data().mode = mode
 
