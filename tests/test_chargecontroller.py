@@ -5,11 +5,18 @@ from pvcontrol.meter import TestMeter, MeterData
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode, PhaseMode
 
 
+def reset_controller_metrics():
+    ChargeController._metrics_pvc_controller_total_charged_energy._value.set(0)
+    ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value.set(0)
+    ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value.set(0)
+
+
 class ChargeControllerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(self.wallbox)
         self.controller = ChargeController(ChargeControllerConfig(), self.meter, self.wallbox)
+        reset_controller_metrics()
 
     def test_data(self):
         self.assertEqual(self.controller._data, self.controller.get_data())
@@ -117,12 +124,95 @@ class ChargeControllerTest(unittest.TestCase):
             self.assertEqual(3, ctl._desired_phases(5000, 1))
             self.assertEqual(3, ctl._desired_phases(5000, 3))
 
+    def test_meter_charged_energy(self):
+        ctl = self.controller
+        m = MeterData()
+        wb = WallboxData()
+        metric_value_total_charged_energy = ChargeController._metrics_pvc_controller_total_charged_energy._value
+        metric_value_charged_energy_grid = ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value
+        metric_value_charged_energy_pv = ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value
+
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(0, metric_value_total_charged_energy.get())
+        self.assertEqual(0, metric_value_charged_energy_grid.get())
+        self.assertEqual(0, metric_value_charged_energy_pv.get())
+
+        m.energy_consumption_grid = 1000
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(0, metric_value_total_charged_energy.get())
+        self.assertEqual(0, metric_value_charged_energy_grid.get())
+        self.assertEqual(0, metric_value_charged_energy_pv.get())
+
+        # start charging
+        wb.allow_charging = True
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(0, metric_value_total_charged_energy.get())
+        self.assertEqual(0, metric_value_charged_energy_grid.get())
+        self.assertEqual(0, metric_value_charged_energy_pv.get())
+
+        wb.charged_energy = 100
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(100, metric_value_total_charged_energy.get())
+        self.assertEqual(0, metric_value_charged_energy_grid.get())
+        self.assertEqual(0, metric_value_charged_energy_pv.get())
+
+        wb.charged_energy = 200
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(200, metric_value_total_charged_energy.get())
+        self.assertEqual(0, metric_value_charged_energy_grid.get())
+        self.assertEqual(0, metric_value_charged_energy_pv.get())
+
+        # energy tick from meter
+        m.energy_consumption_grid = 1100
+        wb.charged_energy = 300
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(300, metric_value_total_charged_energy.get())
+        self.assertEqual(100, metric_value_charged_energy_grid.get())
+        self.assertEqual(200, metric_value_charged_energy_pv.get())
+
+        # Off, grid/pv != charged due to 5min energy resolution
+        wb.allow_charging = False
+        wb.charged_energy = 400
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(400, metric_value_total_charged_energy.get())
+        self.assertEqual(100, metric_value_charged_energy_grid.get())
+        self.assertEqual(200, metric_value_charged_energy_pv.get())
+
+        # home consumption but no charging
+        m.energy_consumption_grid = 1500
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(400, metric_value_total_charged_energy.get())
+        self.assertEqual(100, metric_value_charged_energy_grid.get())
+        self.assertEqual(200, metric_value_charged_energy_pv.get())
+
+        # start charging again
+        wb.allow_charging = True
+        wb.charged_energy = 0
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(400, metric_value_total_charged_energy.get())
+        self.assertEqual(100, metric_value_charged_energy_grid.get())
+        self.assertEqual(200, metric_value_charged_energy_pv.get())
+
+        wb.charged_energy = 100
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(500, metric_value_total_charged_energy.get())
+        self.assertEqual(100, metric_value_charged_energy_grid.get())
+        self.assertEqual(200, metric_value_charged_energy_pv.get())
+
+        m.energy_consumption_grid = 1600
+        wb.charged_energy = 200
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(600, metric_value_total_charged_energy.get())
+        self.assertEqual(200, metric_value_charged_energy_grid.get())
+        self.assertEqual(300, metric_value_charged_energy_pv.get())
+
 
 class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
     def setUp(self) -> None:
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(self.wallbox)
         self.controller = ChargeController(ChargeControllerConfig(enable_phase_switching=False), self.meter, self.wallbox)
+        reset_controller_metrics()
 
     def test_3P(self):
         self.controller.run()  # init
@@ -157,6 +247,7 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(self.wallbox)
         self.controller = ChargeController(ChargeControllerConfig(), self.meter, self.wallbox)
+        reset_controller_metrics()
         self.controller.run()  # init
 
     def test_mode_FULL_POWER(self):
@@ -284,21 +375,28 @@ class ChargeControllerPVTest(unittest.TestCase):
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(self.wallbox)
         self.controller = ChargeController(ChargeControllerConfig(pv_allow_charging_delay=0), self.meter, self.wallbox)
+        reset_controller_metrics()
         self.controller.run()  # init
 
     def runControllerTest(self, data):
         for idx, d in enumerate(data):
             with self.subTest(idx=idx, test=d["test"]):
-                self.meter.set_data(d["pv"], d["home"])
+                self.meter.set_data(d["pv"], d["home"], d.get("energy_consumption_grid", 0))
                 if "car" in d:
                     self.wallbox.set_car_status(d["car"])
                 self.controller.run()
                 # re-read meter and wallbox to avoid 1 cycle delay -> makes test data easier
                 # order is important: simulated meter needs wallbox data
                 wb = self.wallbox.read_data()
+                self.wallbox.decrement_charge_energy_for_tests()
                 m = self.meter.read_data()
+                expected_wb = d["expected_wb"]
+                # skip checking charged_energy if not explicitly specified
+                if expected_wb.charged_energy == 0:
+                    wb.charged_energy = 0
+                    wb.total_energy = 0
                 self.assertEqual(d["expected_m"], m)
-                self.assertEqual(d["expected_wb"], wb)
+                self.assertEqual(expected_wb, wb)
 
     def test_charge_control_pv_only_auto(self):
         self.controller.set_desired_mode(ChargeMode.PV_ONLY)
@@ -850,3 +948,110 @@ class ChargeControllerPVTest(unittest.TestCase):
             },
         ]
         self.runControllerTest(data)
+
+    def test_charge_control_meter_charged_energy(self):
+        self.controller.set_desired_mode(ChargeMode.MAX)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        pmax = 11040
+        energy_inc = pmax / 120  # 30s cycle time
+
+        data = [
+            {
+                "test": "6kW PV, #1",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=6000, power_consumption=pmax, power_grid=-6000 + pmax),
+                "expected_wb": WallboxData(
+                    phases_in=3,
+                    phases_out=3,
+                    allow_charging=True,
+                    max_current=16,
+                    power=pmax,
+                ),
+            },
+            {
+                "test": "6kW PV, #2",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
+                "expected_wb": WallboxData(
+                    phases_in=3,
+                    phases_out=3,
+                    allow_charging=True,
+                    max_current=16,
+                    power=11040,
+                    charged_energy=1 * energy_inc,
+                    total_energy=1 * energy_inc,
+                ),
+            },
+            {
+                "test": "6kW PV, #3",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
+                "expected_wb": WallboxData(
+                    phases_in=3,
+                    phases_out=3,
+                    allow_charging=True,
+                    max_current=16,
+                    power=11040,
+                    charged_energy=2 * energy_inc,
+                    total_energy=2 * energy_inc,
+                ),
+            },
+            {
+                "test": "6kW PV, #4",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
+                "expected_wb": WallboxData(
+                    phases_in=3,
+                    phases_out=3,
+                    allow_charging=True,
+                    max_current=16,
+                    power=11040,
+                    charged_energy=3 * energy_inc,
+                    total_energy=3 * energy_inc,
+                ),
+            },
+            {
+                "test": "6kW PV, #5",
+                "pv": 6000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
+                "expected_wb": WallboxData(
+                    phases_in=3,
+                    phases_out=3,
+                    allow_charging=True,
+                    max_current=16,
+                    power=11040,
+                    charged_energy=4 * energy_inc,
+                    total_energy=4 * energy_inc,
+                ),
+            },
+            {
+                "test": "6kW PV, #6, meter reports new energy data",
+                "pv": 6000,
+                "home": 0,
+                "energy_consumption_grid": (-6000 + 11040) * 5 / 120,
+                "expected_m": MeterData(
+                    power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040, energy_consumption_grid=(-6000 + 11040) * 5 / 120
+                ),
+                "expected_wb": WallboxData(
+                    phases_in=3,
+                    phases_out=3,
+                    allow_charging=True,
+                    max_current=16,
+                    power=11040,
+                    charged_energy=5 * energy_inc,
+                    total_energy=5 * energy_inc,
+                ),
+            },
+        ]
+        self.runControllerTest(data)
+        total_charged_energy_metric = ChargeController._metrics_pvc_controller_total_charged_energy._value.get()
+        charged_energy_grid_metric = ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value.get()
+        charged_energy_pv_metric = ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value.get()
+        self.assertEqual(5 * energy_inc, total_charged_energy_metric)
+        self.assertEqual(5 * (-6000 + pmax) / 120, charged_energy_grid_metric)
+        self.assertEqual(5 * 6000 / 120, charged_energy_pv_metric)

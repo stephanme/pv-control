@@ -41,7 +41,8 @@ class WallboxData(BaseData):
     phases_in: int = 3  # 0..3
     phases_out: int = 0  # 0..3
     power: float = 0  # [W]
-    # energy? - may be wrong when switching off in between
+    charged_energy: float = 0  # [Wh], energy of last charging
+    total_energy: float = 0  # [Wh], total charged energy
     # unlocked_by - RFID card id
 
 
@@ -95,8 +96,12 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
         old = self.get_data()
         wb = WallboxData(**old.__dict__)
         if wb.allow_charging:
+            if not old.allow_charging:
+                wb.charged_energy = 0
             wb.phases_out = wb.phases_in
             wb.power = wb.phases_out * wb.max_current * 230
+            wb.charged_energy += wb.power / 120  # assumption 30s cycle time
+            wb.total_energy += wb.power / 120
         else:
             wb.phases_out = 0
             wb.power = 0
@@ -113,6 +118,13 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
 
     def allow_charging(self, f: bool) -> None:
         self.get_data().allow_charging = f
+
+    def decrement_charge_energy_for_tests(self):
+        """ needed for chargecontroller tests """
+        wb = self.get_data()
+        if wb.allow_charging:
+            wb.charged_energy -= wb.power / 120
+            wb.total_energy -= wb.power / 120
 
 
 class SimulatedWallboxWithRelay(SimulatedWallbox):
@@ -193,7 +205,9 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         phases_in = (phases >> 3) % 2 + (phases >> 4) % 2 + (phases >> 5) % 2
         phases_out = phases % 2 + (phases >> 1) % 2 + (phases >> 2) % 2  # TODO use current or power data not phases
         power = int(json["nrg"][11]) * 10
-        wb = WallboxData(0, car_status, max_current, allow_charging, phases_in, phases_out, power)
+        charged_energy = int(json["dws"]) / 360.0
+        total_energy = int(json["eto"]) * 100
+        wb = WallboxData(0, car_status, max_current, allow_charging, phases_in, phases_out, power, charged_energy, total_energy)
         return wb
 
 

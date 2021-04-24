@@ -60,22 +60,33 @@ class ChargeControllerConfig(BaseConfig):
     pv_allow_charging_delay: int = 120  # [s] min stable allow_charging time before switching on/off (PV modes only)
 
 
-# metrics
-metrics_pvc_controller_processing = prometheus_client.Summary(
+# metrics - used as annotation -> can't move into class
+_metrics_pvc_controller_processing = prometheus_client.Summary(
     "pvcontrol_controller_processing_seconds", "Time spent processing control loop"
-)
-metrics_pvc_controller_mode = prometheus_client.Enum(
-    "pvcontrol_controller_mode", "Charge controller mode", states=list(ChargeMode.__members__.values())
 )
 
 
 class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]):
+    # metrics
+    _metrics_pvc_controller_mode = prometheus_client.Enum(
+        "pvcontrol_controller_mode", "Charge controller mode", states=list(ChargeMode.__members__.values())
+    )
+    _metrics_pvc_controller_total_charged_energy = prometheus_client.Counter(
+        "pvcontrol_controller_total_charged_energy_wh_total", "Total energy charged into car"
+    )
+    _metrics_pvc_controller_charged_energy = prometheus_client.Counter(
+        "pvcontrol_controller_charged_energy_wh_total", "Energy charged into car by source", ["source"]
+    )
+
     def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox):
         super().__init__(config)
         self._meter = meter
         self._wallbox = wallbox
         self._set_data(ChargeControllerData())
         self._pv_allow_charging_delay = 0
+        self._last_charged_energy = None  # reset on every charging cycle, None = needs initialization on first cycle
+        self._last_charged_energy_5m = 0.0  # charged energy in last 5m (cycle when meter energy data is updated)
+        self._last_energy_consumption_grid = 0.0  # total counter value, must be initialized first with data from meter
         # config
         self._min_supported_current = wallbox.get_config().min_supported_current
         self._max_supported_current = wallbox.get_config().max_supported_current
@@ -99,7 +110,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
     def set_phase_mode(self, mode: PhaseMode) -> None:
         self.get_data().phase_mode = mode
 
-    @metrics_pvc_controller_processing.time()
+    @_metrics_pvc_controller_processing.time()
     def run(self) -> None:
         """ Read charger data from wallbox and calculate set point """
 
@@ -107,13 +118,45 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         wb = self._wallbox.read_data()
         m = self._meter.read_data()
 
+        self._meter_charged_energy(m, wb)
         self._control_charge_mode(wb)
         # skip one cycle whe switching phases
         if not self._converge_phases(m, wb):
             self._control_charging(m, wb)
 
         # metrics
-        metrics_pvc_controller_mode.state(self.get_data().mode)
+        ChargeController._metrics_pvc_controller_mode.state(self.get_data().mode)
+
+    def _meter_charged_energy(self, m: MeterData, wb: WallboxData):
+        """ Calculates energy charged into car by source and updates metrics. """
+        if self._last_charged_energy is not None:
+            energy_inc = wb.charged_energy - self._last_charged_energy
+            # charged_energy reset
+            if energy_inc < 0:
+                energy_inc = wb.charged_energy
+            ChargeController._metrics_pvc_controller_total_charged_energy.inc(energy_inc)
+
+            # note: energy values are updates every 5 min only
+            if wb.allow_charging:
+                consumed_energy_grid_inc = m.energy_consumption_grid - self._last_energy_consumption_grid
+                if consumed_energy_grid_inc > 0:
+                    # Any energy consumed from grid while charging car is accounted to "charged from grid",
+                    # the remaining part as "charged from PV"
+                    charged_energy_5m = wb.charged_energy - self._last_charged_energy_5m
+                    if charged_energy_5m < 0:
+                        charged_energy_5m = wb.charged_energy
+                    self._last_charged_energy_5m = wb.charged_energy
+                    charged_energy_5m = max(charged_energy_5m, 0.0)
+                    charged_from_grid = min(consumed_energy_grid_inc, charged_energy_5m)
+                    ChargeController._metrics_pvc_controller_charged_energy.labels("grid").inc(charged_from_grid)
+                    ChargeController._metrics_pvc_controller_charged_energy.labels("pv").inc(charged_energy_5m - charged_from_grid)
+            else:
+                self._last_charged_energy_5m = wb.charged_energy
+        else:
+            self._last_charged_energy_5m = wb.charged_energy
+
+        self._last_energy_consumption_grid = m.energy_consumption_grid
+        self._last_charged_energy = wb.charged_energy
 
     # TODO rename
     def _control_charge_mode(self, wb: WallboxData) -> None:

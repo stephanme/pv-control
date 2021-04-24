@@ -24,6 +24,8 @@ class MeterData(BaseData):
     power_consumption: float = 0  # power consumption [W] (including car charing)
     power_grid: float = 0  # power from/to grid [W], + from grid, - to grid
     # power_consumption = power_pv + power_grid
+    energy_consumption_grid: float = 0  # [Wh]
+    energy_consumption_pv: float = 0  # [Wh]
 
 
 C = typing.TypeVar("C", bound=BaseConfig)  # type of configuration
@@ -92,11 +94,12 @@ class TestMeter(Meter[BaseConfig]):
         pv = self._pv
         consumption = self._home + power_car
         grid = consumption - pv
-        return MeterData(0, pv, consumption, grid)
+        return MeterData(0, pv, consumption, grid, self._energy_consumption_grid, 0)
 
-    def set_data(self, pv: float, home: float) -> None:
+    def set_data(self, pv: float, home: float, energy_consumption_grid: float = 0) -> None:
         self._pv = pv
         self._home = home
+        self._energy_consumption_grid = energy_consumption_grid
 
 
 @dataclass
@@ -122,9 +125,11 @@ class KostalMeter(Meter[KostalMeterConfig]):
             grid = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_grid)[0])
             consumption_l = modbusUtils.word_list_to_long(regs_consumption)
             consumption_grid = modbusUtils.decode_ieee(consumption_l[0])
+            energy_consumption_grid = modbusUtils.decode_ieee(consumption_l[2])
+            energy_consumption_pv = modbusUtils.decode_ieee(consumption_l[3])
             consumption_pv = modbusUtils.decode_ieee(consumption_l[4])
             pv = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_pv)[0])
-            return MeterData(0, pv, consumption_grid + consumption_pv, grid)
+            return MeterData(0, pv, consumption_grid + consumption_pv, grid, energy_consumption_grid, energy_consumption_pv)
         else:
             logger.error(f"Modbus error: {self._modbusClient.last_error_txt()}")
             errcnt = self.inc_error_counter()
