@@ -102,6 +102,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._pv_all_off = max(config.pv_all_min_power - config.power_hysteresis, 100)
         self._pv_all_1_3_phase_theshold = max_power_1phase
         self._pv_all_3_1_phase_theshold = max_power_1phase - config.power_hysteresis
+        # init metrics with labels
+        ChargeController._metrics_pvc_controller_charged_energy.labels("grid")
+        ChargeController._metrics_pvc_controller_charged_energy.labels("pv")
 
     def set_desired_mode(self, mode: ChargeMode) -> None:
         logger.info(f"set_desired_mode: {self.get_data().desired_mode} -> {mode}")

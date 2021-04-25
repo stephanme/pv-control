@@ -64,6 +64,8 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
     def __init__(self, config: SimulatedMeterConfig, wallbox: Wallbox):
         super().__init__(config)
         self._wallbox = wallbox
+        self._energy_grid = 0.0
+        self._energy_pv = 0.0
 
     # config
     def get_config(self) -> SimulatedMeterConfig:
@@ -80,7 +82,9 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
             + power_car
         )
         grid = consumption - pv
-        return MeterData(0, pv, consumption, grid)
+        self._energy_grid += grid / 120  # assumption: 30s cycle time
+        self._energy_pv += pv / 120
+        return MeterData(0, pv, consumption, grid, self._energy_grid, self._energy_pv)
 
 
 class TestMeter(Meter[BaseConfig]):
