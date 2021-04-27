@@ -9,15 +9,6 @@ from pvcontrol import relay
 
 logger = logging.getLogger(__name__)
 
-# TODO: more metrics: car status etc
-metrics_pvc_wallbox_power = prometheus_client.Gauge("pvcontrol_wallbox_power_watts", "Wallbox total power")
-metrics_pvc_wallbox_phases_in = prometheus_client.Gauge("pvcontrol_wallbox_phases_in", "Number of phases before wallbox (0..3)")
-metrics_pvc_wallbox_phases_out = prometheus_client.Gauge(
-    "pvcontrol_wallbox_phases_out", "Number of phases for charging after wallbox (0..3)"
-)
-metrics_pvc_wallbox_max_current = prometheus_client.Gauge("pvcontrol_wallbox_max_current_amperes", "Max current per phase")
-metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("metrics_pvc_wallbox_allow_charging", "Wallbox allows charging")
-
 
 @dataclass
 class WallboxConfig(BaseConfig):
@@ -52,6 +43,15 @@ C = typing.TypeVar("C", bound=WallboxConfig)  # type of configuration
 class Wallbox(BaseService[C, WallboxData]):
     """ Base class / interface for wallboxes """
 
+    _metrics_pvc_wallbox_car_status = prometheus_client.Gauge("pvcontrol_wallbox_car_status", "Wallbox car status")
+    _metrics_pvc_wallbox_power = prometheus_client.Gauge("pvcontrol_wallbox_power_watts", "Wallbox total power")
+    _metrics_pvc_wallbox_phases_in = prometheus_client.Gauge("pvcontrol_wallbox_phases_in", "Number of phases before wallbox (0..3)")
+    _metrics_pvc_wallbox_phases_out = prometheus_client.Gauge(
+        "pvcontrol_wallbox_phases_out", "Number of phases for charging after wallbox (0..3)"
+    )
+    _metrics_pvc_wallbox_max_current = prometheus_client.Gauge("pvcontrol_wallbox_max_current_amperes", "Max current per phase")
+    _metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("pvcontrol_wallbox_allow_charging", "Wallbox allows charging")
+
     def __init__(self, config: C):
         super().__init__(config)
         self._set_data(WallboxData())
@@ -68,11 +68,12 @@ class Wallbox(BaseService[C, WallboxData]):
 
     def _set_data(self, wb: WallboxData) -> None:
         super()._set_data(wb)
-        metrics_pvc_wallbox_power.set(wb.power)
-        metrics_pvc_wallbox_phases_in.set(wb.phases_in)
-        metrics_pvc_wallbox_phases_out.set(wb.phases_out)
-        metrics_pvc_wallbox_max_current.set(wb.max_current)
-        metrics_pvc_wallbox_allow_charging.set(wb.allow_charging)
+        Wallbox._metrics_pvc_wallbox_car_status.set(wb.car_status)
+        Wallbox._metrics_pvc_wallbox_power.set(wb.power)
+        Wallbox._metrics_pvc_wallbox_phases_in.set(wb.phases_in)
+        Wallbox._metrics_pvc_wallbox_phases_out.set(wb.phases_out)
+        Wallbox._metrics_pvc_wallbox_max_current.set(wb.max_current)
+        Wallbox._metrics_pvc_wallbox_allow_charging.set(wb.allow_charging)
 
     # set wallbox registers
 
