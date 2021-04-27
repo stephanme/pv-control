@@ -28,7 +28,7 @@ C = typing.TypeVar("C", bound=BaseConfig)  # type of configuration
 
 
 class Meter(BaseService[C, MeterData]):
-    """ Base class / interface for meters """
+    """Base class / interface for meters"""
 
     _metrics_pvc_meter_power = prometheus_client.Gauge("pvcontrol_meter_power_watts", "Power from pv or grid", ["source"])
     _metrics_pvc_meter_power_consumption_total = prometheus_client.Gauge(
@@ -40,7 +40,7 @@ class Meter(BaseService[C, MeterData]):
         self._set_data(MeterData())
 
     def read_data(self) -> MeterData:
-        """ Read meter data and report metrics. The data is cached. """
+        """Read meter data and report metrics. The data is cached."""
         m = self._read_data()
         self._set_data(m)
         Meter._metrics_pvc_meter_power.labels("pv").set(m.power_pv)

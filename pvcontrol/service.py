@@ -26,11 +26,11 @@ class BaseService(typing.Generic[C, D]):
         self._config = config
 
     def get_config(self) -> C:
-        """ Get configuration. """
+        """Get configuration."""
         return self._config
 
     def get_data(self) -> D:
-        """ Get last data. """
+        """Get last data."""
         return self._data
 
     def _set_data(self, data: D) -> None:

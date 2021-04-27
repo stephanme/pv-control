@@ -41,7 +41,7 @@ C = typing.TypeVar("C", bound=WallboxConfig)  # type of configuration
 
 
 class Wallbox(BaseService[C, WallboxData]):
-    """ Base class / interface for wallboxes """
+    """Base class / interface for wallboxes"""
 
     _metrics_pvc_wallbox_car_status = prometheus_client.Gauge("pvcontrol_wallbox_car_status", "Wallbox car status")
     _metrics_pvc_wallbox_power = prometheus_client.Gauge("pvcontrol_wallbox_power_watts", "Wallbox total power")
@@ -57,13 +57,13 @@ class Wallbox(BaseService[C, WallboxData]):
         self._set_data(WallboxData())
 
     def read_data(self) -> WallboxData:
-        """ Read wallbox data and report metrics. The data is cached. """
+        """Read wallbox data and report metrics. The data is cached."""
         wb = self._read_data()
         self._set_data(wb)
         return wb
 
     def _read_data(self) -> WallboxData:
-        """ Override in sub classes """
+        """Override in sub classes"""
         return self.get_data()
 
     def _set_data(self, wb: WallboxData) -> None:
@@ -88,7 +88,7 @@ class Wallbox(BaseService[C, WallboxData]):
 
 
 class SimulatedWallbox(Wallbox[WallboxConfig]):
-    """ A wallbox simulation for testing """
+    """A wallbox simulation for testing"""
 
     def __init__(self, config: WallboxConfig):
         super().__init__(config)
@@ -121,7 +121,7 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
         self.get_data().allow_charging = f
 
     def decrement_charge_energy_for_tests(self):
-        """ needed for chargecontroller tests """
+        """needed for chargecontroller tests"""
         wb = self.get_data()
         if wb.allow_charging:
             wb.charged_energy -= wb.power / 120

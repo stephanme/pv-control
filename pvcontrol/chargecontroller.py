@@ -116,7 +116,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
     @_metrics_pvc_controller_processing.time()
     def run(self) -> None:
-        """ Read charger data from wallbox and calculate set point """
+        """Read charger data from wallbox and calculate set point"""
 
         # read current state: order is important for simulation
         wb = self._wallbox.read_data()
@@ -132,7 +132,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         ChargeController._metrics_pvc_controller_mode.state(self.get_data().mode)
 
     def _meter_charged_energy(self, m: MeterData, wb: WallboxData):
-        """ Calculates energy charged into car by source and updates metrics. """
+        """Calculates energy charged into car by source and updates metrics."""
         if self._last_charged_energy is not None:
             energy_inc = wb.charged_energy - self._last_charged_energy
             # charged_energy reset
