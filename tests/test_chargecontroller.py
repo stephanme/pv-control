@@ -137,6 +137,7 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(0, metric_value_charged_energy_grid.get())
         self.assertEqual(0, metric_value_charged_energy_pv.get())
 
+        m.energy_consumption = 1000
         m.energy_consumption_grid = 1000
         ctl._meter_charged_energy(m, wb)
         self.assertEqual(0, metric_value_total_charged_energy.get())
@@ -163,7 +164,8 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(0, metric_value_charged_energy_pv.get())
 
         # energy tick from meter
-        m.energy_consumption_grid = 1100
+        m.energy_consumption += 300
+        m.energy_consumption_grid += 100
         wb.charged_energy = 300
         ctl._meter_charged_energy(m, wb)
         self.assertEqual(300, metric_value_total_charged_energy.get())
@@ -179,7 +181,8 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(200, metric_value_charged_energy_pv.get())
 
         # home consumption but no charging
-        m.energy_consumption_grid = 1500
+        m.energy_consumption += 400
+        m.energy_consumption_grid += 400
         ctl._meter_charged_energy(m, wb)
         self.assertEqual(400, metric_value_total_charged_energy.get())
         self.assertEqual(100, metric_value_charged_energy_grid.get())
@@ -199,12 +202,13 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(100, metric_value_charged_energy_grid.get())
         self.assertEqual(200, metric_value_charged_energy_pv.get())
 
-        m.energy_consumption_grid = 1600
+        # charge from PV only
+        m.energy_consumption += 300
         wb.charged_energy = 200
         ctl._meter_charged_energy(m, wb)
         self.assertEqual(600, metric_value_total_charged_energy.get())
-        self.assertEqual(200, metric_value_charged_energy_grid.get())
-        self.assertEqual(300, metric_value_charged_energy_pv.get())
+        self.assertEqual(100, metric_value_charged_energy_grid.get())
+        self.assertEqual(400, metric_value_charged_energy_pv.get())
 
 
 class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
@@ -381,7 +385,7 @@ class ChargeControllerPVTest(unittest.TestCase):
     def runControllerTest(self, data):
         for idx, d in enumerate(data):
             with self.subTest(idx=idx, test=d["test"]):
-                self.meter.set_data(d["pv"], d["home"], d.get("energy_consumption_grid", 0))
+                self.meter.set_data(d["pv"], d["home"], d.get("energy_consumption_grid", 0), d.get("energy_consumption_pv", 0))
                 if "car" in d:
                     self.wallbox.set_car_status(d["car"])
                 self.controller.run()
@@ -1034,8 +1038,14 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "pv": 6000,
                 "home": 0,
                 "energy_consumption_grid": (-6000 + 11040) * 5 / 120,
+                "energy_consumption_pv": 6000 * 5 / 120,
                 "expected_m": MeterData(
-                    power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040, energy_consumption_grid=(-6000 + 11040) * 5 / 120
+                    power_pv=6000,
+                    power_consumption=11040,
+                    power_grid=-6000 + 11040,
+                    energy_consumption=11040 * 5 / 120,
+                    energy_consumption_grid=(-6000 + 11040) * 5 / 120,
+                    energy_consumption_pv=6000 * 5 / 120,
                 ),
                 "expected_wb": WallboxData(
                     phases_in=3,

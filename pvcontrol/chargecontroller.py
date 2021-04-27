@@ -86,6 +86,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._pv_allow_charging_delay = 0
         self._last_charged_energy = None  # reset on every charging cycle, None = needs initialization on first cycle
         self._last_charged_energy_5m = 0.0  # charged energy in last 5m (cycle when meter energy data is updated)
+        self._last_energy_consumption = 0.0  # total counter value, must be initialized first with data from meter
         self._last_energy_consumption_grid = 0.0  # total counter value, must be initialized first with data from meter
         # config
         self._min_supported_current = wallbox.get_config().min_supported_current
@@ -140,9 +141,11 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             ChargeController._metrics_pvc_controller_total_charged_energy.inc(energy_inc)
 
             # note: energy values are updates every 5 min only
+            # assumption: all energy values are incremented at the same time
             if wb.allow_charging:
-                consumed_energy_grid_inc = m.energy_consumption_grid - self._last_energy_consumption_grid
-                if consumed_energy_grid_inc > 0:
+                consumed_energy_inc = m.energy_consumption - self._last_energy_consumption
+                if consumed_energy_inc > 0:
+                    consumed_energy_grid_inc = m.energy_consumption_grid - self._last_energy_consumption_grid
                     # Any energy consumed from grid while charging car is accounted to "charged from grid",
                     # the remaining part as "charged from PV"
                     charged_energy_5m = wb.charged_energy - self._last_charged_energy_5m
@@ -158,6 +161,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         else:
             self._last_charged_energy_5m = wb.charged_energy
 
+        self._last_energy_consumption = m.energy_consumption
         self._last_energy_consumption_grid = m.energy_consumption_grid
         self._last_charged_energy = wb.charged_energy
 

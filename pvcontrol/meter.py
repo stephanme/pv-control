@@ -12,11 +12,6 @@ from pvcontrol.wallbox import Wallbox
 
 logger = logging.getLogger(__name__)
 
-metrics_pvc_meter_power = prometheus_client.Gauge("pvcontrol_meter_power_watts", "Power from pv or grid", ["source"])
-metrics_pvc_meter_power_consumption_total = prometheus_client.Gauge(
-    "pvcontrol_meter_power_consumption_total_watts", "Total home power consumption"
-)
-
 
 @dataclass
 class MeterData(BaseData):
@@ -24,6 +19,7 @@ class MeterData(BaseData):
     power_consumption: float = 0  # power consumption [W] (including car charing)
     power_grid: float = 0  # power from/to grid [W], + from grid, - to grid
     # power_consumption = power_pv + power_grid
+    energy_consumption: float = 0  # [Wh]
     energy_consumption_grid: float = 0  # [Wh]
     energy_consumption_pv: float = 0  # [Wh]
 
@@ -34,6 +30,11 @@ C = typing.TypeVar("C", bound=BaseConfig)  # type of configuration
 class Meter(BaseService[C, MeterData]):
     """ Base class / interface for meters """
 
+    _metrics_pvc_meter_power = prometheus_client.Gauge("pvcontrol_meter_power_watts", "Power from pv or grid", ["source"])
+    _metrics_pvc_meter_power_consumption_total = prometheus_client.Gauge(
+        "pvcontrol_meter_power_consumption_total_watts", "Total home power consumption"
+    )
+
     def __init__(self, config: C):
         super().__init__(config)
         self._set_data(MeterData())
@@ -42,9 +43,9 @@ class Meter(BaseService[C, MeterData]):
         """ Read meter data and report metrics. The data is cached. """
         m = self._read_data()
         self._set_data(m)
-        metrics_pvc_meter_power.labels("pv").set(m.power_pv)
-        metrics_pvc_meter_power.labels("grid").set(m.power_grid)
-        metrics_pvc_meter_power_consumption_total.set(m.power_consumption)
+        Meter._metrics_pvc_meter_power.labels("pv").set(m.power_pv)
+        Meter._metrics_pvc_meter_power.labels("grid").set(m.power_grid)
+        Meter._metrics_pvc_meter_power_consumption_total.set(m.power_consumption)
         return m
 
     def _read_data(self) -> MeterData:
@@ -84,7 +85,7 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
         grid = consumption - pv
         self._energy_grid += grid / 120  # assumption: 30s cycle time
         self._energy_pv += pv / 120
-        return MeterData(0, pv, consumption, grid, self._energy_grid, self._energy_pv)
+        return MeterData(0, pv, consumption, grid, self._energy_grid + self._energy_pv, self._energy_grid, self._energy_pv)
 
 
 class TestMeter(Meter[BaseConfig]):
@@ -98,12 +99,21 @@ class TestMeter(Meter[BaseConfig]):
         pv = self._pv
         consumption = self._home + power_car
         grid = consumption - pv
-        return MeterData(0, pv, consumption, grid, self._energy_consumption_grid, 0)
+        return MeterData(
+            0,
+            pv,
+            consumption,
+            grid,
+            self._energy_consumption_grid + self._energy_consumption_pv,
+            self._energy_consumption_grid,
+            self._energy_consumption_pv,
+        )
 
-    def set_data(self, pv: float, home: float, energy_consumption_grid: float = 0) -> None:
+    def set_data(self, pv: float, home: float, energy_consumption_grid: float = 0, energy_consumption_pv: float = 0) -> None:
         self._pv = pv
         self._home = home
         self._energy_consumption_grid = energy_consumption_grid
+        self._energy_consumption_pv = energy_consumption_pv
 
 
 @dataclass
@@ -123,7 +133,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
         # kpc_ac_power_total_watts #172 -> pv
         # kpc_powermeter_total_watts #252 -> grid
         regs_grid = self._modbusClient.read_holding_registers(252, 2)
-        regs_consumption = self._modbusClient.read_holding_registers(108, 10)
+        regs_consumption = self._modbusClient.read_holding_registers(108, 12)
         regs_pv = self._modbusClient.read_holding_registers(172, 2)
         if regs_consumption and regs_pv and regs_grid:
             grid = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_grid)[0])
@@ -132,8 +142,11 @@ class KostalMeter(Meter[KostalMeterConfig]):
             energy_consumption_grid = modbusUtils.decode_ieee(consumption_l[2])
             energy_consumption_pv = modbusUtils.decode_ieee(consumption_l[3])
             consumption_pv = modbusUtils.decode_ieee(consumption_l[4])
+            energy_consumption = modbusUtils.decode_ieee(consumption_l[5])
             pv = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_pv)[0])
-            return MeterData(0, pv, consumption_grid + consumption_pv, grid, energy_consumption_grid, energy_consumption_pv)
+            return MeterData(
+                0, pv, consumption_grid + consumption_pv, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv
+            )
         else:
             logger.error(f"Modbus error: {self._modbusClient.last_error_txt()}")
             errcnt = self.inc_error_counter()
