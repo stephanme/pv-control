@@ -680,10 +680,35 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
             },
             {
+                "test": "0kW PV, off by PV",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+            },
+            {
+                "test": "0kW PV, off by PV, ChargingFinished",
+                "pv": 0,
+                "home": 0,
+                "car": CarStatus.ChargingFinished,
+                "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
+                "expected_wb": WallboxData(
+                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0
+                ),
+            },
+            {
                 "test": "6kW PV, 3x8A",
                 "pv": 6000,
                 "home": 0,
-                "car": CarStatus.ChargingFinished,
+                "car": CarStatus.NoVehicle,  # should be Charging but this is not simulated properly
+                "expected_m": MeterData(power_pv=6000, power_consumption=5520, power_grid=-6000 + 5520),
+                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+            },
+            {
+                "test": "6kW PV, 3x8A",
+                "pv": 6000,
+                "home": 0,
+                "car": CarStatus.ChargingFinished,  # reported by car not because PV switched off
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
                 "expected_wb": WallboxData(
                     car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0

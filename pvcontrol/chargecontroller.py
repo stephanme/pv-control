@@ -83,6 +83,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._meter = meter
         self._wallbox = wallbox
         self._set_data(ChargeControllerData())
+        self._pv_allow_charging_off = False
         self._pv_allow_charging_delay = 0
         self._last_charged_energy = None  # reset on every charging cycle, None = needs initialization on first cycle
         self._last_charged_energy_5m = 0.0  # charged energy in last 5m (cycle when meter energy data is updated)
@@ -167,10 +168,16 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
     # TODO rename
     def _control_charge_mode(self, wb: WallboxData) -> None:
-        # switch to OFF when car charging finished
-        # TODO: also for NoVehicle?
-        if wb.car_status == CarStatus.ChargingFinished:
+        # switch to OFF when car charging finished in PV mode (and it was not the PV control loop that switched off)
+        # stay in PV mode if control loop switched charging off (alw=0) -> results in CarStatus.ChargingFinished as well
+        ctl = self.get_data()
+        if (
+            (ctl.mode == ChargeMode.PV_ONLY or ctl.mode == ChargeMode.PV_ALL)
+            and wb.car_status == CarStatus.ChargingFinished
+            and not self._pv_allow_charging_off
+        ):
             self.set_desired_mode(ChargeMode.OFF)
+
         # TODO: enable charging when RFID is recognized
         # !!! RFID sets allow_charging (but a phase switching may be needed)
 
@@ -186,7 +193,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                     self._wallbox.set_phases_in(desired_phases)
                 else:
                     # charging off and wait one cylce
-                    self._wallbox.allow_charging(False)
+                    self._set_allow_charging(False, skip_delay=True)
                 return True
             else:
                 return False
@@ -234,13 +241,11 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
     def _control_charging(self, m: MeterData, wb: WallboxData) -> None:
         mode = self.get_data().desired_mode
         if mode == ChargeMode.OFF:
-            self._wallbox.allow_charging(False)
+            self._set_allow_charging(False, skip_delay=True)
             self.set_desired_mode(ChargeMode.MANUAL)
-            self._pv_allow_charging_delay = 0
         elif mode == ChargeMode.MAX:
             self._wallbox.set_max_current(self._max_supported_current)
-            self._wallbox.allow_charging(True)
-            self._pv_allow_charging_delay = 0
+            self._set_allow_charging(True, skip_delay=True)
             self.set_desired_mode(ChargeMode.MANUAL)
         elif mode == ChargeMode.MANUAL:
             # calc effective (manual) mode for UI
@@ -289,12 +294,16 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             if wb.allow_charging != desired_allow_charging:
                 self._pv_allow_charging_delay -= config.cycle_time
                 if self._pv_allow_charging_delay <= 0:
-                    self._wallbox.allow_charging(desired_allow_charging)
-                    self._pv_allow_charging_delay = config.pv_allow_charging_delay
+                    self._set_allow_charging(desired_allow_charging)
             else:
                 self._pv_allow_charging_delay = config.pv_allow_charging_delay
 
         self.get_data().mode = mode
+
+    def _set_allow_charging(self, v: bool, skip_delay: bool = False):
+        self._pv_allow_charging_off = not v and not skip_delay  # remember if allow_charging off came from PV control loop
+        self._pv_allow_charging_delay = self.get_config().pv_allow_charging_delay if not skip_delay else 0
+        self._wallbox.allow_charging(v)
 
 
 class ChargeControllerFactory:
