@@ -83,6 +83,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._meter = meter
         self._wallbox = wallbox
         self._set_data(ChargeControllerData())
+        self._charge_mode_pv_to_off_delay = 5 * 60  # configurable?
         self._pv_allow_charging_off = False
         self._pv_allow_charging_delay = 0
         self._last_charged_energy = None  # reset on every charging cycle, None = needs initialization on first cycle
@@ -168,15 +169,20 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
     # TODO rename
     def _control_charge_mode(self, wb: WallboxData) -> None:
-        # switch to OFF when car charging finished in PV mode (and it was not the PV control loop that switched off)
-        # stay in PV mode if control loop switched charging off (alw=0) -> results in CarStatus.ChargingFinished as well
+        # Switch to OFF when car charging finished in PV mode (and it was not the PV control loop that switched off).
+        # Needs a delay to avoid OFF when car doesn't switch fast enough from Finished to Charging.
+        # Stay in PV mode if control loop switched charging off (alw=0) -> results in CarStatus.ChargingFinished as well
         ctl = self.get_data()
         if (
             (ctl.mode == ChargeMode.PV_ONLY or ctl.mode == ChargeMode.PV_ALL)
             and wb.car_status == CarStatus.ChargingFinished
             and not self._pv_allow_charging_off
         ):
-            self.set_desired_mode(ChargeMode.OFF)
+            self._charge_mode_pv_to_off_delay -= self.get_config().cycle_time
+            if self._charge_mode_pv_to_off_delay <= 0:
+                self.set_desired_mode(ChargeMode.OFF)
+        else:
+            self._charge_mode_pv_to_off_delay = 5 * 60  # configurable?
 
         # TODO: enable charging when RFID is recognized
         # !!! RFID sets allow_charging (but a phase switching may be needed)

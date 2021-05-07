@@ -711,10 +711,26 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "car": CarStatus.ChargingFinished,  # reported by car not because PV switched off
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
                 "expected_wb": WallboxData(
-                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0
+                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=True, max_current=8, power=0
                 ),
             },
         ]
+        # 5 min delay until charge mode OFF
+        d_finished = data[-1]
+        for _ in range(0, 8):
+            data.append(d_finished)
+        data.append(
+            {
+                "test": "6kW PV, 3x8A",
+                "pv": 6000,
+                "home": 0,
+                "car": CarStatus.ChargingFinished,  # reported by car not because PV switched off
+                "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
+                "expected_wb": WallboxData(
+                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0
+                ),
+            }
+        )
         self.runControllerTest(data)
         self.assertEqual(ChargeMode.MANUAL, self.controller.get_data().desired_mode)
         self.assertEqual(ChargeMode.OFF, self.controller.get_data().mode)
