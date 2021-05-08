@@ -99,12 +99,12 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         min_power_3phases = 3 * self._min_supported_current * config.line_voltage
         self._pv_only_on = min_power_1phase + config.power_hysteresis
         self._pv_only_off = min_power_1phase
-        self._pv_only_1_3_phase_theshold = min_power_3phases + config.power_hysteresis
-        self._pv_only_3_1_phase_theshold = min_power_3phases
+        self._pv_only_1_3_phase_threshold = min_power_3phases + config.power_hysteresis
+        self._pv_only_3_1_phase_threshold = min_power_3phases
         self._pv_all_on = config.pv_all_min_power
         self._pv_all_off = max(config.pv_all_min_power - config.power_hysteresis, 100)
-        self._pv_all_1_3_phase_theshold = max_power_1phase
-        self._pv_all_3_1_phase_theshold = max_power_1phase - config.power_hysteresis
+        self._pv_all_1_3_phase_threshold = max_power_1phase
+        self._pv_all_3_1_phase_threshold = max_power_1phase - config.power_hysteresis
         # init metrics with labels
         ChargeController._metrics_pvc_controller_charged_energy.labels("grid")
         ChargeController._metrics_pvc_controller_charged_energy.labels("pv")
@@ -138,7 +138,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         if self._last_charged_energy is not None:
             energy_inc = wb.charged_energy - self._last_charged_energy
             # charged_energy reset
-            if energy_inc < 0:
+            if energy_inc < -1.0:
                 energy_inc = wb.charged_energy
             ChargeController._metrics_pvc_controller_total_charged_energy.inc(energy_inc)
 
@@ -146,12 +146,12 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             # assumption: all energy values are incremented at the same time
             if wb.allow_charging:
                 consumed_energy_inc = m.energy_consumption - self._last_energy_consumption
-                if consumed_energy_inc > 0:
+                if consumed_energy_inc > 1.0:
                     consumed_energy_grid_inc = m.energy_consumption_grid - self._last_energy_consumption_grid
                     # Any energy consumed from grid while charging car is accounted to "charged from grid",
                     # the remaining part as "charged from PV"
                     charged_energy_5m = wb.charged_energy - self._last_charged_energy_5m
-                    if charged_energy_5m < 0:
+                    if charged_energy_5m < 1.0:
                         charged_energy_5m = wb.charged_energy
                     self._last_charged_energy_5m = wb.charged_energy
                     charged_energy_5m = max(charged_energy_5m, 0.0)
@@ -219,23 +219,23 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         else:  # AUTO
             if mode == ChargeMode.PV_ONLY:
                 if current_phases == 1:
-                    if available_power >= self._pv_only_1_3_phase_theshold:
+                    if available_power >= self._pv_only_1_3_phase_threshold:
                         return 3
                     else:
                         return 1
                 else:
-                    if available_power >= self._pv_only_3_1_phase_theshold:
+                    if available_power >= self._pv_only_3_1_phase_threshold:
                         return 3
                     else:
                         return 1
             elif mode == ChargeMode.PV_ALL:
                 if current_phases == 1:
-                    if available_power >= self._pv_all_1_3_phase_theshold:
+                    if available_power >= self._pv_all_1_3_phase_threshold:
                         return 3
                     else:
                         return 1
                 else:
-                    if available_power >= self._pv_all_3_1_phase_theshold:
+                    if available_power >= self._pv_all_3_1_phase_threshold:
                         return 3
                     else:
                         return 1

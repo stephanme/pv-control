@@ -40,12 +40,12 @@ class ChargeControllerTest(unittest.TestCase):
         hys = ctl.get_config().power_hysteresis
         self.assertEqual(6 * 230 + hys, ctl._pv_only_on)
         self.assertEqual(6 * 230, ctl._pv_only_off)
-        self.assertEqual(3 * 6 * 230 + hys, ctl._pv_only_1_3_phase_theshold)
-        self.assertEqual(3 * 6 * 230, ctl._pv_only_3_1_phase_theshold)
+        self.assertEqual(3 * 6 * 230 + hys, ctl._pv_only_1_3_phase_threshold)
+        self.assertEqual(3 * 6 * 230, ctl._pv_only_3_1_phase_threshold)
         self.assertEqual(ctl.get_config().pv_all_min_power, ctl._pv_all_on)
         self.assertEqual(ctl.get_config().pv_all_min_power - hys, ctl._pv_all_off)
-        self.assertEqual(16 * 230, ctl._pv_all_1_3_phase_theshold)
-        self.assertEqual(16 * 230 - hys, ctl._pv_all_3_1_phase_theshold)
+        self.assertEqual(16 * 230, ctl._pv_all_1_3_phase_threshold)
+        self.assertEqual(16 * 230 - hys, ctl._pv_all_3_1_phase_threshold)
 
     def test_init(self):
         c = self.controller.get_data()
