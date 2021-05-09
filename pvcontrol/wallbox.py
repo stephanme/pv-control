@@ -24,8 +24,19 @@ class CarStatus(enum.IntEnum):
     ChargingFinished = 4  # Charge finished, vehicle still connected
 
 
+@enum.unique
+class WbError(enum.IntEnum):
+    OK = 0
+    RCCB = 1  # RCCB (Residual Current Device)
+    PHASE = 3  # phase disturbance
+    NO_GROUND = 8  # earthing detection
+    INTERNAL = 10  # other
+    # 20 seems to be alw=1 (no error)
+
+
 @dataclass
 class WallboxData(BaseData):
+    wb_error: WbError = WbError.OK  # wb error status (!= error which means communication error)
     car_status: CarStatus = CarStatus.NoVehicle
     max_current: int = 16  # [A]
     allow_charging: bool = False
@@ -66,7 +77,7 @@ class Wallbox(BaseService[C, WallboxData]):
         """Override in sub classes"""
         return self.get_data()
 
-    def _set_data(self, wb: WallboxData) -> None:
+    def _set_data(self, wb: WallboxData):
         super()._set_data(wb)
         Wallbox._metrics_pvc_wallbox_car_status.set(wb.car_status)
         Wallbox._metrics_pvc_wallbox_power.set(wb.power)
@@ -77,13 +88,16 @@ class Wallbox(BaseService[C, WallboxData]):
 
     # set wallbox registers
 
-    def set_phases_in(self, phases: int) -> None:
+    def set_phases_in(self, phases: int):
         pass
 
-    def set_max_current(self, max_current: int) -> None:
+    def set_max_current(self, max_current: int):
         pass
 
-    def allow_charging(self, f: bool) -> None:
+    def allow_charging(self, f: bool):
+        pass
+
+    def trigger_reset(self):
         pass
 
 
@@ -92,6 +106,7 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
 
     def __init__(self, config: WallboxConfig):
         super().__init__(config)
+        self.trigger_reset_cnt = 0
 
     def _read_data(self) -> WallboxData:
         old = self.get_data()
@@ -108,17 +123,23 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
             wb.power = 0
         return wb
 
-    def set_car_status(self, status: CarStatus) -> None:
+    def set_wb_error(self, err: WbError):
+        self.get_data().wb_error = err
+
+    def set_car_status(self, status: CarStatus):
         self.get_data().car_status = status
 
-    def set_phases_in(self, phases: int) -> None:
+    def set_phases_in(self, phases: int):
         self.get_data().phases_in = phases
 
-    def set_max_current(self, max_current: int) -> None:
+    def set_max_current(self, max_current: int):
         self.get_data().max_current = max_current
 
-    def allow_charging(self, f: bool) -> None:
+    def allow_charging(self, f: bool):
         self.get_data().allow_charging = f
+
+    def trigger_reset(self):
+        self.trigger_reset_cnt += 1
 
     def decrement_charge_energy_for_tests(self):
         """needed for chargecontroller tests"""
@@ -135,7 +156,7 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
         wb.phases_in = 1 if ch else 3
         return wb
 
-    def set_phases_in(self, phases: int) -> None:
+    def set_phases_in(self, phases: int):
         # relay ON = 1 phase
         relay.writeChannel1(phases == 1)
 
@@ -153,7 +174,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         self._mqtt_url = f"{config.url}/mqtt"
         self._timeout = config.timeout
 
-    def set_phases_in(self, phases: int) -> None:
+    def set_phases_in(self, phases: int):
         errcnt = self.get_error_counter()
         phases_out = self.get_data().phases_out
         if errcnt == 0 and phases_out == 0:
@@ -163,7 +184,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         else:
             logger.warning(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
 
-    def set_max_current(self, max_current: int) -> None:
+    def set_max_current(self, max_current: int):
         if max_current != self.get_data().max_current:
             try:
                 logger.debug(f"set max_current={max_current}")
@@ -173,7 +194,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             except Exception as e:
                 logger.error(e)
 
-    def allow_charging(self, f: bool) -> None:
+    def allow_charging(self, f: bool):
         if f != self.get_data().allow_charging:
             try:
                 logger.debug(f"set allow_charging={f}")
@@ -183,6 +204,13 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             except Exception as e:
                 logger.error(e)
 
+    def trigger_reset(self):
+        try:
+            logger.debug("trigger reset")
+            requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": "rst=1"})
+        except Exception as e:
+            logger.error(e)
+
     def _read_data(self) -> WallboxData:
         try:
             res = requests.get(self._status_url, timeout=self._timeout)
@@ -191,14 +219,13 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             return wb
         except Exception as e:
             logger.error(e)
-            errcnt = self.inc_error_counter()
-            if errcnt > 3:
-                return WallboxData(errcnt)
-            else:
-                return self.get_data()
+            self.inc_error_counter()
+            # always return last known data - there is no safe state that would somehow help
+            return self.get_data()
 
     @classmethod
     def _json_2_wallbox_data(cls, json) -> WallboxData:
+        wb_error = WbError(int(json["err"]))
         car_status = CarStatus(int(json["car"]))
         max_current = int(json["amp"])
         allow_charging = json["alw"] == "1"
@@ -208,7 +235,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         power = int(json["nrg"][11]) * 10
         charged_energy = int(json["dws"]) / 360.0
         total_energy = int(json["eto"]) * 100
-        wb = WallboxData(0, car_status, max_current, allow_charging, phases_in, phases_out, power, charged_energy, total_energy)
+        wb = WallboxData(0, wb_error, car_status, max_current, allow_charging, phases_in, phases_out, power, charged_energy, total_energy)
         return wb
 
 

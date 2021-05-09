@@ -1,6 +1,6 @@
 import unittest
 import json
-from pvcontrol.wallbox import CarStatus, SimulatedWallbox, WallboxConfig, WallboxData
+from pvcontrol.wallbox import CarStatus, SimulatedWallbox, WallboxConfig, WallboxData, WbError
 from pvcontrol.meter import TestMeter, MeterData
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode, PhaseMode
 
@@ -372,6 +372,21 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.controller.run()
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+
+    def test_mode_3P_1P_phase_err(self):
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        c = self.controller.get_data()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
+
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+        self.controller.run()
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
+
+        self.wallbox.set_wb_error(WbError.PHASE)
+        self.controller.run()
+        self.assertEqual(1, self.wallbox.trigger_reset_cnt)
 
 
 class ChargeControllerPVTest(unittest.TestCase):

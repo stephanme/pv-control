@@ -6,7 +6,7 @@ import prometheus_client
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.meter import Meter, MeterData
-from pvcontrol.wallbox import CarStatus, Wallbox, WallboxData
+from pvcontrol.wallbox import CarStatus, Wallbox, WallboxData, WbError
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class ChargeControllerData(BaseData):
 class ChargeControllerConfig(BaseConfig):
     cycle_time: int = 30  # [s] control loop cycle time, used by scheduler
     enable_phase_switching: bool = True  # set to False of phase relay is not in operation
+    enable_auto_phase_switching: bool = True  # automatic phase switching depending on available PV
     line_voltage: float = 230  # [V]
     current_rounding_offset: float = 0.1  # [A] offset for max_current rounding
     power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
@@ -84,7 +85,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._wallbox = wallbox
         self._set_data(ChargeControllerData())
         self._charge_mode_pv_to_off_delay = 5 * 60  # configurable?
-        self._pv_allow_charging_off = False
+        self._pv_allow_charging_value = False
         self._pv_allow_charging_delay = 0
         self._last_charged_energy = None  # reset on every charging cycle, None = needs initialization on first cycle
         self._last_charged_energy_5m = 0.0  # charged energy in last 5m (cycle when meter energy data is updated)
@@ -93,7 +94,6 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         # config
         self._min_supported_current = wallbox.get_config().min_supported_current
         self._max_supported_current = wallbox.get_config().max_supported_current
-        self._allow_phase_switching = config.enable_phase_switching
         min_power_1phase = self._min_supported_current * config.line_voltage
         max_power_1phase = self._max_supported_current * config.line_voltage
         min_power_3phases = 3 * self._min_supported_current * config.line_voltage
@@ -175,8 +175,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         ctl = self.get_data()
         if (
             (ctl.mode == ChargeMode.PV_ONLY or ctl.mode == ChargeMode.PV_ALL)
+            and wb.error == 0
             and wb.car_status == CarStatus.ChargingFinished
-            and not self._pv_allow_charging_off
+            and self._pv_allow_charging_value
         ):
             self._charge_mode_pv_to_off_delay -= self.get_config().cycle_time
             if self._charge_mode_pv_to_off_delay <= 0:
@@ -190,10 +191,16 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
     # TODO: prevent too fast switching, use energy to grid and time instead of power
     # TODO: sync with allow_charging_delay
     def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
-        if self._allow_phase_switching:
+        if wb.error == 0 and wb.wb_error == WbError.PHASE:
+            # TODO: back-off needed?
+            self._wallbox.trigger_reset()
+            return True
+
+        config = self.get_config()
+        if config.enable_phase_switching:
             available_power = -m.power_grid + wb.power
             desired_phases = self._desired_phases(available_power, wb.phases_in)
-            if desired_phases != wb.phases_in:
+            if wb.error == 0 and desired_phases != wb.phases_in:
                 # switch phase relay only if charging is off
                 if wb.phases_out == 0:
                     self._wallbox.set_phases_in(desired_phases)
@@ -217,7 +224,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         elif phase_mode == PhaseMode.CHARGE_3P:
             return 3
         else:  # AUTO
-            if mode == ChargeMode.PV_ONLY:
+            if not self.get_config().enable_auto_phase_switching:
+                return current_phases
+            elif mode == ChargeMode.PV_ONLY:
                 if current_phases == 1:
                     if available_power >= self._pv_only_1_3_phase_threshold:
                         return 3
@@ -307,7 +316,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self.get_data().mode = mode
 
     def _set_allow_charging(self, v: bool, skip_delay: bool = False):
-        self._pv_allow_charging_off = not v and not skip_delay  # remember if allow_charging off came from PV control loop
+        self._pv_allow_charging_value = v  # remember last set allow_charging value set by PV control
         self._pv_allow_charging_delay = self.get_config().pv_allow_charging_delay if not skip_delay else 0
         self._wallbox.allow_charging(v)
 
