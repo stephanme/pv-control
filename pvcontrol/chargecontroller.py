@@ -189,9 +189,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         # !!! RFID sets allow_charging (but a phase switching may be needed)
 
     # TODO: prevent too fast switching, use energy to grid and time instead of power
-    # TODO: sync with allow_charging_delay
     def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
         if wb.error == 0 and wb.wb_error == WbError.PHASE:
+            # should not happen anymore since reset is triggered by wallbox.set_phases_in()
             # TODO: back-off needed?
             self._wallbox.trigger_reset()
             return True

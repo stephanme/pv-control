@@ -7,7 +7,7 @@ from pvcontrol.wallbox import CarStatus, GoeWallbox, GoeWallboxConfig, WallboxDa
 
 class GoeWallboxTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.wallbox = GoeWallbox(GoeWallboxConfig())
+        self.wallbox = GoeWallbox(GoeWallboxConfig(switch_phases_reset_delay=0))
 
     def test_error_counter(self):
         self.assertEqual(0, self.wallbox.get_error_counter())
@@ -24,23 +24,31 @@ class GoeWallboxTest(unittest.TestCase):
         wb = GoeWallbox._json_2_wallbox_data(wb_json)
         self.assertEqual(WallboxData(0, WbError.OK, CarStatus.NoVehicle, 10, True, 1, 0, 0, 0, 12000), wb)
 
+    @patch.object(GoeWallbox, "trigger_reset")
     @patch("pvcontrol.relay.writeChannel1")
-    def test_set_phases_in(self, mock_writeChannel1):
+    def test_set_phases_in(self, mock_writeChannel1, mock_trigger_reset):
         self.wallbox.set_phases_in(1)
         mock_writeChannel1.assert_called_with(True)
+        mock_trigger_reset.assert_called_with()
         self.wallbox.set_phases_in(3)
         mock_writeChannel1.assert_called_with(False)
+        mock_trigger_reset.assert_called_with()
         self.wallbox.set_phases_in(2)
         mock_writeChannel1.assert_called_with(False)
+        mock_trigger_reset.assert_called_with()
 
+    @patch.object(GoeWallbox, "trigger_reset")
     @patch("pvcontrol.relay.writeChannel1")
-    def test_set_phases_in_error(self, mock_writeChannel1):
+    def test_set_phases_in_error(self, mock_writeChannel1, mock_trigger_reset):
         self.wallbox.inc_error_counter()
         self.wallbox.set_phases_in(1)
         mock_writeChannel1.assert_not_called()
+        mock_trigger_reset.assert_not_called()
 
+    @patch.object(GoeWallbox, "trigger_reset")
     @patch("pvcontrol.relay.writeChannel1")
-    def test_set_phases_in_charging(self, mock_writeChannel1):
+    def test_set_phases_in_charging(self, mock_writeChannel1, mock_trigger_reset):
         self.wallbox.get_data().phases_out = 3
         self.wallbox.set_phases_in(1)
         mock_writeChannel1.assert_not_called()
+        mock_trigger_reset.assert_not_called()

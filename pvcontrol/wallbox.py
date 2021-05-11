@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import enum
 import typing
 import requests
+import time
 import prometheus_client
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol import relay
@@ -164,7 +165,8 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
 @dataclass
 class GoeWallboxConfig(WallboxConfig):
     url: str = "http://go-echarger.fritz.box"
-    timeout: int = 5  # request timeout
+    timeout: int = 5  # [s] request timeout
+    switch_phases_reset_delay: int = 2  # [s] delay between switching phase relay and trigger WB reset
 
 
 class GoeWallbox(Wallbox[GoeWallboxConfig]):
@@ -181,6 +183,8 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             # relay ON = 1 phase
             relay.writeChannel1(phases == 1)
             logger.debug(f"set phases_in={phases}")
+            time.sleep(self.get_config().switch_phases_reset_delay)
+            self.trigger_reset()
         else:
             logger.warning(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
 
