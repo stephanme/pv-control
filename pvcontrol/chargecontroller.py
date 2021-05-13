@@ -156,8 +156,20 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                     self._last_charged_energy_5m = wb.charged_energy
                     charged_energy_5m = max(charged_energy_5m, 0.0)
                     charged_from_grid = min(consumed_energy_grid_inc, charged_energy_5m)
-                    ChargeController._metrics_pvc_controller_charged_energy.labels("grid").inc(charged_from_grid)
-                    ChargeController._metrics_pvc_controller_charged_energy.labels("pv").inc(charged_energy_5m - charged_from_grid)
+                    charged_from_pv = charged_energy_5m - charged_from_grid
+                    if charged_from_grid < 0.0 or charged_from_pv < 0.0:
+                        logger.error(
+                            f"Negative charged energy incr.: charged_from_grid={charged_from_grid}, charged_from_pv={charged_from_pv}"
+                        )
+                        logger.error(f"  m={m}")
+                        logger.error(f"  wb={wb}")
+                        logger.error(f"  _last_energy_consumption={self._last_energy_consumption}")
+                        logger.error(f"  _last_energy_consumption_grid={self._last_energy_consumption_grid}")
+                        logger.error(f"  _last_charged_energy={self._last_charged_energy}")
+                        logger.error(f"  _last_charged_energy_5m={self._last_charged_energy_5m}")
+                    else:
+                        ChargeController._metrics_pvc_controller_charged_energy.labels("grid").inc(charged_from_grid)
+                        ChargeController._metrics_pvc_controller_charged_energy.labels("pv").inc(charged_from_pv)
             else:
                 self._last_charged_energy_5m = wb.charged_energy
         else:
