@@ -30,6 +30,11 @@ spec:
             - containerPort: 8080
           securityContext:
             privileged: true
+          lifecycle:
+            preStop:
+              exec:
+                # SIGINT needed for flask dev server, kill is a bash built-in
+                command: ["bash", "-c", "kill -s SIGINT 1"]
       nodeSelector:
         kubernetes.io/hostname: pi1
 
