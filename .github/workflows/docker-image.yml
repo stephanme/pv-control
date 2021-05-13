@@ -66,3 +66,4 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta.outputs.tags }}
         labels: ${{ steps.docker_meta.outputs.labels }}
+        build-args: COMMIT_SHA_ARG=${{ github.sha }}

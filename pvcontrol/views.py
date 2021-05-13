@@ -1,7 +1,8 @@
 import logging
-from pvcontrol.service import BaseService
+import os
 import flask
 import flask.views
+from pvcontrol.service import BaseService
 from pvcontrol.meter import Meter
 from pvcontrol.wallbox import Wallbox
 from pvcontrol.chargecontroller import ChargeController, ChargeMode, PhaseMode
@@ -25,9 +26,11 @@ class PvControlView(flask.views.MethodView):
         self._meter = meter
         self._wb = wb
         self._controller = controller
+        self._version = os.getenv("COMMIT_SHA", "unknown")
 
     def get(self) -> flask.Response:
         res = {
+            "version": self._version,
             "controller": self._controller.get_data(),
             "meter": self._meter.get_data(),
             "wallbox": self._wb.get_data(),

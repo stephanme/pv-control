@@ -49,6 +49,7 @@ class PvControlViewTest(unittest.TestCase):
         self.assertEqual(self.meter_data.__dict__, r.json["meter"])
         self.assertEqual(self.wb_data.__dict__, r.json["wallbox"])
         self.assertEqual(self.controller_data.__dict__, r.json["controller"])
+        self.assertEqual("unknown", r.json["version"])
 
 
 class PvControlConfigDataViewTest(unittest.TestCase):

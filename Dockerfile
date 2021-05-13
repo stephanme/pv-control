@@ -1,4 +1,6 @@
 FROM python:3.7-slim
+ARG COMMIT_SHA_ARG
+ENV COMMIT_SHA=$COMMIT_SHA_ARG
 
 WORKDIR /usr/src/app
 
