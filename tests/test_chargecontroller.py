@@ -210,6 +210,32 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(100, metric_value_charged_energy_grid.get())
         self.assertEqual(400, metric_value_charged_energy_pv.get())
 
+    def test_meter_charged_energy_neg_energy_consumption_grid(self):
+        # observed (very low) negative meter.energy_consumption_grid changes (which should not exist)
+        ctl = self.controller
+        m = MeterData()
+        wb = WallboxData()
+        metric_value_total_charged_energy = ChargeController._metrics_pvc_controller_total_charged_energy._value
+        metric_value_charged_energy_grid = ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value
+        metric_value_charged_energy_pv = ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value
+
+        m.energy_consumption += 400
+        m.energy_consumption_grid += 200
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(0, metric_value_total_charged_energy.get())
+        self.assertEqual(0, metric_value_charged_energy_grid.get())
+        self.assertEqual(0, metric_value_charged_energy_pv.get())
+
+        wb.allow_charging = True
+        ctl._meter_charged_energy(m, wb)
+        wb.charged_energy += 100
+        m.energy_consumption += 100
+        m.energy_consumption_grid -= 1
+        ctl._meter_charged_energy(m, wb)
+        self.assertEqual(100, metric_value_total_charged_energy.get())
+        self.assertEqual(0, metric_value_charged_energy_grid.get())
+        self.assertEqual(100, metric_value_charged_energy_pv.get())
+
 
 class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
     def setUp(self) -> None:

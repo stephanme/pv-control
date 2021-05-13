@@ -140,6 +140,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             # charged_energy reset
             if energy_inc < -1.0:
                 energy_inc = wb.charged_energy
+            energy_inc = max(energy_inc, 0.0)
             ChargeController._metrics_pvc_controller_total_charged_energy.inc(energy_inc)
 
             # note: energy values are updates every 5 min only
@@ -148,12 +149,13 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                 consumed_energy_inc = m.energy_consumption - self._last_energy_consumption
                 if consumed_energy_inc > 1.0:
                     consumed_energy_grid_inc = m.energy_consumption_grid - self._last_energy_consumption_grid
+                    # no neg allowed (but observed very small negative increments)
+                    consumed_energy_grid_inc = max(consumed_energy_grid_inc, 0.0)
                     # Any energy consumed from grid while charging car is accounted to "charged from grid",
                     # the remaining part as "charged from PV"
                     charged_energy_5m = wb.charged_energy - self._last_charged_energy_5m
-                    if charged_energy_5m < 1.0:
+                    if charged_energy_5m < -1.0:
                         charged_energy_5m = wb.charged_energy
-                    self._last_charged_energy_5m = wb.charged_energy
                     charged_energy_5m = max(charged_energy_5m, 0.0)
                     charged_from_grid = min(consumed_energy_grid_inc, charged_energy_5m)
                     charged_from_pv = charged_energy_5m - charged_from_grid
@@ -170,6 +172,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                     else:
                         ChargeController._metrics_pvc_controller_charged_energy.labels("grid").inc(charged_from_grid)
                         ChargeController._metrics_pvc_controller_charged_energy.labels("pv").inc(charged_from_pv)
+                    self._last_charged_energy_5m = wb.charged_energy
             else:
                 self._last_charged_energy_5m = wb.charged_energy
         else:
