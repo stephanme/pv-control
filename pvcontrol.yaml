@@ -26,6 +26,8 @@ spec:
             - SimulatedMeter
             - --wallbox
             - SimulatedWallboxWithRelay
+            - --car
+            - SimulatedCar
           ports:
             - containerPort: 8080
           securityContext:

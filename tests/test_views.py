@@ -1,3 +1,5 @@
+from datetime import datetime
+from pvcontrol.car import CarData
 import unittest
 import unittest.mock as mock
 import flask
@@ -30,18 +32,22 @@ class StaticResourcesViewTest(unittest.TestCase):
 class PvControlViewTest(unittest.TestCase):
     def setUp(self):
         app = flask.Flask(__name__)
+        app.json_encoder = views.JSONEncoder
         app.testing = True
         self.app = app.test_client()
         self.meter_data = MeterData(5000, 3000, 2000)
         self.wb_data = WallboxData()
         self.controller_data = ChargeControllerData()
+        self.car_data = CarData()
         meter = mock.Mock()
         meter.get_data.return_value = self.meter_data
         wb = mock.Mock()
         wb.get_data.return_value = self.wb_data
         controller = mock.Mock()
         controller.get_data.return_value = self.controller_data
-        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", meter, wb, controller))
+        car = mock.Mock()
+        car.get_data.return_value = self.car_data
+        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", meter, wb, controller, car))
 
     def test_pvcontrol_api(self):
         r = self.app.get("/api/pvcontrol")
@@ -49,6 +55,9 @@ class PvControlViewTest(unittest.TestCase):
         self.assertEqual(self.meter_data.__dict__, r.json["meter"])
         self.assertEqual(self.wb_data.__dict__, r.json["wallbox"])
         self.assertEqual(self.controller_data.__dict__, r.json["controller"])
+        _car = r.json["car"]
+        _car["data_captured_at"] = datetime.fromisoformat(_car["data_captured_at"])  # can't guess conversion
+        self.assertEqual(self.car_data.__dict__, _car)
         self.assertEqual("unknown", r.json["version"])
 
 
