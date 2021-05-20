@@ -8,11 +8,10 @@ COPY requirements.txt ./
 
 # build-essential needed for gpio library
 # clean up after pip install to keep image small
-# libffi-dev libssl-dev are required for Authlib>cryptography>cffi (seems missing on arm)
+# libffi-dev, libssl-dev, rust are required for Authlib>cryptography>cffi (seems missing on arm)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends build-essential \
-  && apt-get install -y libffi-dev libssl-dev \
-  && pip install --no-cache-dir -r requirements.txt \
+  && pip install --no-cache-dir --extra-index-url https://www.piwheels.org/simple -r requirements.txt \
   && apt-get remove -y build-essential \
   && apt-get -y autoremove \
   && apt-get clean \
