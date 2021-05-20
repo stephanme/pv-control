@@ -91,6 +91,10 @@ describe('AppComponent', () => {
         mode: ChargeMode.OFF,
         desired_mode: ChargeMode.OFF,
         phase_mode: PhaseMode.AUTO,
+      },
+      car: {
+        soc: 50,
+        cruising_range: 150,
       }
     };
 
@@ -119,9 +123,10 @@ describe('AppComponent', () => {
     expect(fixture.debugElement.query(By.css('#card-grid span')).nativeElement.textContent).toContain('-2.0 kW');
     expect(fixture.debugElement.query(By.css('#card-grid mat-icon')).nativeElement.className).toContain('col-green');
     expect(fixture.debugElement.query(By.css('#card-home span')).nativeElement.textContent).toContain('1.0 kW');
-    expect(fixture.debugElement.query(By.css('#card-car span')).nativeElement.textContent).toContain('2.0 kW');
+    expect(fixture.debugElement.query(By.css('#card-car span')).nativeElement.textContent).toContain('50 %');
 
     expect(fixture.debugElement.query(By.css('#car-max-current')).nativeElement.textContent).toContain('3x 8 A');
+    expect(fixture.debugElement.query(By.css('#car-charge-power')).nativeElement.textContent).toContain('2.0 kW');
   });
 
   it('should refresh data', async () => {

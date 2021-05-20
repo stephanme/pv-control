@@ -41,6 +41,10 @@ export class AppComponent implements OnInit, OnDestroy {
       mode: ChargeMode.OFF,
       desired_mode: ChargeMode.OFF,
       phase_mode: PhaseMode.AUTO,
+    },
+    car: {
+      soc: 0,
+      cruising_range: 0
     }
   };
   chargeModeControl = this.fb.control(ChargeMode.OFF);

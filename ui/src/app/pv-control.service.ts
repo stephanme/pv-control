@@ -37,10 +37,17 @@ export interface ChargerController {
   phase_mode: PhaseMode;
 }
 
+export interface Car {
+  // data_captured_at: string; - deserialize as Date ?
+  soc: number;
+  cruising_range: number;
+}
+
 export interface PvControl {
   meter: Meter;
   wallbox: Wallbox;
   controller: ChargerController;
+  car: Car;
 }
 
 const httpOptions = {

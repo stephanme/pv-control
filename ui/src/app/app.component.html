@@ -25,7 +25,7 @@
     </div>
     <div>
       <mat-card id="card-car" class="mat-elevation-z4">
-          <mat-card-title><mat-icon [inline]="true" color="primary">electric_car</mat-icon><span fxFlex="grow" class="text-right">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span></mat-card-title>
+          <mat-card-title><mat-icon [inline]="true" color="primary">electric_car</mat-icon><span fxFlex="grow" class="text-right">{{pvControl.car.soc|number:'1.0-0'}} %</span></mat-card-title>
       </mat-card>
     </div>
 
@@ -33,9 +33,9 @@
       <mat-card id="card-chargemode" class="mat-elevation-z4">
         <mat-card-title fxLayoutAlign="space">
           <mat-icon fxFlex="grow" [inline]="true" color="primary">ev_station</mat-icon>
-          <span class="">Charging</span>
-          <span id="car-max-current" *ngIf="!pvControl.wallbox.allow_charging" fxFlex="grow" class="text-right">Off</span>
-          <span id="car-max-current" *ngIf="pvControl.wallbox.allow_charging" fxFlex="grow" class="text-right">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+          <span id="car-max-current" *ngIf="pvControl.wallbox.allow_charging" fxFlex="basis" class="text-center">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+          <span id="car-charge-power" *ngIf="pvControl.wallbox.allow_charging" fxFlex="grow" class="text-right">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
+          <span id="car-charge-power" *ngIf="!pvControl.wallbox.allow_charging" fxFlex="grow" class="text-right">Off</span>
         </mat-card-title>
         <mat-card-content>
           <mat-button-toggle-group id="chargeModeToogle" fxLayout="row" fxLayoutAlign="center" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">

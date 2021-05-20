@@ -35,6 +35,10 @@ describe('PvControlServiceService', () => {
         mode: ChargeMode.OFF,
         desired_mode: ChargeMode.PV_ONLY,
         phase_mode: PhaseMode.AUTO,
+      },
+      car: {
+        soc: 0,
+        cruising_range: 0,
       }
     };
   });
