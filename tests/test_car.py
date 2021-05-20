@@ -73,7 +73,7 @@ class HtmlFormParserTest(unittest.TestCase):
         self.assertEqual({"_csrf": "csrf value", "relayState": "relay state", "hmac": "hmac value"}, p.hidden_input_values)
 
 
-@unittest.skipUnless(car_config is not None, "needs car_test_config.json")
+@unittest.skipUnless(len(car_config) > 0, "needs car_test_config.json")
 class VolkswagenIDCarTest(unittest.TestCase):
     def setUp(self):
         cfg = VolkswagenIDCarConfig(**car_config)
