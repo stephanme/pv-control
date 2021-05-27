@@ -79,7 +79,7 @@ class VolkswagenIDCarTest(unittest.TestCase):
         cfg = VolkswagenIDCarConfig(**car_config)
         self.car = VolkswagenIDCar(cfg)
 
-    def test_login(self):
+    def test_login_and_refresh_token(self):
         cfg = self.car.get_config()
         client = self.car._login(cfg.user, cfg.password)
         vehicles_res = client.get("https://mobileapi.apps.emea.vwapps.io/vehicles")
@@ -92,6 +92,10 @@ class VolkswagenIDCarTest(unittest.TestCase):
         self.assertEqual(207, car_status_res.status_code)
         car_status = car_status_res.json()
         print(f"car_status={car_status}")
+        # refresh token
+        self.car._refresh_token(client)
+        car_status_res = client.get(f"https://mobileapi.apps.emea.vwapps.io/vehicles/{vin}/status")
+        self.assertEqual(207, car_status_res.status_code)
 
     def test_read_data(self):
         c = self.car.read_data()
@@ -100,3 +104,10 @@ class VolkswagenIDCarTest(unittest.TestCase):
         self.assertGreater(c.cruising_range, 0)
         self.assertEqual(0, c.error)
         self.assertIsInstance(c.data_captured_at, datetime.datetime)
+        # read second time, no login needed
+        c = self.car.read_data()
+        self.assertEqual(0, c.error)
+        # invalidate access token -> enforce refresh
+        self.car._client.token["access_token"] = "xxx"
+        c = self.car.read_data()
+        self.assertEqual(0, c.error)

@@ -9,6 +9,7 @@ from authlib.oauth2.rfc6749.wrappers import OAuth2Token
 from authlib.integrations.requests_client import OAuth2Session
 from requests import PreparedRequest, Response
 from requests.adapters import BaseAdapter
+from requests.exceptions import HTTPError
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 
 logger = logging.getLogger(__name__)
@@ -192,13 +193,31 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
             {
                 "access_token": api_token_json["accessToken"],
                 "refresh_token": api_token_json["refreshToken"],
-                "id_token": api_token_json["idToken"],
             }
         )
         # print(f"api_token={api_token}")
-        # TODO token refresh without expire_at?
-        api_client = OAuth2Session(token=api_token)
+        api_client = OAuth2Session(token=api_token, token_endpoint=f"{vwapps_login_service_uri}/refresh/v1")
         return api_client
+
+    @classmethod
+    def _refresh_token(cls, client: OAuth2Session):
+        token = client.token
+        token_endpoint = client.metadata["token_endpoint"]
+        refresh_token_response = client.session.get(
+            token_endpoint,
+            withhold_token=True,
+            headers={"Accept": "application/json", "Authorization": f"Bearer {token['refresh_token']}"},
+        )
+        refresh_token_response.raise_for_status()
+        api_token_json = refresh_token_response.json()
+        api_token = OAuth2Token(
+            {
+                "access_token": api_token_json["accessToken"],
+                "refresh_token": api_token_json["refreshToken"],
+            }
+        )
+        # print(f"api_token refreshed={api_token}")
+        client.token = api_token
 
     def _read_data(self) -> CarData:
         # login if no already done
@@ -210,7 +229,10 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
             # TODO: get vin if not configured
             if self._client is not None:
                 status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/status")
-                # TODO auth error -> refresh token / clear out client
+                if status_res.status_code == 401:
+                    # auth error -> refresh token
+                    VolkswagenIDCar._refresh_token(self._client)
+                    status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/status")
                 status_res.raise_for_status()
                 status = status_res.json()
                 battery_status = status["data"]["batteryStatus"]
@@ -220,6 +242,12 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
                     cruising_range=battery_status["cruisingRangeElectric_km"],
                     soc=battery_status["currentSOC_pct"],
                 )
+        except HTTPError as e:
+            # enforce login on 401
+            if e.response.status_code == 401:
+                self._client = None
+            logger.error(e)
+            self.inc_error_counter()
         except Exception as e:
             logger.error(e)
             self.inc_error_counter()
