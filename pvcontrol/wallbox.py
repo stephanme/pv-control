@@ -41,6 +41,7 @@ class WallboxData(BaseData):
     car_status: CarStatus = CarStatus.NoVehicle
     max_current: int = 16  # [A]
     allow_charging: bool = False
+    phase_relay: bool = False  # on/off - mapping to 1 or 3 phases depends on relay type/wiring
     phases_in: int = 3  # 0..3
     phases_out: int = 0  # 0..3
     power: float = 0  # [W]
@@ -63,6 +64,7 @@ class Wallbox(BaseService[C, WallboxData]):
     )
     _metrics_pvc_wallbox_max_current = prometheus_client.Gauge("pvcontrol_wallbox_max_current_amperes", "Max current per phase")
     _metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("pvcontrol_wallbox_allow_charging", "Wallbox allows charging")
+    _metrics_pvc_wallbox_phase_relay = prometheus_client.Gauge("pvcontrol_wallbox_phase_relay", "Phase switch relay status (off/on)")
 
     def __init__(self, config: C):
         super().__init__(config)
@@ -86,6 +88,7 @@ class Wallbox(BaseService[C, WallboxData]):
         Wallbox._metrics_pvc_wallbox_phases_out.set(wb.phases_out)
         Wallbox._metrics_pvc_wallbox_max_current.set(wb.max_current)
         Wallbox._metrics_pvc_wallbox_allow_charging.set(wb.allow_charging)
+        Wallbox._metrics_pvc_wallbox_phase_relay.set(wb.phase_relay)
 
     # set wallbox registers
 
@@ -132,6 +135,7 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
 
     def set_phases_in(self, phases: int):
         self.get_data().phases_in = phases
+        self.get_data().phase_relay = (phases == 1)
 
     def set_max_current(self, max_current: int):
         self.get_data().max_current = max_current
@@ -155,6 +159,7 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
         ch = relay.readChannel1()
         wb = super()._read_data()
         wb.phases_in = 1 if ch else 3
+        wb.phase_relay = ch
         return wb
 
     def set_phases_in(self, phases: int):
@@ -193,7 +198,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             try:
                 logger.debug(f"set max_current={max_current}")
                 res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"})
-                wb = GoeWallbox._json_2_wallbox_data(res.json())
+                wb = GoeWallbox._json_2_wallbox_data(res.json(), relay.readChannel1())
                 self._set_data(wb)
             except Exception as e:
                 logger.error(e)
@@ -203,7 +208,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             try:
                 logger.debug(f"set allow_charging={f}")
                 res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"})
-                wb = GoeWallbox._json_2_wallbox_data(res.json())
+                wb = GoeWallbox._json_2_wallbox_data(res.json(), relay.readChannel1())
                 self._set_data(wb)
             except Exception as e:
                 logger.error(e)
@@ -218,7 +223,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
     def _read_data(self) -> WallboxData:
         try:
             res = requests.get(self._status_url, timeout=self._timeout)
-            wb = GoeWallbox._json_2_wallbox_data(res.json())
+            wb = GoeWallbox._json_2_wallbox_data(res.json(), relay.readChannel1())
             self.reset_error_counter()
             return wb
         except Exception as e:
@@ -228,7 +233,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             return self.get_data()
 
     @classmethod
-    def _json_2_wallbox_data(cls, json) -> WallboxData:
+    def _json_2_wallbox_data(cls, json: typing.Dict, phase_relay: bool) -> WallboxData:
         wb_error = WbError(int(json["err"]))
         car_status = CarStatus(int(json["car"]))
         max_current = int(json["amp"])
@@ -239,7 +244,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         power = int(json["nrg"][11]) * 10
         charged_energy = int(json["dws"]) / 360.0
         total_energy = int(json["eto"]) * 100
-        wb = WallboxData(0, wb_error, car_status, max_current, allow_charging, phases_in, phases_out, power, charged_energy, total_energy)
+        wb = WallboxData(0, wb_error, car_status, max_current, allow_charging, phase_relay, phases_in, phases_out, power, charged_energy, total_energy)
         return wb
 
 
