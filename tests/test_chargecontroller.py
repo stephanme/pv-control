@@ -414,6 +414,17 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.controller.run()
         self.assertEqual(1, self.wallbox.trigger_reset_cnt)
 
+    def test_inconsistent_phase_relay_err(self):
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        c = self.controller.get_data()
+        self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
+
+        self.wallbox.set_wb_error(WbError.PHASE_RELAY_ERR)
+        self.controller.run()
+        self.assertEqual(1, self.wallbox.trigger_reset_cnt)
+
 
 class ChargeControllerPVTest(unittest.TestCase):
     def setUp(self) -> None:

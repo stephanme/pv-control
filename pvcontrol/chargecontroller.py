@@ -205,8 +205,8 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
     # TODO: prevent too fast switching, use energy to grid and time instead of power
     def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
-        if wb.error == 0 and wb.wb_error == WbError.PHASE:
-            # should not happen anymore since reset is triggered by wallbox.set_phases_in()
+        if wb.error == 0 and wb.wb_error in [WbError.PHASE, WbError.PHASE_RELAY_ERR]:
+            # may happen on raspberry reboot -> phase relay is switched off (3 phases)
             # TODO: back-off needed?
             self._wallbox.trigger_reset()
             return True

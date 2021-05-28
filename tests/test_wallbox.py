@@ -23,6 +23,9 @@ class GoeWallboxTest(unittest.TestCase):
         )
         wb = GoeWallbox._json_2_wallbox_data(wb_json, True)
         self.assertEqual(WallboxData(0, WbError.OK, CarStatus.NoVehicle, 10, True, True, 1, 0, 0, 0, 12000), wb)
+        # phase releay error
+        wb = GoeWallbox._json_2_wallbox_data(wb_json, False)
+        self.assertEqual(WallboxData(0, WbError.PHASE_RELAY_ERR, CarStatus.NoVehicle, 10, True, False, 1, 0, 0, 0, 12000), wb)
 
     @patch.object(GoeWallbox, "trigger_reset")
     @patch("pvcontrol.relay.writeChannel1")

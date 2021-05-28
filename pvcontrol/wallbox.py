@@ -33,6 +33,7 @@ class WbError(enum.IntEnum):
     NO_GROUND = 8  # earthing detection
     INTERNAL = 10  # other
     # 20 seems to be alw=1 (no error)
+    PHASE_RELAY_ERR = 100  # inconsistency between phase relay and phases-in
 
 
 @dataclass
@@ -244,6 +245,10 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         power = int(json["nrg"][11]) * 10
         charged_energy = int(json["dws"]) / 360.0
         total_energy = int(json["eto"]) * 100
+        # check if phases_in is consistent with phase relay state, WB errors dominate
+        if wb_error == WbError.OK or wb_error > WbError.INTERNAL:
+            if not (phases_in == 3 and not phase_relay or phases_in == 1 and phase_relay):
+                wb_error = WbError.PHASE_RELAY_ERR
         wb = WallboxData(
             0, wb_error, car_status, max_current, allow_charging, phase_relay, phases_in, phases_out, power, charged_energy, total_energy
         )

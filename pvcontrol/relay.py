@@ -45,5 +45,5 @@ def writeChannel1(v: bool):
 
 
 def cleanup():
-    logger.info("cleanup")
-    GPIO.cleanup()
+    logger.info("skip cleanup to keep relay state")
+    # GPIO.cleanup()
