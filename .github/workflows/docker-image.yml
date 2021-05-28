@@ -28,7 +28,7 @@ jobs:
       working-directory: ./ui
     - name: Build UI
       # base-href must match ingress path
-      run: ng build --prod --base-href /pvcontrol/
+      run: ng build --configuration production --base-href /pvcontrol/
       working-directory: ./ui
     - name: Test UI
       run: npm run test
