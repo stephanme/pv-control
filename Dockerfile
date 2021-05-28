@@ -5,7 +5,7 @@ ENV COMMIT_SHA=$COMMIT_SHA_ARG
 WORKDIR /usr/src/app
 
 COPY requirements.txt ./
-RUN pip install --no-cache-dir --prefer-binary --extra-index-url https://www.piwheels.org/simple -r requirements.txt
+RUN pip install --no-cache-dir --only-binary :all: --extra-index-url https://www.piwheels.org/simple -r requirements.txt
 
 COPY ./pvcontrol/*.py ./pvcontrol/
 COPY /ui/dist/ui ./ui/dist/ui/
