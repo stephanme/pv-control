@@ -135,7 +135,7 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
 
     def set_phases_in(self, phases: int):
         self.get_data().phases_in = phases
-        self.get_data().phase_relay = (phases == 1)
+        self.get_data().phase_relay = phases == 1
 
     def set_max_current(self, max_current: int):
         self.get_data().max_current = max_current
@@ -244,7 +244,9 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         power = int(json["nrg"][11]) * 10
         charged_energy = int(json["dws"]) / 360.0
         total_energy = int(json["eto"]) * 100
-        wb = WallboxData(0, wb_error, car_status, max_current, allow_charging, phase_relay, phases_in, phases_out, power, charged_energy, total_energy)
+        wb = WallboxData(
+            0, wb_error, car_status, max_current, allow_charging, phase_relay, phases_in, phases_out, power, charged_energy, total_energy
+        )
         return wb
 
 
