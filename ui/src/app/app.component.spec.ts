@@ -76,11 +76,13 @@ describe('AppComponent', () => {
 
     pvControlData = {
       meter: {
+        error: 0,
         power_pv: 5000,
         power_consumption: 3000,
         power_grid: -2000
       },
       wallbox: {
+        error: 0,
         allow_charging: true,
         max_current: 8,
         phases_in: 3,
@@ -88,11 +90,13 @@ describe('AppComponent', () => {
         power: 2000,
       },
       controller: {
+        error: 0,
         mode: ChargeMode.OFF,
         desired_mode: ChargeMode.OFF,
         phase_mode: PhaseMode.AUTO,
       },
       car: {
+        error: 0,
         soc: 50,
         cruising_range: 150,
       }

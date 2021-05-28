@@ -2,13 +2,17 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-export interface Meter {
+export interface BaseService {
+  error: number;
+}
+
+export interface Meter extends BaseService {
   power_pv: number;
   power_consumption: number;
   power_grid: number;
 }
 
-export interface Wallbox {
+export interface Wallbox extends BaseService {
   car_status?: number;
   max_current: number;
   allow_charging: boolean;
@@ -31,13 +35,13 @@ export enum PhaseMode {
   CHARGE_3P = 'CHARGE_3P',
 }
 
-export interface ChargerController {
+export interface ChargerController extends BaseService {
   mode: ChargeMode;
   desired_mode: ChargeMode;
   phase_mode: PhaseMode;
 }
 
-export interface Car {
+export interface Car extends BaseService {
   // data_captured_at: string; - deserialize as Date ?
   soc: number;
   cruising_range: number;

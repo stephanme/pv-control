@@ -39,10 +39,10 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 /* colors */
 
 .col-primary {
-  color: #3f51b5
+  color: #3f51b5;
 }
 .col-grey {
-  color: rgba(0,0,0,.38)
+  color: #9E9E9E;
 }
 .col-yellow {
   color: #ffc107;

@@ -26,11 +26,13 @@ export class AppComponent implements OnInit, OnDestroy {
 
   pvControl: PvControl = {
     meter: {
+      error: 0,
       power_pv: 0,
       power_consumption: 0,
       power_grid: 0,
     },
     wallbox: {
+      error: 0,
       allow_charging: false,
       max_current: 0,
       phases_in: 3,
@@ -38,11 +40,13 @@ export class AppComponent implements OnInit, OnDestroy {
       power: 0,
     },
     controller: {
+      error: 0,
       mode: ChargeMode.OFF,
       desired_mode: ChargeMode.OFF,
       phase_mode: PhaseMode.AUTO,
     },
     car: {
+      error: 0,
       soc: 0,
       cruising_range: 0
     }
