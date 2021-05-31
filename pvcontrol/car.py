@@ -236,6 +236,7 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
                 status_res.raise_for_status()
                 status = status_res.json()
                 battery_status = status["data"]["batteryStatus"]
+                self.reset_error_counter()
                 return CarData(
                     error=0,
                     data_captured_at=dateutil.parser.isoparse(battery_status["carCapturedTimestamp"]),

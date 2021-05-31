@@ -144,6 +144,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
             consumption_pv = modbusUtils.decode_ieee(consumption_l[4])
             energy_consumption = modbusUtils.decode_ieee(consumption_l[5])
             pv = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_pv)[0])
+            self.reset_error_counter()
             return MeterData(
                 0, pv, consumption_grid + consumption_pv, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv
             )
