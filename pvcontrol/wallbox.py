@@ -116,7 +116,7 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
     def _read_data(self) -> WallboxData:
         old = self.get_data()
         wb = WallboxData(**old.__dict__)
-        if wb.allow_charging and wb.car_status != CarStatus.ChargingFinished:
+        if wb.allow_charging and wb.car_status not in [CarStatus.NoVehicle, CarStatus.ChargingFinished]:
             if not old.allow_charging:
                 wb.charged_energy = 0
             wb.phases_out = wb.phases_in
