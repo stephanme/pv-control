@@ -126,6 +126,8 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
         else:
             wb.phases_out = 0
             wb.power = 0
+            if wb.car_status == CarStatus.NoVehicle:
+                wb.allow_charging = False
         return wb
 
     def set_wb_error(self, err: WbError):

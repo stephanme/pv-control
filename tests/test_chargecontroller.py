@@ -813,7 +813,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.NoVehicle,  # reported by car not because PV switched off
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=True, max_current=8),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=8),
             },
             {
                 "test": "6kW PV, 3x8A, car connected",
@@ -837,7 +837,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.NoVehicle,  # unplugged car
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=True, max_current=8, power=0),
+                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0),
             },
         ]
         # 5 min delay until charge mode OFF

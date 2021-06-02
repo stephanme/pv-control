@@ -192,8 +192,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         if (
             ctl.mode in [ChargeMode.PV_ONLY, ChargeMode.PV_ALL]
             and wb.error == 0
-            and wb.car_status in [CarStatus.NoVehicle, CarStatus.ChargingFinished]
-            and self._pv_allow_charging_value
+            and (wb.car_status == CarStatus.NoVehicle or (wb.car_status == CarStatus.ChargingFinished and self._pv_allow_charging_value))
         ):
             self._charge_mode_pv_to_off_delay -= self.get_config().cycle_time
             if self._charge_mode_pv_to_off_delay <= 0:
