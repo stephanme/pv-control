@@ -165,15 +165,28 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
         login_params = credential_form_parser.hidden_input_values
         login_params["email"] = user
         login_params["password"] = password
-        # POST https://identity.vwgroup.io/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/login/authenticate -> 302
-        # GET https://identity.vwgroup.io//oidc/v1/oauth/sso?clientId=... -> 302
-        # GET https://identity.vwgroup.io//signin-service/v1/consent/users/9dcee9cb-e388-42a4-a89b-e12230114e83/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com?... -> 302
-        # GET https://identity.vwgroup.io//oidc/v1/oauth/client/callback/success?... -> 302
+        # POST https://identity.vwgroup.io/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/login/authenticate -> 303
+        # if ToS updated
+        #   GET https://identity.vwgroup.io/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/terms-and-conditions?... -> 200
+        #   POST https://identity.vwgroup.io/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/terms-and-conditions -> 302
+        # GET https://identity.vwgroup.io/oidc/v1/oauth/sso?clientId=... -> 302
+        # GET https://identity.vwgroup.io/signin-service/v1/consent/users/9dcee9cb-e388-42a4-a89b-e12230114e83/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com?... -> 302
+        # GET https://identity.vwgroup.io/oidc/v1/oauth/client/callback/success?... -> 302
         # GET weconnect://authenticated?... -> handled by WeConnectHttpAdapter
         authorization_response = client.session.post(
             f"{vw_identity_service_uri}{credential_form_parser.action}", data=login_params, withhold_token=True
         )
         authorization_response.raise_for_status()
+        if "terms-and-conditions" in authorization_response.url:
+            logger.info(f"Accepting updated ToS: {authorization_response.url}")
+            tos_response = client.session.get(authorization_response.url, withhold_token=True)
+            tos_response.raise_for_status()
+            tos_form_parser = HtmlFormParser(tos_response.text, "emailPasswordForm")
+            authorization_response = client.session.post(
+                f"{vw_identity_service_uri}{tos_form_parser.action}", data=tos_form_parser.hidden_input_values, withhold_token=True
+            )
+            authorization_response.raise_for_status()
+
         token = client.fetch_token(authorization_response=authorization_response.url)
         # print(f"token={token}")
         # fetch the real token
