@@ -11,10 +11,16 @@ from pvcontrol import relay
 logger = logging.getLogger(__name__)
 
 
+class RelayType(str, enum.Enum):
+    NO = "NO"  # normally open
+    NC = "NC"  # normally closed
+
+
 @dataclass
 class WallboxConfig(BaseConfig):
     min_supported_current: int = 6
     max_supported_current: int = 16
+    phase_relay_type: RelayType = RelayType.NC
 
 
 @enum.unique
@@ -70,6 +76,12 @@ class Wallbox(BaseService[C, WallboxData]):
     def __init__(self, config: C):
         super().__init__(config)
         self._set_data(WallboxData())
+
+    def phases_to_relay(self, phases: int) -> bool:
+        if self.get_config().phase_relay_type == RelayType.NO:
+            return phases == 3
+        else:
+            return phases == 1
 
     def read_data(self) -> WallboxData:
         """Read wallbox data and report metrics. The data is cached."""
@@ -166,8 +178,7 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
         return wb
 
     def set_phases_in(self, phases: int):
-        # relay ON = 1 phase
-        relay.writeChannel1(phases == 1)
+        relay.writeChannel1(self.phases_to_relay(phases))
 
 
 @dataclass
@@ -189,7 +200,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         phases_out = self.get_data().phases_out
         if errcnt == 0 and phases_out == 0:
             # relay ON = 1 phase
-            relay.writeChannel1(phases == 1)
+            relay.writeChannel1(self.phases_to_relay(phases))
             logger.debug(f"set phases_in={phases}")
             time.sleep(self.get_config().switch_phases_reset_delay)
             self.trigger_reset()
@@ -201,7 +212,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             try:
                 logger.debug(f"set max_current={max_current}")
                 res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"})
-                wb = GoeWallbox._json_2_wallbox_data(res.json(), relay.readChannel1())
+                wb = self._json_2_wallbox_data(res.json(), relay.readChannel1())
                 self._set_data(wb)
             except Exception as e:
                 logger.error(e)
@@ -211,7 +222,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             try:
                 logger.debug(f"set allow_charging={f}")
                 res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"})
-                wb = GoeWallbox._json_2_wallbox_data(res.json(), relay.readChannel1())
+                wb = self._json_2_wallbox_data(res.json(), relay.readChannel1())
                 self._set_data(wb)
             except Exception as e:
                 logger.error(e)
@@ -226,7 +237,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
     def _read_data(self) -> WallboxData:
         try:
             res = requests.get(self._status_url, timeout=self._timeout)
-            wb = GoeWallbox._json_2_wallbox_data(res.json(), relay.readChannel1())
+            wb = self._json_2_wallbox_data(res.json(), relay.readChannel1())
             self.reset_error_counter()
             return wb
         except Exception as e:
@@ -235,8 +246,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             # always return last known data - there is no safe state that would somehow help
             return self.get_data()
 
-    @classmethod
-    def _json_2_wallbox_data(cls, json: typing.Dict, phase_relay: bool) -> WallboxData:
+    def _json_2_wallbox_data(self, json: typing.Dict, phase_relay: bool) -> WallboxData:
         wb_error = WbError(int(json["err"]))
         car_status = CarStatus(int(json["car"]))
         max_current = int(json["amp"])
@@ -249,7 +259,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         total_energy = int(json["eto"]) * 100
         # check if phases_in is consistent with phase relay state, WB errors dominate
         if wb_error == WbError.OK or wb_error > WbError.INTERNAL:
-            if not (phases_in == 3 and not phase_relay or phases_in == 1 and phase_relay):
+            if self.phases_to_relay(phases_in) != phase_relay:
                 wb_error = WbError.PHASE_RELAY_ERR
         wb = WallboxData(
             0, wb_error, car_status, max_current, allow_charging, phase_relay, phases_in, phases_out, power, charged_energy, total_energy
