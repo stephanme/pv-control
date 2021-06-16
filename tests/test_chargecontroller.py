@@ -245,6 +245,7 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
         reset_controller_metrics()
 
     def test_3P(self):
+        self.wallbox.set_phases_in(3)
         self.controller.run()  # init
 
         c = self.controller.get_data()
@@ -258,7 +259,6 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
         self.assertEqual(3, self.wallbox.get_data().phases_in)
 
     def test_1P(self):
-        self.wallbox.set_phases_in(1)
         self.controller.run()  # init
         c = self.controller.get_data()
 
@@ -286,9 +286,14 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
-        self.assertEqual(3, self.wallbox.get_data().phases_in)
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
 
         self.controller.set_desired_mode(ChargeMode.MAX)
+        # 1 to 3 phase switch
+        self.controller.run()
+        self.assertEqual(ChargeMode.MAX, c.desired_mode)
+        self.assertEqual(ChargeMode.OFF, c.mode)
+
         self.controller.run()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.MAX, c.mode)
@@ -303,7 +308,7 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
-        self.assertEqual(3, self.wallbox.get_data().phases_in)
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
         self.assertEqual(0, self.wallbox.get_data().phases_out)
 
         self.wallbox.allow_charging(True)
@@ -311,7 +316,7 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.controller.run()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.MANUAL, c.mode)
-        self.assertEqual(3, self.wallbox.get_data().phases_out)
+        self.assertEqual(1, self.wallbox.get_data().phases_out)
 
         self.controller.set_desired_mode(ChargeMode.OFF)
         self.controller.run()
@@ -323,65 +328,65 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(0, self.wallbox.get_data().phases_out)
 
-    def test_mode_3P_1P_3P(self):
+    def test_mode_1P_3P_1P(self):
         c = self.controller.get_data()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
-        self.assertEqual(3, self.wallbox.get_data().phases_in)
-
-        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
-        self.controller.run()
         self.assertEqual(1, self.wallbox.get_data().phases_in)
 
         self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
         self.controller.run()
         self.assertEqual(3, self.wallbox.get_data().phases_in)
 
-    def test_mode_3P_1P_while_charging(self):
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+        self.controller.run()
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
+
+    def test_mode_1P_3P_while_charging(self):
         c = self.controller.get_data()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
         wb = self.wallbox.get_data()
-        self.assertEqual(3, wb.phases_in)
+        self.assertEqual(1, wb.phases_in)
 
         self.wallbox.allow_charging(True)
-        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
         self.controller.run()
         wb = self.wallbox.get_data()
-        self.assertEqual(3, wb.phases_in)
+        self.assertEqual(1, wb.phases_in)
         self.assertFalse(wb.allow_charging)
 
         self.controller.run()
         wb = self.wallbox.get_data()
-        self.assertEqual(1, wb.phases_in)
+        self.assertEqual(3, wb.phases_in)
         self.assertEqual(0, wb.phases_out)
         self.assertEqual(ChargeMode.OFF, c.mode)
 
-    def test_mode_1P_3P_while_charging(self):
-        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+    def test_mode_3P_1P_while_charging(self):
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
         self.controller.run()
         c = self.controller.get_data()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
         wb = self.wallbox.get_data()
-        self.assertEqual(1, wb.phases_in)
+        self.assertEqual(3, wb.phases_in)
 
         self.wallbox.allow_charging(True)
-        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         self.controller.run()
         wb = self.wallbox.get_data()
-        self.assertEqual(1, wb.phases_in)
+        self.assertEqual(3, wb.phases_in)
         self.assertFalse(wb.allow_charging)
 
         self.controller.run()
         wb = self.wallbox.get_data()
-        self.assertEqual(3, wb.phases_in)
+        self.assertEqual(1, wb.phases_in)
         self.assertEqual(0, wb.phases_out)
 
-    def test_mode_3P_PV(self):
-        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+    def test_mode_1P_PV(self):
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         c = self.controller.get_data()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
@@ -400,27 +405,27 @@ class ChargeControllerManualModeTest(unittest.TestCase):
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
 
-    def test_mode_3P_1P_phase_err(self):
-        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+    def test_mode_1P_3P_phase_err(self):
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         c = self.controller.get_data()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
-        self.assertEqual(3, self.wallbox.get_data().phases_in)
-
-        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
-        self.controller.run()
         self.assertEqual(1, self.wallbox.get_data().phases_in)
+
+        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        self.controller.run()
+        self.assertEqual(3, self.wallbox.get_data().phases_in)
 
         self.wallbox.set_wb_error(WbError.PHASE)
         self.controller.run()
         self.assertEqual(1, self.wallbox.trigger_reset_cnt)
 
     def test_inconsistent_phase_relay_err(self):
-        self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         c = self.controller.get_data()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
-        self.assertEqual(3, self.wallbox.get_data().phases_in)
+        self.assertEqual(1, self.wallbox.get_data().phases_in)
 
         self.wallbox.set_wb_error(WbError.PHASE_RELAY_ERR)
         self.controller.run()
@@ -466,14 +471,14 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "1.4kW PV, off",
                 "pv": 1400,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1400, power_consumption=0, power_grid=-1400),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "3kW PV, 1x13A",
@@ -481,42 +486,42 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
             {
                 "test": "3kW PV, 1x13A *",
                 "pv": 3000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
             {
                 "test": "4kW PV, 1x16A",
                 "pv": 4000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4000, power_consumption=3680, power_grid=-4000 + 3680),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
             },
             {
                 "test": "4.3kW PV, 1x16A",
                 "pv": 4300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4300, power_consumption=3680, power_grid=-4300 + 3680),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
             },
             {
                 "test": "4.5kW PV, 3x6A",
                 "pv": 4500,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4500, power_consumption=0, power_grid=-4500),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=16, power=0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=16, power=0),
             },
             {
                 "test": "4.5kW PV, 3x6A *",
                 "pv": 4500,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4500, power_consumption=0, power_grid=-4500),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=16, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=16, power=0),
             },
             {
                 "test": "4.5kW PV, 3x6A **",
@@ -524,49 +529,49 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=4500, power_consumption=4140, power_grid=-4500 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "6kW PV, 3x8A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=5520, power_grid=-6000 + 5520),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
             },
             {
                 "test": "4.3kW PV, 3x6A",
                 "pv": 4300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4300, power_consumption=4140, power_grid=-4300 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "4kW PV, 1x16A",
                 "pv": 4000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4000, power_consumption=0, power_grid=-4000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
             {
                 "test": "4kW PV, 1x16A *",
                 "pv": 4000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4000, power_consumption=0, power_grid=-4000),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
             {
                 "test": "4kW PV, 1x16A *",
                 "pv": 4000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4000, power_consumption=3680, power_grid=-4000 + 3680),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
             },
             {
                 "test": "1.4kW PV, 1x6A",
                 "pv": 1400,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1400, power_consumption=1380, power_grid=-1400 + 1380),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=6, power=1380),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=6, power=1380),
             },
             {
                 "test": "1kW PV, off",
@@ -574,7 +579,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.ChargingFinished,
                 "expected_m": MeterData(power_pv=1000, power_consumption=0, power_grid=-1000),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
         ]
         self.runControllerTest(data)
@@ -588,14 +593,14 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "1.4kW PV, off",
                 "pv": 1400,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1400, power_consumption=0, power_grid=-1400),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "3kW PV, 1x13A",
@@ -603,49 +608,49 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
             {
                 "test": "3kW PV, 1x13A *",
                 "pv": 3000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
             {
                 "test": "4kW PV, 1x16A",
                 "pv": 4000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4000, power_consumption=3680, power_grid=-4000 + 3680),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
             },
             {
                 "test": "5kW PV, 1x16A",
                 "pv": 5000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=5000, power_consumption=3680, power_grid=-5000 + 3680),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
             },
             {
                 "test": "10kW PV, 1x16A",
                 "pv": 10000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=10000, power_consumption=3680, power_grid=-10000 + 3680),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
             },
             {
                 "test": "1.4kW PV, 1x6A",
                 "pv": 1400,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1400, power_consumption=1380, power_grid=-1400 + 1380),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=6, power=1380),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=6, power=1380),
             },
             {
                 "test": "1kW PV, off",
                 "pv": 1000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1000, power_consumption=0, power_grid=-1000),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
         ]
         self.runControllerTest(data)
@@ -659,14 +664,14 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=16),
             },
             {
                 "test": "1.4kW PV, off",
                 "pv": 1400,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1400, power_consumption=0, power_grid=-1400),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "4.3kW PV, 3x6A",
@@ -674,42 +679,42 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=4300, power_consumption=4140, power_grid=-4300 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "6kW PV, 3x8A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=5520, power_grid=-6000 + 5520),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
             },
             {
                 "test": "4.3kW PV, 3x6A",
                 "pv": 4300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4300, power_consumption=4140, power_grid=-4300 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "4kW PV, off",
                 "pv": 4000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4000, power_consumption=0, power_grid=-4000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
             {
                 "test": "1.4kW PV, off",
                 "pv": 1400,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1400, power_consumption=0, power_grid=-1400),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
             {
                 "test": "1kW PV, off",
                 "pv": 1000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1000, power_consumption=0, power_grid=-1000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
         ]
         self.runControllerTest(data)
@@ -723,7 +728,14 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=16),
+            },
+            {
+                "test": "Enable Mode, no PV, #2",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "6kW PV, 3x8A",
@@ -731,21 +743,21 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=6000, power_consumption=5520, power_grid=-6000 + 5520),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
             },
             {
                 "test": "6kW PV, 3x8A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=5520, power_grid=-6000 + 5520),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
             },
             {
                 "test": "0kW PV, off by PV",
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
             {
                 "test": "0kW PV, off by PV, ChargingFinished",
@@ -754,7 +766,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "car": CarStatus.ChargingFinished,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
                 "expected_wb": WallboxData(
-                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0
+                    car_status=CarStatus.ChargingFinished, phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0
                 ),
             },
             {
@@ -763,7 +775,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=6000, power_consumption=5520, power_grid=-6000 + 5520),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
             },
             {
                 "test": "6kW PV, 3x8A",
@@ -772,7 +784,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "car": CarStatus.ChargingFinished,  # reported by car not because PV switched off
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
                 "expected_wb": WallboxData(
-                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=True, max_current=8, power=0
+                    car_status=CarStatus.ChargingFinished, phase_relay=True, phases_in=3, phases_out=0, allow_charging=True, max_current=8, power=0
                 ),
             },
         ]
@@ -788,7 +800,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "car": CarStatus.ChargingFinished,  # reported by car not because PV switched off
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
                 "expected_wb": WallboxData(
-                    car_status=CarStatus.ChargingFinished, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0
+                    car_status=CarStatus.ChargingFinished, phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0
                 ),
             }
         )
@@ -805,7 +817,14 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=16),
+            },
+            {
+                "test": "Enable Mode, no PV",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "6kW PV, 3x8A, NoVehicle",
@@ -813,7 +832,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.NoVehicle,  # reported by car not because PV switched off
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=8),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=8),
             },
             {
                 "test": "6kW PV, 3x8A, car connected",
@@ -821,7 +840,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,  # plugged in
                 "expected_m": MeterData(power_pv=6000, power_consumption=5520, power_grid=-6000 + 5520),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=8, power=5520),
             },
             {
                 "test": "6kW PV, 3x8A, finished by car",
@@ -829,7 +848,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.ChargingFinished,  # reported by car not because PV switched off
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=True, max_current=8, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=True, max_current=8, power=0),
             },
             {
                 "test": "6kW PV, 3x8A, unplugged",
@@ -837,7 +856,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.NoVehicle,  # unplugged car
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0),
             },
         ]
         # 5 min delay until charge mode OFF
@@ -851,7 +870,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.NoVehicle,  # unplugged car
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=8, power=0),
             }
         )
         self.runControllerTest(data)
@@ -866,14 +885,14 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "0.3kW PV, off",
                 "pv": 300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=300, power_consumption=0, power_grid=-300),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "3kW PV, 1x13A",
@@ -881,98 +900,98 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
             {
                 "test": "3kW PV, 1x13A *",
                 "pv": 3000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
             {
                 "test": "3.5kW PV, 1x16A",
                 "pv": 3500,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3500, power_consumption=3680, power_grid=-3500 + 3680),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=16, power=3680),
             },
             {
                 "test": "4.3kW PV, 3x7A",
                 "pv": 4300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4300, power_consumption=0, power_grid=-4300),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=16, power=0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=16, power=0),
             },
             {
                 "test": "4.3kW PV, 3x7A *",
                 "pv": 4300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4300, power_consumption=0, power_grid=-4300),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=16, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=16, power=0),
             },
             {
                 "test": "4.3kW PV, 3x7A **",
                 "pv": 4300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4300, power_consumption=4830, power_grid=-4300 + 4830),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
             },
             {
                 "test": "4.89kW PV, 3x7A (0.1A rounding offset)",
                 "pv": 4890,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4890, power_consumption=4830, power_grid=-4890 + 4830),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
             },
             {
                 "test": "6kW PV, 3x9A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=6210, power_grid=-6000 + 6210),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
             },
             {
                 "test": "3.5kW PV, 3x6A",
                 "pv": 3500,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3500, power_consumption=4140, power_grid=-3500 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "3kW PV, 1x13A",
                 "pv": 3000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3000, power_consumption=0, power_grid=-3000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
             {
                 "test": "3kW PV, 1x13A *",
                 "pv": 3000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3000, power_consumption=0, power_grid=-3000),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6, power=0),
             },
             {
                 "test": "3kW PV, 1x13A **",
                 "pv": 3000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
             {
                 "test": "0.4kW PV, 1x6A",
                 "pv": 400,
                 "home": 0,
                 "expected_m": MeterData(power_pv=400, power_consumption=1380, power_grid=-400 + 1380),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=1, allow_charging=True, max_current=6, power=1380),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=6, power=1380),
             },
             {
                 "test": "0.2kW PV, off",
                 "pv": 200,
                 "home": 0,
                 "expected_m": MeterData(power_pv=200, power_consumption=0, power_grid=-200),
-                "expected_wb": WallboxData(phase_relay=True, phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
             },
         ]
         self.runControllerTest(data)
@@ -982,18 +1001,25 @@ class ChargeControllerPVTest(unittest.TestCase):
         self.controller.set_phase_mode(PhaseMode.CHARGE_3P)
         data = [
             {
+                "test": "Enable Mode, no PV, phase switching",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=16),
+            },
+            {
                 "test": "Enable Mode, no PV",
                 "pv": 0,
                 "home": 0,
                 "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "0.3kW PV, off",
                 "pv": 300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=300, power_consumption=0, power_grid=-300),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "1kW PV, 3x6A",
@@ -1001,49 +1027,49 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=1000, power_consumption=4140, power_grid=-1000 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "4kW PV, 3x6A",
                 "pv": 4000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4000, power_consumption=4140, power_grid=-4000 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "4.3kW PV, 3x7A **",
                 "pv": 4300,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4300, power_consumption=4830, power_grid=-4300 + 4830),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
             },
             {
                 "test": "4.89kW PV, 3x7A (0.1A rounding offset)",
                 "pv": 4890,
                 "home": 0,
                 "expected_m": MeterData(power_pv=4890, power_consumption=4830, power_grid=-4890 + 4830),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=7, power=4830),
             },
             {
                 "test": "6kW PV, 3x9A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=6210, power_grid=-6000 + 6210),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
             },
             {
                 "test": "3.5kW PV, 3x6A",
                 "pv": 3500,
                 "home": 0,
                 "expected_m": MeterData(power_pv=3500, power_consumption=4140, power_grid=-3500 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "1kW PV, 3x6A",
                 "pv": 1000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=1000, power_consumption=4140, power_grid=-1000 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "0.2kW PV, off",
@@ -1051,7 +1077,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "car": CarStatus.ChargingFinished,
                 "expected_m": MeterData(power_pv=200, power_consumption=0, power_grid=-200),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6),
             },
         ]
         self.runControllerTest(data)
@@ -1062,61 +1088,69 @@ class ChargeControllerPVTest(unittest.TestCase):
         self.controller.get_config().pv_allow_charging_delay = 60
         data = [
             {
+                "test": "Enable Mode, 6kW PV, 3x9A, phase switching",
+                "pv": 6000,
+                "home": 0,
+                "car": CarStatus.Charging,
+                "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=16),
+            },
+            {
                 "test": "Enable Mode, 6kW PV, 3x9A, no allow_charging delay",
                 "pv": 6000,
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=6000, power_consumption=6210, power_grid=-6000 + 6210),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
             },
             {
                 "test": "6kW PV, 3x9A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=6210, power_grid=-6000 + 6210),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
             },
             {
                 "test": "0.2kW PV, 3x6A (allow_charging delay)",
                 "pv": 200,
                 "home": 0,
                 "expected_m": MeterData(power_pv=200, power_consumption=4140, power_grid=-200 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "0.2kW PV, off",
                 "pv": 200,
                 "home": 0,
                 "expected_m": MeterData(power_pv=200, power_consumption=0, power_grid=-200),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=6),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=6),
             },
             {
                 "test": "6kW PV, off (allow_charging delay)",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
-                "expected_wb": WallboxData(phases_in=3, phases_out=0, allow_charging=False, max_current=9),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=0, allow_charging=False, max_current=9),
             },
             {
                 "test": "6kW PV, 3x9A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=6210, power_grid=-6000 + 6210),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
             },
             {
                 "test": "0.2kW PV, 3x6A (allow_charging delay)",
                 "pv": 200,
                 "home": 0,
                 "expected_m": MeterData(power_pv=200, power_consumption=4140, power_grid=-200 + 4140),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=6, power=4140),
             },
             {
                 "test": "6kW PV, 3x9A",
                 "pv": 6000,
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=6210, power_grid=-6000 + 6210),
-                "expected_wb": WallboxData(phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
+                "expected_wb": WallboxData(phase_relay=True, phases_in=3, phases_out=3, allow_charging=True, max_current=9, power=6210),
             },
         ]
         self.runControllerTest(data)
@@ -1129,12 +1163,28 @@ class ChargeControllerPVTest(unittest.TestCase):
 
         data = [
             {
+                "test": "6kW PV, #0, phase switching",
+                "pv": 6000,
+                "home": 0,
+                "car": CarStatus.Charging,
+                "expected_m": MeterData(power_pv=6000, power_consumption=0, power_grid=-6000),
+                "expected_wb": WallboxData(
+                    phase_relay=True,
+                    phases_in=3,
+                    phases_out=0,
+                    allow_charging=False,
+                    max_current=16,
+                    power=0,
+                ),
+            },
+            {
                 "test": "6kW PV, #1",
                 "pv": 6000,
                 "home": 0,
                 "car": CarStatus.Charging,
                 "expected_m": MeterData(power_pv=6000, power_consumption=pmax, power_grid=-6000 + pmax),
                 "expected_wb": WallboxData(
+                    phase_relay=True,
                     phases_in=3,
                     phases_out=3,
                     allow_charging=True,
@@ -1148,6 +1198,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
                 "expected_wb": WallboxData(
+                    phase_relay=True,
                     phases_in=3,
                     phases_out=3,
                     allow_charging=True,
@@ -1163,6 +1214,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
                 "expected_wb": WallboxData(
+                    phase_relay=True,
                     phases_in=3,
                     phases_out=3,
                     allow_charging=True,
@@ -1178,6 +1230,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
                 "expected_wb": WallboxData(
+                    phase_relay=True,
                     phases_in=3,
                     phases_out=3,
                     allow_charging=True,
@@ -1193,6 +1246,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                 "home": 0,
                 "expected_m": MeterData(power_pv=6000, power_consumption=11040, power_grid=-6000 + 11040),
                 "expected_wb": WallboxData(
+                    phase_relay=True,
                     phases_in=3,
                     phases_out=3,
                     allow_charging=True,
@@ -1217,6 +1271,7 @@ class ChargeControllerPVTest(unittest.TestCase):
                     energy_consumption_pv=6000 * 5 / 120,
                 ),
                 "expected_wb": WallboxData(
+                    phase_relay=True,
                     phases_in=3,
                     phases_out=3,
                     allow_charging=True,

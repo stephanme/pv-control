@@ -20,7 +20,7 @@ class RelayType(str, enum.Enum):
 class WallboxConfig(BaseConfig):
     min_supported_current: int = 6
     max_supported_current: int = 16
-    phase_relay_type: RelayType = RelayType.NC
+    phase_relay_type: RelayType = RelayType.NO
 
 
 @enum.unique
@@ -49,7 +49,7 @@ class WallboxData(BaseData):
     max_current: int = 16  # [A]
     allow_charging: bool = False
     phase_relay: bool = False  # on/off - mapping to 1 or 3 phases depends on relay type/wiring
-    phases_in: int = 3  # 0..3
+    phases_in: int = 1  # 0..3
     phases_out: int = 0  # 0..3
     power: float = 0  # [W]
     charged_energy: float = 0  # [Wh], energy of last charging
@@ -150,7 +150,7 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
 
     def set_phases_in(self, phases: int):
         self.get_data().phases_in = phases
-        self.get_data().phase_relay = phases == 1
+        self.get_data().phase_relay = self.phases_to_relay(phases)
 
     def set_max_current(self, max_current: int):
         self.get_data().max_current = max_current
