@@ -187,11 +187,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         # Switch to OFF when car gets unplugged (NoVehicle)
         # 5 min delay to allow PV mode before connecting car
         ctl = self.get_data()
-        if (
-            ctl.mode in [ChargeMode.PV_ONLY, ChargeMode.PV_ALL]
-            and wb.error == 0
-            and wb.car_status == CarStatus.NoVehicle
-        ):
+        if ctl.mode in [ChargeMode.PV_ONLY, ChargeMode.PV_ALL] and wb.error == 0 and wb.car_status == CarStatus.NoVehicle:
             self._charge_mode_pv_to_off_delay -= self.get_config().cycle_time
             if self._charge_mode_pv_to_off_delay <= 0:
                 self.set_desired_mode(ChargeMode.OFF)
