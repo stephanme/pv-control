@@ -83,6 +83,7 @@ describe('AppComponent', () => {
       },
       wallbox: {
         error: 0,
+        car_status: 2,
         allow_charging: true,
         max_current: 8,
         phases_in: 3,
@@ -131,7 +132,20 @@ describe('AppComponent', () => {
 
     expect(fixture.debugElement.query(By.css('#car-max-current')).nativeElement.textContent).toContain('3x 8 A');
     expect(fixture.debugElement.query(By.css('#car-charge-power')).nativeElement.textContent).toContain('2.0 kW');
+    expect(fixture.debugElement.query(By.css('#car-charge-state'))).toBeNull();
   });
+
+  it('should render car status', async () => {
+    pvControlData.wallbox.car_status = 1;
+    pvControlData.wallbox.phases_out = 0;
+    httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('#car-max-current'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('#car-charge-power'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('#car-charge-state')).nativeElement.textContent).toContain('power_off');
+  });
+
 
   it('should refresh data', async () => {
     const refreshIcon = fixture.debugElement.query(By.css('#refresh mat-icon')).nativeElement;
@@ -218,5 +232,64 @@ describe('AppComponent', () => {
 
     expect(await phaseModeCharge1P.isChecked()).toBeTrue();
     expect(await phaseModeAuto.isChecked()).toBeFalse();
+  });
+});
+
+describe('AppComponent', () => {
+  const pvControlData = {
+    meter: {
+      error: 0,
+      power_pv: 5000,
+      power_consumption: 3000,
+      power_grid: -2000
+    },
+    wallbox: {
+      error: 0,
+      car_status: 1,
+      allow_charging: false,
+      max_current: 8,
+      phases_in: 3,
+      phases_out: 0,
+      power: 0,
+    },
+    controller: {
+      error: 0,
+      mode: ChargeMode.OFF,
+      desired_mode: ChargeMode.OFF,
+      phase_mode: PhaseMode.AUTO,
+    },
+    car: {
+      error: 0,
+      soc: 50,
+      cruising_range: 150,
+    }
+  };
+
+  it('should support isCharging()', () => {
+    pvControlData.wallbox.phases_out = 0;
+    expect(AppComponent.isCharging(pvControlData)).toBeFalse();
+    pvControlData.wallbox.phases_out = 1;
+    expect(AppComponent.isCharging(pvControlData)).toBeTrue();
+    pvControlData.wallbox.phases_out = 3;
+    expect(AppComponent.isCharging(pvControlData)).toBeTrue();
+  });
+
+  it('should support chargingStateIcon()', () => {
+    pvControlData.wallbox.phases_out = 0;
+    pvControlData.wallbox.car_status = 0; // unknown
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_unknown');
+
+    pvControlData.wallbox.car_status = 1; // NoVehicle
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('power_off');
+    pvControlData.wallbox.car_status = 2; // Charging
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_charging_full');
+    pvControlData.wallbox.car_status = 3; // WaitingForVehicle
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('hourglass_empty');
+
+    pvControlData.wallbox.car_status = 4; // ChargingFinished
+    pvControlData.wallbox.allow_charging = false;
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_saver');
+    pvControlData.wallbox.allow_charging = true;
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_full');
   });
 });

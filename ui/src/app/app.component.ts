@@ -22,7 +22,7 @@ export class AppComponent implements OnInit, OnDestroy {
   busy$ = this.httpStatusService.busy();
   autoRefreshControl = this.fb.control(false);
   refreshTimer$ = timer(0, 30000).pipe(takeUntil(this.unsubscribe));
-  refreshTimerSubscription: Subscription|null = null;
+  refreshTimerSubscription: Subscription | null = null;
 
   pvControl: PvControl = {
     meter: {
@@ -51,8 +51,35 @@ export class AppComponent implements OnInit, OnDestroy {
       cruising_range: 0
     }
   };
+  isCharging = false;
+  chargingStateIcon = 'power_off';
+
   chargeModeControl = this.fb.control(ChargeMode.OFF);
   phaseModeControl = this.fb.control(PhaseMode.AUTO);
+
+  static isCharging(pv: PvControl): boolean {
+    return pv.wallbox.phases_out > 0;
+  }
+
+  static chargingStateIcon(pv: PvControl): string {
+    switch (pv.wallbox.car_status) {
+      case 1: // NoVehicle
+        return 'power_off';
+      case 2: // Charging
+        return 'battery_charging_full';
+      case 3: // WaitingForVehicle
+        return 'hourglass_empty';
+      case 4: // ChargingFinished
+        // TODO: SOC (allow_charging=on but not charging -> car rejected charging)
+        if (pv.wallbox.allow_charging) {
+          return 'battery_full';
+        } else {
+          return 'battery_saver';
+        }
+      default: // unknown
+        return 'battery_unknown';
+    }
+  }
 
   constructor(
     private fb: FormBuilder, private snackBar: MatSnackBar,
@@ -83,6 +110,8 @@ export class AppComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.pvControlService.getPvControl().subscribe(pv => {
       this.pvControl = pv;
+      this.isCharging = AppComponent.isCharging(pv);
+      this.chargingStateIcon = AppComponent.chargingStateIcon(pv);
       // map desired_mode==MANUAL to current mode -> show real status if e.g. somebody changes current via app/WB
       let mode = pv.controller.desired_mode;
       if (mode === ChargeMode.MANUAL) {
@@ -98,16 +127,16 @@ export class AppComponent implements OnInit, OnDestroy {
   onChargeModeChange(event: MatButtonToggleChange): void {
     const desiredMode = event.value;
     this.pvControlService.putPvControlDesiredChargeMode(desiredMode).subscribe(
-      () => {},
-      () => {}
+      () => { },
+      () => { }
     );
   }
 
   onPhaseModeChange(event: MatButtonToggleChange): void {
     const mode = event.value;
     this.pvControlService.putPvControlPhaseMode(mode).subscribe(
-      () => {},
-      () => {}
+      () => { },
+      () => { }
     );
   }
 }

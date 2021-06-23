@@ -6,7 +6,7 @@ import flask.views
 import flask.json
 from pvcontrol.service import BaseService
 from pvcontrol.meter import Meter
-from pvcontrol.wallbox import Wallbox
+from pvcontrol.wallbox import CarStatus, SimulatedWallbox, Wallbox
 from pvcontrol.chargecontroller import ChargeController, ChargeMode, PhaseMode
 from pvcontrol.car import Car
 
@@ -91,5 +91,25 @@ class PvControlPhaseModeView(flask.views.MethodView):
             mode = PhaseMode(v)
             self._controller.set_phase_mode(mode)
             return jsonify_no_content()
+        except ValueError:
+            flask.abort(400)
+
+
+# for testing only: SimulatedWallbox
+# curl -X PUT http://localhost:8080/api/pvcontrol/wallbox/car_status -H 'Content-Type: application/json' --data 1..4
+# 1=NoVehicle, 2=Charging, 3=WaitingForVehicle, 4=ChargingFinished
+class PvControlCarStatusView(flask.views.MethodView):
+    def __init__(self, wallbox: SimulatedWallbox):
+        self._wallbox = wallbox
+
+    def put(self):
+        v = flask.request.json
+        try:
+            if v is not None:
+                status = CarStatus(v)
+                self._wallbox.set_car_status(status)
+                return jsonify_no_content()
+            else:
+                flask.abort(400)
         except ValueError:
             flask.abort(400)

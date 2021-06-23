@@ -57,6 +57,9 @@ app.add_url_rule("/api/pvcontrol/controller/phase_mode", view_func=views.PvContr
 app.add_url_rule("/api/pvcontrol/meter", view_func=views.PvControlConfigDataView.as_view("get_meter", meter))
 app.add_url_rule("/api/pvcontrol/wallbox", view_func=views.PvControlConfigDataView.as_view("get_wallbox", wallbox))
 app.add_url_rule("/api/pvcontrol/car", view_func=views.PvControlConfigDataView.as_view("get_car", car))
+# for testing only
+app.add_url_rule("/api/pvcontrol/wallbox/car_status", view_func=views.PvControlCarStatusView.as_view("put_car_status", wallbox))
+
 
 # Add prometheus wsgi middleware to route /metrics requests
 app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": prometheus_client.make_wsgi_app()})

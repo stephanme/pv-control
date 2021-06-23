@@ -184,15 +184,13 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
     # TODO rename
     def _control_charge_mode(self, wb: WallboxData) -> None:
-        # Switch to OFF when car charging finished in PV mode (and it was not the PV control loop that switched off).
-        # Needs a delay to avoid OFF when car doesn't switch fast enough from Finished to Charging.
-        # Stay in PV mode if control loop switched charging off (alw=0) -> results in CarStatus.ChargingFinished as well
-        # Same handling for NoVehicle to switch off when car was disconnected.
+        # Switch to OFF when car gets unplugged (NoVehicle)
+        # 5 min delay to allow PV mode before connecting car
         ctl = self.get_data()
         if (
             ctl.mode in [ChargeMode.PV_ONLY, ChargeMode.PV_ALL]
             and wb.error == 0
-            and (wb.car_status == CarStatus.NoVehicle or (wb.car_status == CarStatus.ChargingFinished and self._pv_allow_charging_value))
+            and wb.car_status == CarStatus.NoVehicle
         ):
             self._charge_mode_pv_to_off_delay -= self.get_config().cycle_time
             if self._charge_mode_pv_to_off_delay <= 0:
