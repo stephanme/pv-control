@@ -1,6 +1,7 @@
 <mat-toolbar color="primary">
+  <mat-icon class="col-yellow mr-1">wb_sunny</mat-icon>
   <span>PV Control</span>
-  <span class="spacer"></span>
+  <span fxFlex="grow"></span>
   <mat-slide-toggle [formControl]="autoRefreshControl"></mat-slide-toggle>
   <button id="refresh" mat-icon-button aria-label="Refresh" (click)="refresh()">
     <mat-icon [class.spin]="busy$ | async">autorenew</mat-icon>
@@ -39,7 +40,7 @@
           <mat-icon fxFlex="grow" [inline]="true" [class.col-primary]="pvControl.wallbox.error <= 3" [class.col-grey]="pvControl.wallbox.error > 3">ev_station</mat-icon>
           <span id="car-max-current" *ngIf="isCharging" fxFlex="none" class="text-center">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
           <span id="car-charge-power" *ngIf="isCharging" fxFlex="grow" class="text-right">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
-          <mat-icon id="car-charge-state" *ngIf="!isCharging" fxFlex="grow" [inline]="true" class="text-right">{{chargingStateIcon}}</mat-icon>
+          <mat-icon id="car-charge-state" *ngIf="!isCharging" fxFlex="grow" [inline]="true" class="text-right" fontSet="material-icons-two-tone">{{chargingStateIcon}}</mat-icon>
         </mat-card-title>
         <mat-card-content>
           <mat-button-toggle-group id="chargeModeToogle" fxLayout="row" fxLayoutAlign="center" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">

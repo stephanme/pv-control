@@ -9,10 +9,6 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   margin-left: 5px; /* optional */
 }
 
-.spacer {
-  flex: 1 1 auto;
-}
-
 /* text */
 .text-right {
   text-align: right;

@@ -66,15 +66,15 @@ export class AppComponent implements OnInit, OnDestroy {
       case 1: // NoVehicle
         return 'power_off';
       case 2: // Charging
-        return 'battery_charging_full';
+        return 'battery_charging_50';
       case 3: // WaitingForVehicle
-        return 'hourglass_empty';
+        return 'hourglass_bottom';
       case 4: // ChargingFinished
         // TODO: SOC (allow_charging=on but not charging -> car rejected charging)
         if (pv.wallbox.allow_charging) {
           return 'battery_full';
         } else {
-          return 'battery_saver';
+          return 'battery_50';
         }
       default: // unknown
         return 'battery_unknown';

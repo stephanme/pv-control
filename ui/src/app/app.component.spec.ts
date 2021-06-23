@@ -282,13 +282,13 @@ describe('AppComponent', () => {
     pvControlData.wallbox.car_status = 1; // NoVehicle
     expect(AppComponent.chargingStateIcon(pvControlData)).toBe('power_off');
     pvControlData.wallbox.car_status = 2; // Charging
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_charging_full');
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_charging_50');
     pvControlData.wallbox.car_status = 3; // WaitingForVehicle
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('hourglass_empty');
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('hourglass_bottom');
 
     pvControlData.wallbox.car_status = 4; // ChargingFinished
     pvControlData.wallbox.allow_charging = false;
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_saver');
+    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_50');
     pvControlData.wallbox.allow_charging = true;
     expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_full');
   });
