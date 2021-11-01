@@ -74,7 +74,7 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(1, ctl._desired_phases(5000, 1))
         self.assertEqual(3, ctl._desired_phases(5000, 3))
 
-    def test_desired_phases_FULL_POWER(self):
+    def test_desired_phases_MAX(self):
         ctl = self.controller
         ctl.set_desired_mode(ChargeMode.MAX)
         self.assertEqual(3, ctl._desired_phases(0, 1))
@@ -93,6 +93,18 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(3, ctl._desired_phases(p, 3))
         self.assertEqual(1, ctl._desired_phases(p - 1, 3))
 
+    def test_desired_phases_PV_ONLY_disabled_auto_phase_switching(self):
+        ctl = self.controller
+        ctl.get_config().enable_auto_phase_switching = False
+        ctl.set_desired_mode(ChargeMode.PV_ONLY)
+        p = 3 * 6 * 230
+        self.assertEqual(1, ctl._desired_phases(0, 1))
+        self.assertEqual(1, ctl._desired_phases(p, 1))
+        self.assertEqual(1, ctl._desired_phases(p + 200, 1))
+        self.assertEqual(1, ctl._desired_phases(p + 200, 3))
+        self.assertEqual(1, ctl._desired_phases(p, 3))
+        self.assertEqual(1, ctl._desired_phases(p - 1, 3))
+
     def test_desired_phases_PV_ALL(self):
         ctl = self.controller
         ctl.set_desired_mode(ChargeMode.PV_ALL)
@@ -102,6 +114,18 @@ class ChargeControllerTest(unittest.TestCase):
         self.assertEqual(3, ctl._desired_phases(p, 1))
         self.assertEqual(3, ctl._desired_phases(p, 3))
         self.assertEqual(3, ctl._desired_phases(p - 200, 3))
+        self.assertEqual(1, ctl._desired_phases(p - 201, 3))
+
+    def test_desired_phases_PV_ALL_disabled_auto_phase_switching(self):
+        ctl = self.controller
+        ctl.get_config().enable_auto_phase_switching = False
+        ctl.set_desired_mode(ChargeMode.PV_ALL)
+        p = 16 * 230
+        self.assertEqual(1, ctl._desired_phases(0, 1))
+        self.assertEqual(1, ctl._desired_phases(p - 1, 1))
+        self.assertEqual(1, ctl._desired_phases(p, 1))
+        self.assertEqual(1, ctl._desired_phases(p, 3))
+        self.assertEqual(1, ctl._desired_phases(p - 200, 3))
         self.assertEqual(1, ctl._desired_phases(p - 201, 3))
 
     def test_desired_phases_CHARGE_1P(self):

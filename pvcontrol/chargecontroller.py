@@ -233,10 +233,10 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         elif phase_mode == PhaseMode.CHARGE_3P:
             return 3
         else:  # AUTO
-            if not self.get_config().enable_auto_phase_switching:
-                return current_phases
-            elif mode == ChargeMode.PV_ONLY:
-                if current_phases == 1:
+            if mode == ChargeMode.PV_ONLY:
+                if not self.get_config().enable_auto_phase_switching:
+                    return 1
+                elif current_phases == 1:
                     if available_power >= self._pv_only_1_3_phase_threshold:
                         return 3
                     else:
@@ -247,7 +247,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                     else:
                         return 1
             elif mode == ChargeMode.PV_ALL:
-                if current_phases == 1:
+                if not self.get_config().enable_auto_phase_switching:
+                    return 1
+                elif current_phases == 1:
                     if available_power >= self._pv_all_1_3_phase_threshold:
                         return 3
                     else:
