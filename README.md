@@ -2,10 +2,10 @@
 
 ... controlling an electric car charger to charge from solar energy as efficient as possible.
 
-For the setup and used hardware, see the related project [pv-monitoring](https://github.com/stephanme/pv-monitoring).
+For the deployment on a k8s cluster and the used hardware, see the related project [pv-monitoring](https://github.com/stephanme/pv-monitoring).
 
 pv-control contains:
-- A control loop implemented in Python that reads energy data from the inverter and sets the current of the wallbox.
+- A control loop implemented in Python that reads energy data from the inverter and sets the charge current of the wallbox.
 - Some logic to control 1-phase vs 3-phase charging of the go-e wallbox via an external relay. Therefore, pv-control must run on a Raspberry PI.
 - A we-connect client to read the SOC for an VW ID3.
 - A number of REST endpoints to control the operation like setting charge mode and to get basic info about energy consumption.
@@ -20,11 +20,20 @@ PV-Control implements the following charge modes/strategies:
 - Manual - Wallbox is manually controlled e.g. by the go-e app.
 
 'PV only' and 'PV all' use different strategies when working around the limitations of the wallbox and electric car, i.e. the minimal charging current of 6A and the charging current steps of 1A.
-Automatic phase switching between 1 and 3 phases for the PV modes is implemented but not yet tested in practice because my 7 kW peak solar power system gives little opportunity of 3 phase charging.
+
+Automatic phase switching between 1 and 3 phases for the PV modes is implemented but not yet tested in practice because my 7 kW peak solar power system gives little opportunity of 3 phase charging. Currently, the 'Auto' mode selects 1-phase charging for 'PV only' and 'PV all' and 3-phase charging for 'Max'.
 
 ## UI
 
 ![pv-control screen shot](pvcontrol-screenshot.jpg)
+
+## Wiring of Wallbox and Phase Switching Relay
+
+A relay allows to switch between 1 phase and 3 phase charging. The control loop ensures that phase switching happens only when the wallbox is not charging. After switching, the go-e wallbox needs a reset.
+
+Restarting pv-control (e.g. for updates) doesn't change the state of the relay. A reboot of the Raspberry initializes the relay to 1-phase charging.
+
+![wallbox and phase switching relay](wallbox.png)
 
 ## Configuration
 
@@ -50,7 +59,7 @@ METER, WALLBOX and CAR refer to implementation classes for the energy meter, the
 CONFIG is a json with 'meter', 'wallbox', 'car' and 'controller' configuration structures. The config parameters depend on the METER, WALLBOX and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py` and `chargecontroller.py`.
 
-Examle k8s yamls for deploying pv-control:
+Example k8s yamls for deploying pv-control:
 - https://github.com/stephanme/pv-control/blob/main/pvcontrol.yaml
 - https://github.com/stephanme/pv-monitoring/blob/main/pvcontrol/pvcontrol.yaml
 
@@ -89,6 +98,6 @@ ng lint
 npm run test
 ```
 
-## CI and Relase
+## CI and Release
 
 A docker container [stephanme/pv-control](https://hub.docker.com/r/stephanme/pv-control/tags) is built for every commit via github actions. The arm image is intended to run on a k8s cluster on a Raspberry node.
