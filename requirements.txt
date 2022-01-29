@@ -1,8 +1,8 @@
-Flask==1.1.2
+Flask==2.0.2
 RPi.GPIO==0.7.0; 'arm' in platform_machine
 fake-rpi==0.7.1; 'x86' in platform_machine
-prometheus-client==0.9.0
+prometheus-client==0.13.1
 pyModbusTCP==0.1.10
-requests==2.25.1
-Authlib==0.15.3
-python-dateutil==2.8.1
+requests==2.27.1
+Authlib==0.15.5
+python-dateutil==2.8.2
