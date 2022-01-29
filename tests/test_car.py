@@ -3,7 +3,7 @@ import logging
 import datetime
 import json
 import os
-from pvcontrol.car import HtmlFormParser, VolkswagenIDCar, VolkswagenIDCarConfig
+from pvcontrol.car import HtmlFormParser, LoginFormParser, VolkswagenIDCar, VolkswagenIDCarConfig
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 # logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
@@ -71,6 +71,58 @@ class HtmlFormParserTest(unittest.TestCase):
         p = HtmlFormParser(html, "emailPasswordForm")
         self.assertEqual("/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/login/identifier", p.action)
         self.assertEqual({"_csrf": "csrf value", "relayState": "relay state", "hmac": "hmac value"}, p.hidden_input_values)
+
+
+class LoginFormParserTest(unittest.TestCase):
+    def test_empty(self):
+        p = LoginFormParser("")
+        self.assertFalse(p.found_form)
+        self.assertEqual({}, p.hidden_input_values)
+
+    def test_simple(self):
+        p = LoginFormParser("<script> window._IDK = { p1: 'a',\n p2: \"bbb\"};</script>")
+        self.assertTrue(p.found_form)
+        self.assertEqual({"p1": "a", "p2": "bbb"}, p.hidden_input_values)
+
+    def test_script_not_found(self):
+        p = LoginFormParser("<script>bla</script>")
+        self.assertFalse(p.found_form)
+        self.assertEqual({}, p.hidden_input_values)
+
+    def test_multiple_script_tags(self):
+        p = LoginFormParser("<script>bla</script><script>window._IDK = {p1: 'a',\np2: \"bbb\" }; </script>")
+        self.assertTrue(p.found_form)
+        self.assertEqual({"p1": "a", "p2": "bbb"}, p.hidden_input_values)
+
+    def test_login_form_data(self):
+        html = """
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport"
+          content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+    <meta name="identitykit" content="loginAuthenticate"/>
+
+    <script type="text/javascript">...</script>
+    <script>
+      window._IDK = {
+        templateModel: {"clientLegalEntityModel":{"clientId":"a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com","clientAppName":"We Connect ID","clientAppDisplayName":"We Connect ID.","legalEntityInfo":{"name":"Volkswagen","shortName":"VOLKSWAGEN","productName":"Volkswagen ID","theme":"volkswagen_d6","defaultLanguage":"en","termAndConditionsType":"DEFAULT","legalProperties":{"revokeDataContact":"info-datenschutz@volkswagen.de","imprintText":"IMPRINT","countryOfJurisdiction":"DE"}},"imprintTextKey":"imprint.link.text"},"template":"loginAuthenticate","hmac":"hmac value","emailPasswordForm":{"email":"test@gmail.com","password":null},"error":null,"relayState":"12345","nextButtonDisabled":false,"enableNextButtonAfterSeconds":0,"postAction":"login/authenticate","identifierUrl":"login/identifier"},
+        currentLocale: 'en',
+        csrf_parameterName: '_csrf',
+        csrf_token: 'csrf value'
+      };
+    </script>
+</head>
+<body>
+...
+</body>
+        """
+        p = LoginFormParser(html)
+        self.assertTrue(p.found_form)
+        self.assertEqual("/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/login/authenticate", p.action)
+        self.assertEqual("csrf value", p.hidden_input_values["csrf_token"])
+        self.assertEqual("hmac value", p.hidden_input_values["templateModel"]["hmac"])
 
 
 @unittest.skipUnless(len(car_config) > 0, "needs car_test_config.json")

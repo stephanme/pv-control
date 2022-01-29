@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
+import json
+import re
 import dateutil.parser
 import logging
 import typing
@@ -100,6 +102,47 @@ class HtmlFormParser(HTMLParser):
             self._processing_form = False
 
 
+# parses the login page, not really a form but contains the interesting data in javascript
+class LoginFormParser(HTMLParser):
+    def __init__(self, html: str):
+        super().__init__()
+        self.hidden_input_values = {}
+        self.found_form = False
+        self._processing_script = False
+        self.feed(html)
+        if "templateModel" in self.hidden_input_values:
+            self.action = f"/signin-service/v1/{self.hidden_input_values['templateModel']['clientLegalEntityModel']['clientId']}/{self.hidden_input_values['templateModel']['postAction']}"
+        else:
+            self.action = ""
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "script":
+            if self._processing_script:
+                raise Exception("Found nested scripts.")
+            else:
+                self._processing_script = True
+
+    def handle_data(self, data):
+        if self._processing_script:
+            credPattern = r"\s*window\._IDK\s+=\s+\{(.*)};\s*"
+            match = re.fullmatch(credPattern, data, re.DOTALL)
+            if match:
+                _json = match.group(1)
+                # convert javascript to json
+                # single to double quotes (not always correct but good enough)
+                _json = _json.replace("'", '"')
+                # replace unquoted property names
+                # \1 did not work for unknown reasons (python 3.7.10)
+                _json = re.sub(r"^\s*(\w+):", '"\g<1>":', _json, 0, re.MULTILINE)  # noqa: W605
+                _json = "{" + _json + "}"
+                self.hidden_input_values = json.loads(_json)
+                self.found_form = True
+
+    def handle_endtag(self, tag):
+        if self._processing_script and tag == "script":
+            self._processing_script = False
+
+
 class WeConnectHttpAdapter(BaseAdapter):
     def send(self, request: PreparedRequest, stream=False, timeout=None, verify=True, cert=None, proxies=None) -> Response:
         r = Response()
@@ -159,12 +202,18 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
             f"{vw_identity_service_uri}{signin_form_parser.action}", data=login_params, withhold_token=True
         )
         credential_form_response.raise_for_status()
-        credential_form_parser = HtmlFormParser(credential_form_response.text, "credentialsForm")
+        credential_form_parser = LoginFormParser(credential_form_response.text)
         if not credential_form_parser.found_form:
-            raise Exception("Credentials form not found.")
-        login_params = credential_form_parser.hidden_input_values
-        login_params["email"] = user
-        login_params["password"] = password
+            raise Exception("Login/Credentials form not found.")
+        if "templateModel" not in credential_form_parser.hidden_input_values:
+            raise Exception("Login/Credentials form found but doesn't contain necessary data.")
+        login_params = {
+            "email": user,
+            "password": password,
+            "hmac": credential_form_parser.hidden_input_values["templateModel"]["hmac"],
+            "relayState": credential_form_parser.hidden_input_values["templateModel"]["relayState"],
+            "_csrf": credential_form_parser.hidden_input_values["csrf_token"],
+        }
         # POST https://identity.vwgroup.io/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/login/authenticate -> 303
         # if ToS updated
         #   GET https://identity.vwgroup.io/signin-service/v1/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com/terms-and-conditions?... -> 200
