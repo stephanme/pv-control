@@ -89,6 +89,7 @@ describe('AppComponent', () => {
         phases_in: 3,
         phases_out: 3,
         power: 2000,
+        temperature: 10.3,
       },
       controller: {
         error: 0,
@@ -129,6 +130,7 @@ describe('AppComponent', () => {
     expect(fixture.debugElement.query(By.css('#card-grid mat-icon')).nativeElement.className).toContain('col-green');
     expect(fixture.debugElement.query(By.css('#card-home span')).nativeElement.textContent).toContain('1.0 kW');
     expect(fixture.debugElement.query(By.css('#card-car span')).nativeElement.textContent).toContain('50 %');
+    expect(fixture.debugElement.query(By.css('#card-temp span')).nativeElement.textContent).toContain('10 °C');
 
     expect(fixture.debugElement.query(By.css('#car-max-current')).nativeElement.textContent).toContain('3x 8 A');
     expect(fixture.debugElement.query(By.css('#car-charge-power')).nativeElement.textContent).toContain('2.0 kW');
@@ -251,6 +253,7 @@ describe('AppComponent', () => {
       phases_in: 3,
       phases_out: 0,
       power: 0,
+      temperature: 0,
     },
     controller: {
       error: 0,

@@ -54,6 +54,7 @@ class WallboxData(BaseData):
     power: float = 0  # [W]
     charged_energy: float = 0  # [Wh], energy of last charging
     total_energy: float = 0  # [Wh], total charged energy
+    temperature: float = 0  # grad celsius
     # unlocked_by - RFID card id
 
 
@@ -72,6 +73,7 @@ class Wallbox(BaseService[C, WallboxData]):
     _metrics_pvc_wallbox_max_current = prometheus_client.Gauge("pvcontrol_wallbox_max_current_amperes", "Max current per phase")
     _metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("pvcontrol_wallbox_allow_charging", "Wallbox allows charging")
     _metrics_pvc_wallbox_phase_relay = prometheus_client.Gauge("pvcontrol_wallbox_phase_relay", "Phase switch relay status (off/on)")
+    _metrics_pvc_wallbox_temperature = prometheus_client.Gauge("pvcontrol_wallbox_temperature_celsius", "Wallbox temperature")
 
     def __init__(self, config: C):
         super().__init__(config)
@@ -102,6 +104,7 @@ class Wallbox(BaseService[C, WallboxData]):
         Wallbox._metrics_pvc_wallbox_max_current.set(wb.max_current)
         Wallbox._metrics_pvc_wallbox_allow_charging.set(wb.allow_charging)
         Wallbox._metrics_pvc_wallbox_phase_relay.set(wb.phase_relay)
+        Wallbox._metrics_pvc_wallbox_temperature.set(wb.temperature)
 
     # set wallbox registers
 
@@ -257,12 +260,26 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         power = int(json["nrg"][11]) * 10
         charged_energy = int(json["dws"]) / 360.0
         total_energy = int(json["eto"]) * 100
+        # tma is an array of different temperatures, exact meaning is not specified
+        # use the lowest temperature that should match the outside temperature as good as possible
+        temperature = min(json["tma"])
         # check if phases_in is consistent with phase relay state, WB errors dominate
         if wb_error == WbError.OK or wb_error > WbError.INTERNAL:
             if self.phases_to_relay(phases_in) != phase_relay:
                 wb_error = WbError.PHASE_RELAY_ERR
         wb = WallboxData(
-            0, wb_error, car_status, max_current, allow_charging, phase_relay, phases_in, phases_out, power, charged_energy, total_energy
+            0,
+            wb_error,
+            car_status,
+            max_current,
+            allow_charging,
+            phase_relay,
+            phases_in,
+            phases_out,
+            power,
+            charged_energy,
+            total_energy,
+            temperature,
         )
         return wb
 

@@ -32,6 +32,7 @@ describe('PvControlServiceService', () => {
         phases_in: 3,
         phases_out: 3,
         power: 2000,
+        temperature: 10,
       },
       controller: {
         error: 0,

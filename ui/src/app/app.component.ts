@@ -38,6 +38,7 @@ export class AppComponent implements OnInit, OnDestroy {
       phases_in: 3,
       phases_out: 0,
       power: 0,
+      temperature: 0,
     },
     controller: {
       error: 0,

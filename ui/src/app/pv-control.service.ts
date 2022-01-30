@@ -19,6 +19,7 @@ export interface Wallbox extends BaseService {
   phases_in: number;
   phases_out: number;
   power: number;
+  temperature: number;
 }
 
 export enum ChargeMode {

@@ -60,5 +60,13 @@
         </mat-card-content>
       </mat-card>
     </div>
+
+    <div>
+      <mat-card id="card-temp" class="mat-elevation-z4">
+        <mat-card-title><mat-icon [inline]="true" [class.col-primary]="pvControl.wallbox.error <= 3" [class.col-grey]="pvControl.wallbox.error > 3">thermostat</mat-icon>
+          <span fxFlex="grow" class="text-right">{{pvControl.wallbox.temperature|number:'1.0-0'}} °C</span>
+        </mat-card-title>
+      </mat-card>
+    </div>
   </div>
 </div>
