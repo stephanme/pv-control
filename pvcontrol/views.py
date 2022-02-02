@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import re
 import flask
 import flask.views
 import flask.json
@@ -19,6 +20,12 @@ def jsonify_no_content():
     return response
 
 
+def add_no_cache_header(response: flask.Response):
+    if "Cache-Control" not in response.headers:
+        response.headers["Cache-Control"] = "no-cache, no-store"
+    return response
+
+
 class JSONEncoder(flask.json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime.datetime):
@@ -29,7 +36,17 @@ class JSONEncoder(flask.json.JSONEncoder):
 
 class StaticResourcesView(flask.views.MethodView):
     def get(self, path):
-        return flask.send_from_directory("../ui/dist/ui", path)
+        max_age = 31536000 if StaticResourcesView.is_immutable_resource(path) else None  # 1y in seconds 365*24*60*60
+        return flask.send_from_directory("../ui/dist/ui", path, max_age=max_age)
+
+    _angular_hashed_files_pattern = re.compile(r"\w+\.[0-9a-fA-F]{16,}\.\w+")
+
+    @classmethod
+    def is_immutable_resource(cls, path: str) -> bool:
+        # short cut for
+        if path == "index.html":
+            return False
+        return True if StaticResourcesView._angular_hashed_files_pattern.match(path) is not None else False
 
 
 class PvControlView(flask.views.MethodView):

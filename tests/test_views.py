@@ -28,6 +28,14 @@ class StaticResourcesViewTest(unittest.TestCase):
         self.assertIn("<title>PV Control</title>", str(r.data))
         r.close()
 
+    def test_is_immutable_resource(self):
+        self.assertFalse(views.StaticResourcesView.is_immutable_resource(""))
+        self.assertFalse(views.StaticResourcesView.is_immutable_resource("index.html"))
+        self.assertFalse(views.StaticResourcesView.is_immutable_resource("main.js"))
+        self.assertFalse(views.StaticResourcesView.is_immutable_resource("assets/android-chrome-192x192.png"))
+        self.assertTrue(views.StaticResourcesView.is_immutable_resource("main.b0dc5c2db2936007.js"))
+        self.assertTrue(views.StaticResourcesView.is_immutable_resource("styles.8b5dbd984bf44745.css"))
+
 
 class PvControlViewTest(unittest.TestCase):
     def setUp(self):
@@ -52,13 +60,15 @@ class PvControlViewTest(unittest.TestCase):
     def test_pvcontrol_api(self):
         r = self.app.get("/api/pvcontrol")
         self.assertEqual(200, r.status_code)
-        self.assertEqual(self.meter_data.__dict__, r.json["meter"])
-        self.assertEqual(self.wb_data.__dict__, r.json["wallbox"])
-        self.assertEqual(self.controller_data.__dict__, r.json["controller"])
-        _car = r.json["car"]
+        json = r.json
+        assert json is not None
+        self.assertEqual(self.meter_data.__dict__, json["meter"])
+        self.assertEqual(self.wb_data.__dict__, json["wallbox"])
+        self.assertEqual(self.controller_data.__dict__, json["controller"])
+        _car = json["car"]
         _car["data_captured_at"] = datetime.fromisoformat(_car["data_captured_at"])  # can't guess conversion
         self.assertEqual(self.car_data.__dict__, _car)
-        self.assertEqual("unknown", r.json["version"])
+        self.assertEqual("unknown", json["version"])
 
 
 class PvControlConfigDataViewTest(unittest.TestCase):
@@ -76,9 +86,11 @@ class PvControlConfigDataViewTest(unittest.TestCase):
     def test_pvcontrol_api(self):
         r = self.app.get("/api/pvcontrol/controller")
         self.assertEqual(200, r.status_code)
-        self.assertEqual("BaseService", r.json["type"])
-        self.assertEqual({}, r.json["config"])
-        self.assertEqual({"error": 0}, r.json["data"])
+        json = r.json
+        assert json is not None
+        self.assertEqual("BaseService", json["type"])
+        self.assertEqual({}, json["config"])
+        self.assertEqual({"error": 0}, json["data"])
 
 
 class PvControlChargeModeViewTest(unittest.TestCase):

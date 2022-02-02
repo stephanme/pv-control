@@ -48,6 +48,7 @@ car_scheduler.start()
 
 app = flask.Flask(__name__)
 app.json_encoder = views.JSONEncoder
+app.after_request(views.add_no_cache_header)
 app.add_url_rule("/", view_func=views.StaticResourcesView.as_view("get_index"), defaults={"path": "index.html"})
 app.add_url_rule("/<path:path>", view_func=views.StaticResourcesView.as_view("get_static"))
 app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", meter, wallbox, controller, car))
