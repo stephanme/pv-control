@@ -1,4 +1,4 @@
-black==21.12b0 # due to https://github.com/peterjc/flake8-black/pull/43
+black
 flake8
 flake8-bugbear
 flake8-black
