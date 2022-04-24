@@ -106,12 +106,13 @@ class LoginFormParserTest(unittest.TestCase):
 
     <script type="text/javascript">...</script>
     <script>
-      window._IDK = {
-        templateModel: {"clientLegalEntityModel":{"clientId":"a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com","clientAppName":"We Connect ID","clientAppDisplayName":"We Connect ID.","legalEntityInfo":{"name":"Volkswagen","shortName":"VOLKSWAGEN","productName":"Volkswagen ID","theme":"volkswagen_d6","defaultLanguage":"en","termAndConditionsType":"DEFAULT","legalProperties":{"revokeDataContact":"info-datenschutz@volkswagen.de","imprintText":"IMPRINT","countryOfJurisdiction":"DE"}},"imprintTextKey":"imprint.link.text"},"template":"loginAuthenticate","hmac":"hmac value","emailPasswordForm":{"email":"test@gmail.com","password":null},"error":null,"relayState":"12345","nextButtonDisabled":false,"enableNextButtonAfterSeconds":0,"postAction":"login/authenticate","identifierUrl":"login/identifier"},
-        currentLocale: 'en',
-        csrf_parameterName: '_csrf',
-        csrf_token: 'csrf value'
-      };
+          window._IDK = {
+
+            templateModel: { "clientLegalEntityModel": { "clientId": "a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com", "clientAppName": "We Connect ID", "clientAppDisplayName": "We Connect ID.", "legalEntityInfo": { "name": "Volkswagen", "shortName": "VOLKSWAGEN", "productName": "Volkswagen ID", "theme": "volkswagen_d6", "defaultLanguage": "en", "termAndConditionsType": "DEFAULT", "legalProperties": { "revokeDataContact": "info-datenschutz@volkswagen.de", "imprintText": "IMPRINT", "countryOfJurisdiction": "DE" } }, "imprintTextKey": "imprint.link.text" }, "template": "loginAuthenticate", "hmac": "hmac value", "useClientRendering": true, "emailPasswordForm": { "email": "test@gmail.com", "password": null }, "error": null, "relayState": "12345", "nextButtonDisabled": false, "enableNextButtonAfterSeconds": 0, "postAction": "login/authenticate", "identifierUrl": "login/identifier" },
+            currentLocale: 'en',
+            csrf_parameterName: '_csrf',
+            csrf_token: 'csrf value'
+        }
     </script>
 </head>
 <body>
@@ -160,6 +161,14 @@ class VolkswagenIDCarTest(unittest.TestCase):
         c = self.car.read_data()
         self.assertEqual(0, c.error)
         # invalidate access token -> enforce refresh
+        assert self.car._client is not None
+        assert self.car._client.token is not None
         self.car._client.token["access_token"] = "xxx"
         c = self.car.read_data()
         self.assertEqual(0, c.error)
+
+    def test_disabled(self):
+        self.car.get_config().disabled = True
+        c = self.car.read_data()
+        self.assertEqual(1, c.error)
+        self.assertEqual(0, c.soc)

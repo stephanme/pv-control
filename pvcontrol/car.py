@@ -124,7 +124,7 @@ class LoginFormParser(HTMLParser):
 
     def handle_data(self, data):
         if self._processing_script:
-            credPattern = r"\s*window\._IDK\s+=\s+\{(.*)};\s*"
+            credPattern = r"\s*window\._IDK\s+=\s+\{(.*)};?\s*"
             match = re.fullmatch(credPattern, data, re.DOTALL)
             if match:
                 _json = match.group(1)
@@ -148,8 +148,9 @@ class WeConnectHttpAdapter(BaseAdapter):
         r = Response()
         r.request = request
         r.status_code = 200
-        r.url = str(request.url)
-        r._content = request.url.encode("UTF-8")
+        if request.url is not None:
+            r.url = str(request.url)
+            r._content = request.url.encode("UTF-8")
         return r
 
     def close(self):
@@ -162,6 +163,7 @@ class VolkswagenIDCarConfig(CarConfig):
     password: str = ""
     vin: str = ""
     timeout: int = 10  # request timeout
+    disabled: bool = False
 
 
 class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
@@ -282,6 +284,10 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
         client.token = api_token
 
     def _read_data(self) -> CarData:
+        if self.get_config().disabled:
+            self.inc_error_counter()
+            return CarData()
+
         # login if no already done
         try:
             if self._client is None:
