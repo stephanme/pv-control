@@ -18,7 +18,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
-        python-version: 3.7
+        python-version: 3.9
 
     - name: Install UI dependencies
       run: npm install -g @angular/cli && npm ci

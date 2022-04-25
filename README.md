@@ -68,7 +68,7 @@ Example k8s yamls for deploying pv-control:
 pv-control contains a number of mock implementations for wallbox and inverter/power meter to allow testing and local development.
 
 Basic setup:
-- Python 3.7 (use pyenv and create a virtual env pv-control-3.7)
+- Python 3.9 (use pyenv and create a virtual env pv-control-3.9)
 - a recent version of node and npm (see Angular requirements)
 
 How to run locally:
@@ -78,7 +78,7 @@ npm install
 ng build
 
 # in pv-control
-pyenv activate pv-control-3.7
+pyenv activate pv-control-3.9
 pip install -r requirements.txt
 python -m pvcontrol
 
@@ -102,7 +102,7 @@ npm run test
 For reproducible builds, requirements.txt shall pin all packages using [pip-compile](https://github.com/jazzband/pip-tools).
 Update Python deps:
 ```
-# pyenv activate pv-control-3.7
+# pyenv activate pv-control-3.9
 # python -m pip install pip-tools
 
 pip-compile --upgrade requirements.in
