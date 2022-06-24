@@ -18,7 +18,7 @@ click==8.1.2
     # via flask
 cryptography==36.0.2
     # via authlib
-fake-rpi==0.7.1 ; "x86" in platform_machine
+fake-rpi; 'x86' in platform_machine or 'darwin' == sys_platform
     # via -r requirements.in
 flask==2.1.1
     # via
@@ -39,7 +39,7 @@ jinja2==3.1.1
     # via flask
 markupsafe==2.1.1
     # via jinja2
-numpy==1.21.6 ; "x86" in platform_machine
+numpy==1.21.6 ; "x86" in platform_machine or 'darwin' == sys_platform
     # via fake-rpi
 prometheus-client==0.14.1
     # via -r requirements.in
@@ -51,7 +51,7 @@ python-dateutil==2.8.2
     # via -r requirements.in
 requests==2.27.1
     # via -r requirements.in
-RPi.GPIO==0.7.1; 'arm' in platform_machine
+RPi.GPIO; 'arm' in platform_machine and 'linux' in sys_platform
     # via -r requirements.in, manually added
 six==1.16.0
     # via python-dateutil
