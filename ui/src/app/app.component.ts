@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
+import { UntypedFormBuilder } from '@angular/forms';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, Subject, Subscription, timer } from 'rxjs';
@@ -83,7 +83,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   constructor(
-    private fb: FormBuilder, private snackBar: MatSnackBar,
+    private fb: UntypedFormBuilder, private snackBar: MatSnackBar,
     private httpStatusService: HttpStatusService, private pvControlService: PvControlService) { }
 
   ngOnInit(): void {

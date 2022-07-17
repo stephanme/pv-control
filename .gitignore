@@ -130,3 +130,6 @@ dmypy.json
 
 # test config with creds
 *_test_config.json
+
+# Mac noise
+.DS_Store
