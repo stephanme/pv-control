@@ -72,12 +72,12 @@ export class PvControlService {
   }
 
   public putPvControlDesiredChargeMode(mode: ChargeMode): Observable<void> {
-    // Note: explicit json converion otherwise it is sent as plain text -> 400
+    // Note: explicit json conversion otherwise it is sent as plain text -> 400
     return this.http.put<void>('./api/pvcontrol/controller/desired_mode', JSON.stringify(mode), httpOptions);
   }
 
   public putPvControlPhaseMode(mode: PhaseMode): Observable<void> {
-    // Note: explicit json converion otherwise it is sent as plain text -> 400
+    // Note: explicit json conversion otherwise it is sent as plain text -> 400
     return this.http.put<void>('./api/pvcontrol/controller/phase_mode', JSON.stringify(mode), httpOptions);
   }
 }

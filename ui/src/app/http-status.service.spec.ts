@@ -9,7 +9,7 @@ describe('HttpStatusService', () => {
   let http: HttpClient;
   let httpMock: HttpTestingController;
   let busy = false;
-  let httpErr: string|undefined;
+  let httpErr: string | undefined;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -51,7 +51,7 @@ describe('HttpStatusService', () => {
   });
 
   it('should report http errors', () => {
-    http.get('/').subscribe(() => {}, () => {});
+    http.get('/').subscribe({ next: () => { }, error: () => { } });
     const req = httpMock.expectOne('/');
     req.flush('', {
       status: 500,

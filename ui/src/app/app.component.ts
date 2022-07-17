@@ -1,8 +1,8 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { UntypedFormBuilder } from '@angular/forms';
+import { FormBuilder } from '@angular/forms';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, Subject, Subscription, timer } from 'rxjs';
+import { Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { HttpStatusService } from './http-status.service';
 
@@ -83,7 +83,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   constructor(
-    private fb: UntypedFormBuilder, private snackBar: MatSnackBar,
+    private fb: FormBuilder, private snackBar: MatSnackBar,
     private httpStatusService: HttpStatusService, private pvControlService: PvControlService) { }
 
   ngOnInit(): void {
@@ -109,35 +109,36 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void {
-    this.pvControlService.getPvControl().subscribe(pv => {
-      this.pvControl = pv;
-      this.isCharging = AppComponent.isCharging(pv);
-      this.chargingStateIcon = AppComponent.chargingStateIcon(pv);
-      // map desired_mode==MANUAL to current mode -> show real status if e.g. somebody changes current via app/WB
-      let mode = pv.controller.desired_mode;
-      if (mode === ChargeMode.MANUAL) {
-        mode = pv.controller.mode;
-      }
-      this.chargeModeControl.setValue(mode);
-      this.phaseModeControl.setValue(pv.controller.phase_mode);
-    },
-      () => { }
-    );
+    this.pvControlService.getPvControl().subscribe({
+      next: pv => {
+        this.pvControl = pv;
+        this.isCharging = AppComponent.isCharging(pv);
+        this.chargingStateIcon = AppComponent.chargingStateIcon(pv);
+        // map desired_mode==MANUAL to current mode -> show real status if e.g. somebody changes current via app/WB
+        let mode = pv.controller.desired_mode;
+        if (mode === ChargeMode.MANUAL) {
+          mode = pv.controller.mode;
+        }
+        this.chargeModeControl.setValue(mode);
+        this.phaseModeControl.setValue(pv.controller.phase_mode);
+      },
+      error: () => { }
+    });
   }
 
   onChargeModeChange(event: MatButtonToggleChange): void {
     const desiredMode = event.value;
-    this.pvControlService.putPvControlDesiredChargeMode(desiredMode).subscribe(
-      () => { },
-      () => { }
-    );
+    this.pvControlService.putPvControlDesiredChargeMode(desiredMode).subscribe({
+      next: () => { },
+      error: () => { }
+    });
   }
 
   onPhaseModeChange(event: MatButtonToggleChange): void {
     const mode = event.value;
-    this.pvControlService.putPvControlPhaseMode(mode).subscribe(
-      () => { },
-      () => { }
-    );
+    this.pvControlService.putPvControlPhaseMode(mode).subscribe({
+      next: () => { },
+      error: () => { }
+    });
   }
 }

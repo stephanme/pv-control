@@ -48,15 +48,18 @@ export class HttpStatusInterceptor {
     this.httpStatusService.incBusy();
 
     return next.handle(req).pipe(
-      tap(() => null, errEvent => {
-        let msg: string;
-        if (errEvent instanceof HttpErrorResponse) {
-          msg = `HTTP ${errEvent.status} ${errEvent.statusText} - ${req.method} ${req.url}`;
-        } else {
-          msg = `Unknown error - ${req.method} ${req.url}`;
+      tap({
+        next: () => null,
+        error: errEvent => {
+          let msg: string;
+          if (errEvent instanceof HttpErrorResponse) {
+            msg = `HTTP ${errEvent.status} ${errEvent.statusText} - ${req.method} ${req.url}`;
+          } else {
+            msg = `Unknown error - ${req.method} ${req.url}`;
+          }
+          console.log(`Http request failed: ${msg}`);
+          this.httpStatusService.notifyHttpError(msg);
         }
-        console.log(`Http request failed: ${msg}`);
-        this.httpStatusService.notifyHttpError(msg);
       }),
       finalize(() => {
         // is also called on canceled requests
