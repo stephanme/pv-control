@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def jsonify_no_content():
     response = flask.make_response("", 204)
-    response.mimetype = flask.current_app.config["JSONIFY_MIMETYPE"]
+    response.mimetype = flask.json.provider.DefaultJSONProvider.mimetype
     return response
 
 
@@ -26,11 +26,10 @@ def add_no_cache_header(response: flask.Response):
     return response
 
 
-class JSONEncoder(flask.json.JSONEncoder):
+class JSONProvider(flask.json.provider.DefaultJSONProvider):
     def default(self, o):
         if isinstance(o, datetime.datetime):
             return o.isoformat()
-
         return super().default(o)
 
 

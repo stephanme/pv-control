@@ -47,8 +47,8 @@ controller_scheduler.start()
 car_scheduler = Scheduler(car.get_config().cycle_time, car.read_data)
 car_scheduler.start()
 
+flask.Flask.json_provider_class = views.JSONProvider
 app = flask.Flask(__name__)
-app.json_encoder = views.JSONEncoder
 app.after_request(views.add_no_cache_header)
 app.config["COMPRESS_MIN_SIZE"] = 2048
 app.config["COMPRESS_MIMETYPES"] = ["text/html", "text/css", "application/json", "application/javascript", "image/vnd.microsoft.icon"]

@@ -39,8 +39,8 @@ class StaticResourcesViewTest(unittest.TestCase):
 
 class PvControlViewTest(unittest.TestCase):
     def setUp(self):
+        flask.Flask.json_provider_class = views.JSONProvider
         app = flask.Flask(__name__)
-        app.json_encoder = views.JSONEncoder
         app.testing = True
         self.app = app.test_client()
         self.meter_data = MeterData(5000, 3000, 2000)
@@ -66,6 +66,9 @@ class PvControlViewTest(unittest.TestCase):
         self.assertEqual(self.wb_data.__dict__, json["wallbox"])
         self.assertEqual(self.controller_data.__dict__, json["controller"])
         _car = json["car"]
+        self.assertRegex(
+            _car["data_captured_at"], r"\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d[\d.+:]*"
+        )  # check iso format, optional milliseconds and TZ
         _car["data_captured_at"] = datetime.fromisoformat(_car["data_captured_at"])  # can't guess conversion
         self.assertEqual(self.car_data.__dict__, _car)
         self.assertEqual("unknown", json["version"])
