@@ -133,3 +133,6 @@ dmypy.json
 
 # Mac noise
 .DS_Store
+
+# distro
+pv-control.tar.gz
