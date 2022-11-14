@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.9-bullseye as builder
 WORKDIR /usr/src/app
 COPY requirements.txt ./
@@ -10,8 +11,7 @@ ENV COMMIT_SHA=$COMMIT_SHA_ARG
 
 WORKDIR /usr/src/app
 
-COPY --from=builder /usr/wheels /usr/wheels
-RUN pip install --no-cache /usr/wheels/*
+RUN --mount=type=cache,target=/usr/wheels,from=builder,source=/usr/wheels pip install --no-cache /usr/wheels/*
 
 COPY ./pvcontrol/*.py ./pvcontrol/
 COPY /ui/dist/ui ./ui/dist/ui/
