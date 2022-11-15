@@ -4,6 +4,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 
+import os
 import argparse
 import json
 import flask
@@ -27,7 +28,7 @@ parser.add_argument("-a", "--car", default="SimulatedCar")
 parser.add_argument("-c", "--config", default="{}")
 args = parser.parse_args()
 
-logger.info("Starting pvcontrol")
+logger.info(f"Starting pvcontrol, version={os.getenv('COMMIT_SHA', 'unknown')}")
 logger.info(f"Meter:   {args.meter}")
 logger.info(f"Wallbox: {args.wallbox}")
 logger.info(f"Car:     {args.car}")

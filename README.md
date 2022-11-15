@@ -105,7 +105,7 @@ Update Python deps:
 # pyenv activate pv-control-3.9
 python -m pip install --upgrade pip
 pip install -r requirements-dev.txt -U
-pip-compile --upgrade requirements.in
+pip-compile --upgrade --resolver backtracking --allow-unsafe requirements.in
 
 # edit requirements.txt and add/edit platform specific dependencies: RPi.GPIO, fake-rpi, numpy
 pip install -r requirements.txt -U
