@@ -26,6 +26,8 @@ parser.add_argument("-m", "--meter", default="SimulatedMeter")
 parser.add_argument("-w", "--wallbox", default="SimulatedWallbox")
 parser.add_argument("-a", "--car", default="SimulatedCar")
 parser.add_argument("-c", "--config", default="{}")
+parser.add_argument("--port", type=int, default=8080)
+parser.add_argument("--basehref")
 args = parser.parse_args()
 
 logger.info(f"Starting pvcontrol, version={os.getenv('COMMIT_SHA', 'unknown')}")
@@ -71,8 +73,11 @@ app.add_url_rule("/api/pvcontrol/wallbox/car_status", view_func=views.PvControlC
 
 # Add prometheus wsgi middleware to route /metrics requests
 app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": prometheus_client.make_wsgi_app()})
+# prefix urls to match 'base href' config of ng build, needed for stand-alone operation only
+if args.basehref:
+    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {args.basehref: app.wsgi_app})
 
-app.run(host="0.0.0.0", port=8080)
+app.run(host="0.0.0.0", port=args.port)
 controller_scheduler.stop()
 car_scheduler.stop()
 # disable charging to play it safe

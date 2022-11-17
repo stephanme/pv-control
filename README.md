@@ -49,6 +49,8 @@ optional arguments:
   -w WALLBOX, --wallbox WALLBOX
   -a CAR, --car CAR
   -c CONFIG, --config CONFIG
+  --port PORT
+  --basehref BASEHREF  
 ```
 
 METER, WALLBOX and CAR refer to implementation classes for the energy meter, the wallbox and the car:
@@ -58,6 +60,8 @@ METER, WALLBOX and CAR refer to implementation classes for the energy meter, the
 
 CONFIG is a json with 'meter', 'wallbox', 'car' and 'controller' configuration structures. The config parameters depend on the METER, WALLBOX and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py` and `chargecontroller.py`.
+
+PORT and BASEHREF change the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s. 
 
 Example k8s yamls for deploying pv-control:
 - https://github.com/stephanme/pv-control/blob/main/pvcontrol.yaml
