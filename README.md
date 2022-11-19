@@ -39,7 +39,7 @@ Restarting pv-control (e.g. for updates) doesn't change the state of the relay. 
 
 ```
 python -m pvcontrol --help
-usage: __main__.py [-h] [-m METER] [-w WALLBOX] [-a CAR] [-c CONFIG]
+usage: __main__.py [-h] [-m METER] [-w WALLBOX] [-a CAR] [-c CONFIG] [--host HOST] [--port PORT] [--basehref BASEHREF]
 
 PV Control
 
@@ -49,8 +49,9 @@ optional arguments:
   -w WALLBOX, --wallbox WALLBOX
   -a CAR, --car CAR
   -c CONFIG, --config CONFIG
-  --port PORT
-  --basehref BASEHREF  
+  --host HOST           server host (default: 0.0.0.0)
+  --port PORT           server port (default: 8080)
+  --basehref BASEHREF   URL prefix to match ng base-href param (no leading /)
 ```
 
 METER, WALLBOX and CAR refer to implementation classes for the energy meter, the wallbox and the car:
@@ -61,7 +62,47 @@ METER, WALLBOX and CAR refer to implementation classes for the energy meter, the
 CONFIG is a json with 'meter', 'wallbox', 'car' and 'controller' configuration structures. The config parameters depend on the METER, WALLBOX and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py` and `chargecontroller.py`.
 
-PORT and BASEHREF change the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s. 
+HOST, PORT and BASEHREF configure the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s. 
+
+## Installation
+
+Pre-requisites:
+- Raspberry Pi 2 with Raspberry Pi OS Lite (Debian 11), or newer model
+- [Raspberry Pi Expansion Board, Power Relay](https://www.waveshare.com/rpi-relay-board.htm)
+- Python 3.9
+- download `pv-control.tar.gz` package (release artifacts or from github actions)
+
+The following procedure installs pvcontrol behind an nginx on port 80.
+
+```
+sudo apt install python3-pip
+
+sudo mkdir -p /usr/local/bin/pvcontrol 
+sudo tar -xzf pv-control.tar.gz -C /usrlocal/bin/pvcontrol
+cd /usr/bin/pvcontrol
+pip install -r requirements.txt
+
+sudo cp /usr/local/bin/pvcontrol/pvcontrol.service /etc/systemd/system
+# adapt configuration in /etc/systemd/system/pvcontrol.service
+sudo systemctl daemon-reload
+sudo systemctl start pvcontrol.service
+sudo systemctl enable pvcontrol.service
+
+sudo apt install nginx
+sudo cp /usr/local/bin/pvcontrol/pvcontrol.nginx /etc/nginx/sites-available/pvcontrol.nginx
+# adapt pvcontrol.nginx if needed (e.g. multiple apps running on same raspi)
+sudo ln -s /etc/nginx/sites-available/pvcontrol.nginx /etc/nginx/sites-enabled/pvcontrol.nginx
+sudo rm /etc/nginx/sites-enabled/default
+sudo systemctl start nginx
+
+# journalctl -u pvcontrol.service -f
+# http://pvcontrol.fritz.box
+```
+
+
+## Installation on k8s
+
+Tested on Raspberry Pi 4 with Raspberry Pi OS Lite (Debian 11, 64 bit).
 
 Example k8s yamls for deploying pv-control:
 - https://github.com/stephanme/pv-control/blob/main/pvcontrol.yaml

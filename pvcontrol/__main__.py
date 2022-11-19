@@ -26,8 +26,9 @@ parser.add_argument("-m", "--meter", default="SimulatedMeter")
 parser.add_argument("-w", "--wallbox", default="SimulatedWallbox")
 parser.add_argument("-a", "--car", default="SimulatedCar")
 parser.add_argument("-c", "--config", default="{}")
-parser.add_argument("--port", type=int, default=8080)
-parser.add_argument("--basehref")
+parser.add_argument("--host", default="0.0.0.0", help="server host (default: 0.0.0.0)")
+parser.add_argument("--port", type=int, default=8080, help="server port (default: 8080)")
+parser.add_argument("--basehref", help="URL prefix to match ng base-href param (no leading /)")
 args = parser.parse_args()
 
 logger.info(f"Starting pvcontrol, version={os.getenv('COMMIT_SHA', 'unknown')}")
@@ -77,7 +78,7 @@ app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": prometheus_client
 if args.basehref:
     app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {args.basehref: app.wsgi_app})
 
-app.run(host="0.0.0.0", port=args.port)
+app.run(host=args.host, port=args.port)
 controller_scheduler.stop()
 car_scheduler.stop()
 # disable charging to play it safe

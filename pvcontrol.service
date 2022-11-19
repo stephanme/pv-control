@@ -1,0 +1,11 @@
+[Unit]
+Description=PV Control
+
+[Service]
+User=pi
+WorkingDirectory=/usr/local/bin/pvcontrol
+ExecStart=python -m pvcontrol --host 127.0.0.1 --basehref /pvcontrol
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
