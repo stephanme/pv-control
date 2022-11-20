@@ -65,6 +65,19 @@ class SimulatedCar(Car[CarConfig]):
         return CarData(error=0, data_captured_at=datetime.now(), cruising_range=150, soc=50)
 
 
+# just to permanently grey out car SOC in UI
+class NoCar(Car[CarConfig]):
+    def __init__(self, config: CarConfig):
+        super().__init__(config)
+        self.inc_error_counter()
+        self.inc_error_counter()
+        self.inc_error_counter()
+        self.inc_error_counter()
+
+    def _read_data(self) -> CarData:
+        return CarData(data_captured_at=datetime.now())
+
+
 # helper classes for handling authentication
 class HtmlFormParser(HTMLParser):
     def __init__(self, html: str, form_id: str):
@@ -329,6 +342,8 @@ class CarFactory:
     def newCar(cls, type: str, **kwargs) -> Car:
         if type == "SimulatedCar":
             return SimulatedCar(CarConfig(**kwargs))
+        if type == "NoCar":
+            return NoCar(CarConfig(**kwargs))
         elif type == "VolkswagenIDCar":
             return VolkswagenIDCar(VolkswagenIDCarConfig(**kwargs))
         else:

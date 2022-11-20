@@ -55,9 +55,9 @@ optional arguments:
 ```
 
 METER, WALLBOX and CAR refer to implementation classes for the energy meter, the wallbox and the car:
-- METER = KostalMeter|SimulatedMeter
+- METER = KostalMeter|FroniusMeter|SimulatedMeter
 - WALLBOX = GoeWallbox|SimulatedWallbox|SimulatedWallboxWithRelay
-- CAR = VolkswagenIDCar|SimulatedCar
+- CAR = VolkswagenIDCar|SimulatedCar|NoCar
 
 CONFIG is a json with 'meter', 'wallbox', 'car' and 'controller' configuration structures. The config parameters depend on the METER, WALLBOX and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py` and `chargecontroller.py`.
