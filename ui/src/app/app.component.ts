@@ -108,6 +108,30 @@ export class AppComponent implements OnInit, OnDestroy {
     this.unsubscribe.complete();
   }
 
+  colorPv(): string {
+    return (this.pvControl.meter.error <=3) ? 'col-yellow' : 'col-grey';
+  }
+
+  colorGrid(): string {
+    if (this.pvControl.meter.error <=3) {
+      return (this.pvControl.meter.power_grid <= 0) ? 'col-green' : 'col-red';
+    } else {
+      return 'col-grey';
+    }
+  }
+
+  colorHome(): string {
+    return (this.pvControl.meter.error <=3) ? 'col-primary' : 'col-grey';
+  }
+
+  colorCar(): string {
+    return (this.pvControl.car.error <=3) ? 'col-primary' : 'col-grey';
+  }
+
+  colorWallbox(): string {
+    return (this.pvControl.wallbox.error <=3) ? 'col-primary' : 'col-grey';
+  }
+
   refresh(): void {
     this.pvControlService.getPvControl().subscribe({
       next: pv => {

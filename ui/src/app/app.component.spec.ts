@@ -148,7 +148,6 @@ describe('AppComponent', () => {
     expect(fixture.debugElement.query(By.css('#car-charge-state')).nativeElement.textContent).toContain('power_off');
   });
 
-
   it('should refresh data', async () => {
     const refreshIcon = fixture.debugElement.query(By.css('#refresh mat-icon')).nativeElement;
 
@@ -187,6 +186,21 @@ describe('AppComponent', () => {
     // snack bar is not below root element of fixture -> can't use loader
     const snackbar = await TestbedHarnessEnvironment.documentRootLoader(fixture).getHarness(MatSnackBarHarness);
     expect(await snackbar.getMessage()).toBe('HTTP 500 Internal Server Error - GET ./api/pvcontrol');
+  });
+
+  it('should show grey icons on sub system error', async () => {
+    pvControlData.meter.error = 4;
+    pvControlData.car.error = 4;
+    pvControlData.wallbox.error = 4;
+    httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('#card-pv mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-grid mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-home mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-car mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-chargemode mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-temp mat-icon')).nativeElement.className).toContain('col-grey');
   });
 
   it('should allow to switch to "PV only" charging', async () => {
