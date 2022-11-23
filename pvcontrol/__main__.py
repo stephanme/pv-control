@@ -4,7 +4,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 
-import os
 import argparse
 import json
 import flask
@@ -31,7 +30,15 @@ parser.add_argument("--port", type=int, default=8080, help="server port (default
 parser.add_argument("--basehref", help="URL prefix to match ng base-href param (no leading /)")
 args = parser.parse_args()
 
-logger.info(f"Starting pvcontrol, version={os.getenv('COMMIT_SHA', 'unknown')}")
+# version file is generated during build
+version = "unknown"
+try:
+    with open("version", "r") as f:
+        version = f.read()
+except Exception:
+    pass
+
+logger.info(f"Starting pvcontrol, version={version}")
 logger.info(f"Meter:   {args.meter}")
 logger.info(f"Wallbox: {args.wallbox}")
 logger.info(f"Car:     {args.car}")
@@ -61,7 +68,7 @@ compress.init_app(app)
 
 app.add_url_rule("/", view_func=views.StaticResourcesView.as_view("get_index"), defaults={"path": "index.html"})
 app.add_url_rule("/<path:path>", view_func=views.StaticResourcesView.as_view("get_static"))
-app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", meter, wallbox, controller, car))
+app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", version, meter, wallbox, controller, car))
 app.add_url_rule("/api/pvcontrol/controller", view_func=views.PvControlConfigDataView.as_view("get_controller", controller))
 app.add_url_rule("/api/pvcontrol/controller/desired_mode", view_func=views.PvControlChargeModeView.as_view("put_desired_mode", controller))
 app.add_url_rule("/api/pvcontrol/controller/phase_mode", view_func=views.PvControlPhaseModeView.as_view("put_phase_mode", controller))

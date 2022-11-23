@@ -46,7 +46,9 @@ jobs:
       run: python -m unittest discover -s ./tests
 
     - name: Build distribution
-      run: tar --exclude ./pvcontrol/__pycache__ -zcv -f pv-control.tar.gz ./pvcontrol/ ./ui/dist/ui/ requirements.txt *.md LICENSE
+      run: |
+        echo ${{ github.sha }} > version
+        tar --exclude ./pvcontrol/__pycache__ -zcv -f pv-control.tar.gz ./pvcontrol/ ./ui/dist/ui/ requirements.txt *.md LICENSE
     - name: Archive distribution
       uses: actions/upload-artifact@v3
       with:
@@ -86,4 +88,3 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta.outputs.tags }}
         labels: ${{ steps.docker_meta.outputs.labels }}
-        build-args: COMMIT_SHA_ARG=${{ github.sha }}

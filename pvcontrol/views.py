@@ -1,6 +1,5 @@
 import datetime
 import logging
-import os
 import re
 import flask
 import flask.views
@@ -49,12 +48,12 @@ class StaticResourcesView(flask.views.MethodView):
 
 
 class PvControlView(flask.views.MethodView):
-    def __init__(self, meter: Meter, wb: Wallbox, controller: ChargeController, car: Car):
+    def __init__(self, version: str, meter: Meter, wb: Wallbox, controller: ChargeController, car: Car):
         self._meter = meter
         self._wb = wb
         self._controller = controller
         self._car = car
-        self._version = os.getenv("COMMIT_SHA", "unknown")
+        self._version = version
 
     def get(self) -> flask.Response:
         res = {

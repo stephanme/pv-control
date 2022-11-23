@@ -6,9 +6,6 @@ RUN pip wheel --no-cache-dir --prefer-binary --extra-index-url https://www.piwhe
 
 
 FROM python:3.9-slim-bullseye
-ARG COMMIT_SHA_ARG
-ENV COMMIT_SHA=$COMMIT_SHA_ARG
-
 WORKDIR /usr/src/app
 
 RUN --mount=type=cache,target=/usr/wheels,from=builder,source=/usr/wheels pip install --no-cache /usr/wheels/*

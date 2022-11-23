@@ -78,7 +78,7 @@ The following procedure installs pvcontrol behind an nginx on port 80.
 sudo apt install python3-pip
 
 sudo mkdir -p /usr/local/bin/pvcontrol 
-sudo tar -xzf pv-control.tar.gz -C /usrlocal/bin/pvcontrol
+sudo tar -xzf pv-control.tar.gz -C /usr/local/bin/pvcontrol
 cd /usr/bin/pvcontrol
 pip install -r requirements.txt
 

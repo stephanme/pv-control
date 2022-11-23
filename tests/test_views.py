@@ -55,7 +55,7 @@ class PvControlViewTest(unittest.TestCase):
         controller.get_data.return_value = self.controller_data
         car = mock.Mock()
         car.get_data.return_value = self.car_data
-        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", meter, wb, controller, car))
+        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", "v1", meter, wb, controller, car))
 
     def test_pvcontrol_api(self):
         r = self.app.get("/api/pvcontrol")
@@ -71,7 +71,7 @@ class PvControlViewTest(unittest.TestCase):
         )  # check iso format, optional milliseconds and TZ
         _car["data_captured_at"] = datetime.fromisoformat(_car["data_captured_at"])  # can't guess conversion
         self.assertEqual(self.car_data.__dict__, _car)
-        self.assertEqual("unknown", json["version"])
+        self.assertEqual("v1", json["version"])
 
 
 class PvControlConfigDataViewTest(unittest.TestCase):
