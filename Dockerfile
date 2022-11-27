@@ -10,8 +10,8 @@ WORKDIR /usr/src/app
 
 RUN --mount=type=cache,target=/usr/wheels,from=builder,source=/usr/wheels pip install --no-cache /usr/wheels/*
 
-COPY ./pvcontrol/*.py ./pvcontrol/
-COPY /ui/dist/ui ./ui/dist/ui/
+# see .dockerignore
+COPY . ./
 
 CMD [ "python", "-m", "pvcontrol" ]
 EXPOSE 8080

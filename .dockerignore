@@ -1,5 +1,7 @@
 *
 
+!LICENSE
+!version
 !requirements.txt
-!pvcontrol
+!pvcontrol/*.py
 !ui/dist/ui
