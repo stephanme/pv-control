@@ -48,7 +48,7 @@ jobs:
     - name: Build distribution
       run: |
         echo ${{ github.sha }} > version
-        tar --exclude ./pvcontrol/__pycache__ -zcv -f pv-control.tar.gz ./pvcontrol/ ./ui/dist/ui/ requirements.txt *.md LICENSE
+        tar --exclude ./pvcontrol/__pycache__ -zcv -f pv-control.tar.gz ./pvcontrol/ ./ui/dist/ui/ requirements.txt *.md LICENSE version
     - name: Archive distribution
       uses: actions/upload-artifact@v3
       with:

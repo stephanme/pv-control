@@ -99,6 +99,11 @@ sudo systemctl start nginx
 # http://pvcontrol.fritz.box
 ```
 
+pvcontrol can be updated using the `update-pvcontrol.sh` script. Prerequisites:
+- gh cli installed as described in https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+- successful github login, e.g. with `gh auth login -w`
+- pvcontrol was installed as described above
+- `update-pvcontrol.sh` script copied into home directory of raspberry
 
 ## Installation on k8s
 
