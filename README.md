@@ -104,6 +104,9 @@ pvcontrol can be updated using the `update-pvcontrol.sh` script. Prerequisites:
 - successful github login, e.g. with `gh auth login -w`
 - pvcontrol was installed as described above
 - `update-pvcontrol.sh` script copied into home directory of raspberry
+- Usage
+  - `./update-pvcontrol.sh` - update to latest successful build result fn main branch
+  - `./update-pvcontrol.sh <version>` - update to specified version (github release tag, e.g. v4)
 
 ## Installation on k8s
 
