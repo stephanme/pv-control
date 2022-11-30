@@ -20,7 +20,6 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatButtonHarness } from '@angular/material/button/testing';
 import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
-import { FlexLayoutModule } from '@angular/flex-layout';
 
 import { AppComponent } from './app.component';
 import { ChargeMode, PhaseMode, PvControl } from './pv-control.service';
@@ -46,7 +45,6 @@ describe('AppComponent', () => {
         BrowserAnimationsModule,
         HttpClientTestingModule,
         ReactiveFormsModule,
-        FlexLayoutModule,
         MatToolbarModule,
         MatCardModule,
         MatFormFieldModule,

@@ -1,61 +1,61 @@
 <mat-toolbar color="primary">
   <mat-icon class="col-yellow mr-1">wb_sunny</mat-icon>
   <span>PV Control</span>
-  <span fxFlex="grow"></span>
+  <span class="flex-grow"></span>
   <mat-slide-toggle [formControl]="autoRefreshControl"></mat-slide-toggle>
   <button id="refresh" mat-icon-button aria-label="Refresh" (click)="refresh()">
     <mat-icon [class.spin]="busy$ | async">autorenew</mat-icon>
   </button>
 </mat-toolbar>
 <div class="content">
-  <div gdColumns="1fr 1fr" gdColumns.gt-xs="300px 300px" fxLayoutAlign="center" gdGap="10px">
+  <div class="grid grid-template-pv gap-10 justify-center">
     <div>
       <mat-card id="card-pv" class="mat-elevation-z4">
-        <mat-card-title><mat-icon [inline]="true" [class]="colorPv()">wb_sunny</mat-icon><span fxFlex="grow" class="text-right">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span></mat-card-title>
+        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorPv()">wb_sunny</mat-icon><span class="flex-grow text-right">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span></mat-card-title>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-grid" class="mat-elevation-z4">
-        <mat-card-title><mat-icon [inline]="true" [class]="colorGrid()">power</mat-icon><span fxFlex="grow" class="text-right">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span></mat-card-title>
+        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorGrid()">power</mat-icon><span class="flex-grow text-right">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span></mat-card-title>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-home" class="mat-elevation-z4">
-        <mat-card-title><mat-icon [inline]="true" [class]="colorHome()">home</mat-icon>
-          <span fxFlex="grow" class="text-right">{{(pvControl.meter.power_consumption - pvControl.wallbox.power)/1000|number:'1.1-1'}} kW</span>
+        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorHome()">home</mat-icon>
+          <span class="flex-grow text-right">{{(pvControl.meter.power_consumption - pvControl.wallbox.power)/1000|number:'1.1-1'}} kW</span>
         </mat-card-title>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-car" class="mat-elevation-z4">
-        <mat-card-title><mat-icon [inline]="true" [class]="colorCar()">electric_car</mat-icon>
-          <span fxFlex="grow" class="text-right">{{pvControl.car.soc|number:'1.0-0'}} %</span>
+        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorCar()">electric_car</mat-icon>
+          <span class="flex-grow text-right">{{pvControl.car.soc|number:'1.0-0'}} %</span>
         </mat-card-title>
       </mat-card>
     </div>
 
-    <div gdColumn="span 2">
+    <div class="grid-col-span-2">
       <mat-card id="card-chargemode" class="mat-elevation-z4">
-        <mat-card-title fxLayoutAlign="space">
-          <mat-icon fxFlex="grow" [inline]="true" [class]="colorWallbox()">ev_station</mat-icon>
-          <span id="car-max-current" *ngIf="isCharging" fxFlex="none" class="text-center">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
-          <span id="car-charge-power" *ngIf="isCharging" fxFlex="grow" class="text-right">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
-          <mat-icon id="car-charge-state" *ngIf="!isCharging" fxFlex="grow" [inline]="true" class="text-right" fontSet="material-icons-two-tone">{{chargingStateIcon}}</mat-icon>
+        <mat-card-title class="flex-row">
+          <mat-icon class="flex-grow" [inline]="true" [class]="colorWallbox()">ev_station</mat-icon>
+          <span id="car-max-current" *ngIf="isCharging" class="flex-none text-center">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+          <span id="car-charge-power" *ngIf="isCharging" class="flex-grow text-right">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
+          <mat-icon id="car-charge-state" *ngIf="!isCharging" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone">{{chargingStateIcon}}</mat-icon>
         </mat-card-title>
         <mat-card-content>
-          <mat-button-toggle-group id="chargeModeToogle" fxLayout="row" fxLayoutAlign="center" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">
-            <mat-button-toggle id="chargeModeOFF" fxFlex="grow" [value]="ChargeMode.OFF" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.OFF">Off</mat-button-toggle>
-            <mat-button-toggle id="chargeModePV_ONLY" fxFlex="grow" [value]="ChargeMode.PV_ONLY" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.PV_ONLY">PV only</mat-button-toggle>
-            <mat-button-toggle id="chargeModePV_ALL" fxFlex="grow" [value]="ChargeMode.PV_ALL" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.PV_ALL">PV all</mat-button-toggle>
-            <mat-button-toggle id="chargeModeMAX" fxFlex="grow" [value]="ChargeMode.MAX" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.MAX">Max</mat-button-toggle>
-            <mat-button-toggle id="chargeModeMANUAL" fxFlex="grow" [value]="ChargeMode.MANUAL" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.MANUAL">Manual</mat-button-toggle>
+          <mat-button-toggle-group id="chargeModeToogle" class="flex-row" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">
+            <mat-button-toggle id="chargeModeOFF" class="flex-grow" [value]="ChargeMode.OFF" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.OFF">Off</mat-button-toggle>
+            <mat-button-toggle id="chargeModePV_ONLY" class="flex-grow" [value]="ChargeMode.PV_ONLY" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.PV_ONLY">PV only</mat-button-toggle>
+            <mat-button-toggle id="chargeModePV_ALL" class="flex-grow" [value]="ChargeMode.PV_ALL" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.PV_ALL">PV all</mat-button-toggle>
+            <mat-button-toggle id="chargeModeMAX" class="flex-grow" [value]="ChargeMode.MAX" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.MAX">Max</mat-button-toggle>
+            <mat-button-toggle id="chargeModeMANUAL" class="flex-grow" [value]="ChargeMode.MANUAL" [class.mat-body-strong]="pvControl.controller.mode===ChargeMode.MANUAL">Manual</mat-button-toggle>
           </mat-button-toggle-group>
         </mat-card-content>
         <mat-card-content>
-          <mat-button-toggle-group fxLayout="row" fxLayoutAlign="center" id="phaseModeToogle" [formControl]="phaseModeControl" (change)="onPhaseModeChange($event)" aria-label="Phase Mode">
-            <mat-button-toggle id="phaseModeAUTO" fxFlex="grow" [value]="PhaseMode.AUTO">Auto</mat-button-toggle>
-            <mat-button-toggle id="phaseModeCHARGE_1P" fxFlex="grow" [value]="PhaseMode.CHARGE_1P" [class.mat-body-strong]="pvControl.wallbox.phases_in===1">1 Phase</mat-button-toggle>
-            <mat-button-toggle id="phaseModeCHARGE_3P" fxFlex="grow" [value]="PhaseMode.CHARGE_3P" [class.mat-body-strong]="pvControl.wallbox.phases_in===3">3 Phases</mat-button-toggle>
+          <mat-button-toggle-group class="flex-row" id="phaseModeToogle" [formControl]="phaseModeControl" (change)="onPhaseModeChange($event)" aria-label="Phase Mode">
+            <mat-button-toggle id="phaseModeAUTO" class="flex-grow" [value]="PhaseMode.AUTO">Auto</mat-button-toggle>
+            <mat-button-toggle id="phaseModeCHARGE_1P" class="flex-grow" [value]="PhaseMode.CHARGE_1P" [class.mat-body-strong]="pvControl.wallbox.phases_in===1">1 Phase</mat-button-toggle>
+            <mat-button-toggle id="phaseModeCHARGE_3P" class="flex-grow" [value]="PhaseMode.CHARGE_3P" [class.mat-body-strong]="pvControl.wallbox.phases_in===3">3 Phases</mat-button-toggle>
           </mat-button-toggle-group>
         </mat-card-content>
       </mat-card>
@@ -63,8 +63,8 @@
 
     <div>
       <mat-card id="card-temp" class="mat-elevation-z4">
-        <mat-card-title><mat-icon [inline]="true" [class]="colorWallbox()">thermostat</mat-icon>
-          <span fxFlex="grow" class="text-right">{{pvControl.wallbox.temperature|number:'1.0-0'}} °C</span>
+        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorWallbox()">thermostat</mat-icon>
+          <span class="flex-grow text-right">{{pvControl.wallbox.temperature|number:'1.0-0'}} °C</span>
         </mat-card-title>
       </mat-card>
     </div>

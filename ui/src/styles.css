@@ -50,6 +50,34 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   color: #dc3545;
 }
 
+/* flex and grid layout, https://github.com/angular/flex-layout/issues/1426 */
+.flex-row { display: flex!important; flex-direction: row; }
+.flex-col { display: flex!important; flex-direction: column; }
+
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1 }
+.flex-grow { flex-grow: 1; }
+.flex-none { flex: none }
+
+.space-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.items-center { align-items: center; }
+
+.gap-10 { gap: 10px; }
+
+.grid { display: grid!important; }
+
+.grid-template-pv {
+  grid-template-columns: 1fr 1fr;
+}
+@media screen and (min-width: 600px) {
+  .grid-template-pv {
+    grid-template-columns: 300px 300px;
+  }
+}
+
+.grid-col-span-2 { grid-column: span 2 / auto; }
+
 /* others */
 
 .spin {

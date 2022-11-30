@@ -4,7 +4,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 
-import { FlexLayoutModule } from '@angular/flex-layout';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -27,7 +26,6 @@ import { HttpStatusInterceptor } from './http-status.service';
     BrowserAnimationsModule,
     ReactiveFormsModule,
     HttpClientModule,
-    FlexLayoutModule,
     MatToolbarModule,
     MatCardModule,
     MatFormFieldModule,
