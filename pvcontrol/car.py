@@ -309,19 +309,20 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
 
             # TODO: get vin if not configured
             if self._client is not None:
-                status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/status")
+                status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=fuelstatus")
                 if status_res.status_code == 401:
                     # auth error -> refresh token
                     VolkswagenIDCar._refresh_token(self._client)
-                    status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/status")
+                    status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=fuelstatus")
                 status_res.raise_for_status()
                 status = status_res.json()
-                battery_status = status["data"]["batteryStatus"]
+                range_status = status["fuelStatus"]["rangeStatus"]["value"]
+                battery_status = range_status["primaryEngine"]
                 self.reset_error_counter()
                 return CarData(
                     error=0,
-                    data_captured_at=dateutil.parser.isoparse(battery_status["carCapturedTimestamp"]),
-                    cruising_range=battery_status["cruisingRangeElectric_km"],
+                    data_captured_at=dateutil.parser.isoparse(range_status["carCapturedTimestamp"]),
+                    cruising_range=battery_status["remainingRange_km"],
                     soc=battery_status["currentSOC_pct"],
                 )
         except HTTPError as e:

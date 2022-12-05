@@ -140,15 +140,10 @@ class VolkswagenIDCarTest(unittest.TestCase):
         vehicles = vehicles_res.json()
         print(f"vehicles={vehicles}")
         self.assertEqual(1, len(vehicles))
-        vin = vehicles["data"][0]["vin"]
-        car_status_res = client.get(f"https://mobileapi.apps.emea.vwapps.io/vehicles/{vin}/status")
-        self.assertEqual(207, car_status_res.status_code)
-        car_status = car_status_res.json()
-        print(f"car_status={car_status}")
         # refresh token
         self.car._refresh_token(client)
-        car_status_res = client.get(f"https://mobileapi.apps.emea.vwapps.io/vehicles/{vin}/status")
-        self.assertEqual(207, car_status_res.status_code)
+        vehicles_res = client.get("https://mobileapi.apps.emea.vwapps.io/vehicles")
+        self.assertEqual(200, vehicles_res.status_code)
 
     def test_read_data(self):
         c = self.car.read_data()
