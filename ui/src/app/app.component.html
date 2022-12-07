@@ -11,25 +11,27 @@
   <div class="grid grid-template-pv gap-10 justify-center">
     <div>
       <mat-card id="card-pv" class="mat-elevation-z4">
-        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorPv()">wb_sunny</mat-icon><span class="flex-grow text-right">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span></mat-card-title>
+        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorPv()">wb_sunny</mat-icon>
+          <span class="flex-grow text-right" [class.col-grey]="errorMeter()">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span></mat-card-title>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-grid" class="mat-elevation-z4">
-        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorGrid()">power</mat-icon><span class="flex-grow text-right">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span></mat-card-title>
+        <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorGrid()">power</mat-icon>
+          <span class="flex-grow text-right" [class.col-grey]="errorMeter()">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span></mat-card-title>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-home" class="mat-elevation-z4">
         <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorHome()">home</mat-icon>
-          <span class="flex-grow text-right">{{(pvControl.meter.power_consumption - pvControl.wallbox.power)/1000|number:'1.1-1'}} kW</span>
+          <span class="flex-grow text-right" [class.col-grey]="errorMeter()">{{(pvControl.meter.power_consumption - pvControl.wallbox.power)/1000|number:'1.1-1'}} kW</span>
         </mat-card-title>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-car" class="mat-elevation-z4">
         <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorCar()">electric_car</mat-icon>
-          <span class="flex-grow text-right">{{pvControl.car.soc|number:'1.0-0'}} %</span>
+          <span class="flex-grow text-right" [class.col-grey]="errorCar()">{{pvControl.car.soc|number:'1.0-0'}} %</span>
         </mat-card-title>
       </mat-card>
     </div>
@@ -38,9 +40,9 @@
       <mat-card id="card-chargemode" class="mat-elevation-z4">
         <mat-card-title class="flex-row">
           <mat-icon class="flex-grow" [inline]="true" [class]="colorWallbox()">ev_station</mat-icon>
-          <span id="car-max-current" *ngIf="isCharging" class="flex-none text-center">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
-          <span id="car-charge-power" *ngIf="isCharging" class="flex-grow text-right">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
-          <mat-icon id="car-charge-state" *ngIf="!isCharging" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone">{{chargingStateIcon}}</mat-icon>
+          <span id="car-max-current" *ngIf="isCharging" class="flex-none text-center" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+          <span id="car-charge-power" *ngIf="isCharging" class="flex-grow text-right" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
+          <mat-icon id="car-charge-state" *ngIf="!isCharging" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone" [class.col-grey]="errorWallbox()">{{chargingStateIcon}}</mat-icon>
         </mat-card-title>
         <mat-card-content>
           <mat-button-toggle-group id="chargeModeToogle" class="flex-row" [formControl]="chargeModeControl" (change)="onChargeModeChange($event)" aria-label="Charge Mode">
@@ -64,7 +66,7 @@
     <div>
       <mat-card id="card-temp" class="mat-elevation-z4">
         <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorWallbox()">thermostat</mat-icon>
-          <span class="flex-grow text-right">{{pvControl.wallbox.temperature|number:'1.0-0'}} °C</span>
+          <span class="flex-grow text-right" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.temperature|number:'1.0-0'}} °C</span>
         </mat-card-title>
       </mat-card>
     </div>

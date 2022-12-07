@@ -108,28 +108,38 @@ export class AppComponent implements OnInit, OnDestroy {
     this.unsubscribe.complete();
   }
 
+  errorMeter(): boolean {
+    return this.pvControl.meter.error > 3;
+  }
+
   colorPv(): string {
-    return (this.pvControl.meter.error <=3) ? 'col-yellow' : 'col-grey';
+    return this.errorMeter() ? 'col-grey' : 'col-yellow';
   }
 
   colorGrid(): string {
-    if (this.pvControl.meter.error <=3) {
-      return (this.pvControl.meter.power_grid <= 0) ? 'col-green' : 'col-red';
-    } else {
+    if (this.errorMeter()) {
       return 'col-grey';
+    } else {
+      return (this.pvControl.meter.power_grid <= 0) ? 'col-green' : 'col-red';
     }
   }
 
   colorHome(): string {
-    return (this.pvControl.meter.error <=3) ? 'col-primary' : 'col-grey';
+    return this.errorMeter() ? 'col-grey' : 'col-primary';
   }
 
+  errorCar(): boolean {
+    return this.pvControl.car.error > 3;
+  }
   colorCar(): string {
-    return (this.pvControl.car.error <=3) ? 'col-primary' : 'col-grey';
+    return this.errorCar() ? 'col-grey' : 'col-primary';
   }
 
+  errorWallbox(): boolean {
+    return this.pvControl.wallbox.error > 3;
+  }
   colorWallbox(): string {
-    return (this.pvControl.wallbox.error <=3) ? 'col-primary' : 'col-grey';
+    return this.errorWallbox() ? 'col-grey' : 'col-primary';
   }
 
   refresh(): void {

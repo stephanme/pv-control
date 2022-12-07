@@ -194,11 +194,17 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.css('#card-pv mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-pv span')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-grid mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-grid span')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-home mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-home span')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-car mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-car span')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-chargemode mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-chargemode span')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-temp mat-icon')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-temp span')).nativeElement.className).toContain('col-grey');
   });
 
   it('should allow to switch to "PV only" charging', async () => {
