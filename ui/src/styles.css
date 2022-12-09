@@ -1,12 +1,12 @@
 /* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html,
+body {
+  height: 100%;
+}
 
-.aligned-with-icon-relative {
-  position: relative;
-  top: -3px;
-  margin-left: 5px; /* optional */
+body {
+  margin: 0;
 }
 
 /* text */
@@ -22,12 +22,15 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 .ml-1 {
   margin-left: 1em;
 }
+
 .mr-1 {
   margin-right: 1em;
 }
+
 .mt-1 {
   margin-top: 1em;
 }
+
 .mb-1 {
   margin-bottom: 1em;
 }
@@ -37,67 +40,77 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 .col-primary {
   color: #3f51b5;
 }
+
 .col-grey {
   color: #9E9E9E;
 }
+
 .col-yellow {
   color: #ffc107;
 }
+
 .col-green {
   color: #28a745;
 }
+
 .col-red {
   color: #dc3545;
 }
 
 /* flex and grid layout, https://github.com/angular/flex-layout/issues/1426 */
-.flex-row { display: flex!important; flex-direction: row; }
-.flex-col { display: flex!important; flex-direction: column; }
-
-.flex-wrap { flex-wrap: wrap; }
-.flex-1 { flex: 1 }
-.flex-grow { flex-grow: 1; }
-.flex-none { flex: none }
-
-.space-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
-.items-center { align-items: center; }
-
-.gap-10 { gap: 10px; }
-
-.grid { display: grid!important; }
-
-.grid-template-pv {
-  grid-template-columns: 1fr 1fr;
-}
-@media screen and (min-width: 600px) {
-  .grid-template-pv {
-    grid-template-columns: 300px 300px;
-  }
+.flex-row {
+  display: flex !important;
+  flex-direction: row;
 }
 
-.grid-col-span-2 { grid-column: span 2 / auto; }
+.flex-col {
+  display: flex !important;
+  flex-direction: column;
+}
 
+.flex-1 {
+  flex: 1
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
+
+.flex-none {
+  flex: none
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.gap-10 {
+  gap: 10px;
+}
+
+.grid {
+  display: grid !important;
+}
+
+.grid-col-span-2 {
+  grid-column: span 2 / auto;
+}
+ß
 /* others */
 
 .spin {
   -webkit-animation: spin 2s infinite linear;
   animation: spin 2s infinite linear;
 }
+
 @keyframes spin {
   0% {
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
   }
+
   100% {
     -webkit-transform: rotate(359deg);
     transform: rotate(359deg);
   }
-}
-
-/* fixes */
-
-/* overflow:hidden added by https://github.com/angular/components/pull/12429 which breaks layout */
-.mat-icon {
-  overflow: unset!important;
 }

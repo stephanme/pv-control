@@ -2,6 +2,30 @@
   padding: 16px;
 }
 
+/* mat-elevation-z4 */
+mat-card {
+  box-shadow: 0px 2px 4px -1px rgb(0 0 0 / 20%), 0px 4px 5px 0px rgb(0 0 0 / 14%), 0px 1px 10px 0px rgb(0 0 0 / 12%);
+}
+
+mat-card-header {
+  display: block;
+  padding: 16px;
+}
+
 mat-card-title {
-  margin-bottom: 1em;
+  font-size: 24px;
+}
+
+mat-card-content {
+  padding-bottom: 16px;
+}
+
+.grid-template-pv {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media screen and (min-width: 600px) {
+  .grid-template-pv {
+    grid-template-columns: 300px 300px;
+  }
 }
