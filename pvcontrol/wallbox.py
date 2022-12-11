@@ -176,7 +176,10 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
     def _read_data(self) -> WallboxData:
         ch = relay.readChannel1()
         wb = super()._read_data()
-        wb.phases_in = 1 if ch else 3
+        if self.get_config().phase_relay_type == RelayType.NO:
+            wb.phases_in = 3 if ch else 1
+        else:
+            wb.phases_in = 1 if ch else 3
         wb.phase_relay = ch
         return wb
 
