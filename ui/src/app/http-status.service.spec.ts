@@ -1,8 +1,8 @@
-import { HttpClient, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { HttpStatusInterceptor, HttpStatusService } from './http-status.service';
+import { HttpStatusService, statusInterceptor } from './http-status.service';
 
 describe('HttpStatusService', () => {
   let service: HttpStatusService;
@@ -13,15 +13,10 @@ describe('HttpStatusService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [
-        HttpClientTestingModule
-      ],
+      imports: [],
       providers: [
-        {
-          provide: HTTP_INTERCEPTORS,
-          useClass: HttpStatusInterceptor,
-          multi: true,
-        }
+        provideHttpClient(withInterceptors([statusInterceptor])), 
+        provideHttpClientTesting(),
       ]
     });
     service = TestBed.inject(HttpStatusService);

@@ -1,12 +1,10 @@
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ReactiveFormsModule } from '@angular/forms';
-import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { By } from '@angular/platform-browser';
 
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -14,7 +12,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HarnessLoader } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatButtonHarness } from '@angular/material/button/testing';
@@ -23,7 +21,7 @@ import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 
 import { AppComponent } from './app.component';
 import { ChargeMode, PhaseMode, PvControl } from './pv-control.service';
-import { HttpStatusInterceptor } from './http-status.service';
+import { statusInterceptor } from './http-status.service';
 
 
 describe('AppComponent', () => {
@@ -43,27 +41,19 @@ describe('AppComponent', () => {
     await TestBed.configureTestingModule({
       imports: [
         BrowserAnimationsModule,
-        HttpClientTestingModule,
         ReactiveFormsModule,
         MatToolbarModule,
         MatCardModule,
-        MatFormFieldModule,
-        MatInputModule,
         MatIconModule,
         MatButtonModule,
         MatButtonToggleModule,
         MatSlideToggleModule,
         MatSnackBarModule,
-      ],
-      declarations: [
         AppComponent
       ],
       providers: [
-        {
-          provide: HTTP_INTERCEPTORS,
-          useClass: HttpStatusInterceptor,
-          multi: true,
-        }
+        provideHttpClient(withInterceptors([statusInterceptor])), 
+        provideHttpClientTesting(),
       ]
     }).compileComponents();
 

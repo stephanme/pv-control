@@ -1,17 +1,42 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
-import { MatButtonToggleChange } from '@angular/material/button-toggle';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { HttpStatusService } from './http-status.service';
 
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatButtonToggleChange } from '@angular/material/button-toggle';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
+import { HttpStatusService } from './http-status.service';
 import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control.service';
+import { AsyncPipe, DecimalPipe, NgIf } from '@angular/common';
 
 @Component({
+  standalone: true,
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  imports: [
+    // from CommonModule
+    AsyncPipe,
+    DecimalPipe,
+    NgIf,
+    // other modules not yet available standalone
+    ReactiveFormsModule,
+    MatToolbarModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatSlideToggleModule,
+    MatSnackBarModule,
+    MatButtonToggleModule,
+  ]
 })
 export class AppComponent implements OnInit, OnDestroy {
   private unsubscribe: Subject<void> = new Subject();

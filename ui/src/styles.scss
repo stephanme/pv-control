@@ -40,10 +40,8 @@ $ui-theme: mat.define-light-theme((
 // https://github.com/angular/components/blob/main/src/material/core/theming/_all-theme.scss
 @include mat.toolbar-theme($ui-theme);
 @include mat.card-theme($ui-theme);
-@include mat.form-field-theme($ui-theme);
-@include mat.input-theme($ui-theme);
 @include mat.icon-theme($ui-theme);
-@include mat.button-theme($ui-theme);
+@include mat.icon-button-theme($ui-theme);
 @include mat.slide-toggle-theme($ui-theme);
 @include mat.snack-bar-theme($ui-theme);
 @include mat.button-toggle-theme($ui-theme);
