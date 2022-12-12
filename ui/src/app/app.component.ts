@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -15,7 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { HttpStatusService } from './http-status.service';
 import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control.service';
-import { AsyncPipe, DecimalPipe, NgIf } from '@angular/common';
+import { AsyncPipe, DecimalPipe, DOCUMENT, NgIf } from '@angular/common';
 
 @Component({
   standalone: true,
@@ -109,7 +109,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder, private snackBar: MatSnackBar,
-    private httpStatusService: HttpStatusService, private pvControlService: PvControlService) { }
+    private httpStatusService: HttpStatusService, private pvControlService: PvControlService,
+    @Inject(DOCUMENT) private document: Document) { }
 
   ngOnInit(): void {
     this.httpStatusService.httpError().pipe(takeUntil(this.unsubscribe)).subscribe(errmsg => {
@@ -118,19 +119,31 @@ export class AppComponent implements OnInit, OnDestroy {
         duration: 10000
       });
     });
+    this.autoRefreshControl.valueChanges.subscribe(enable => { this.autoRefresh(enable ?? false); });
     this.refresh();
-    this.autoRefreshControl.valueChanges.subscribe(autoRefresh => {
-      if (autoRefresh) {
-        this.refreshTimerSubscription = this.refreshTimer$.subscribe(_ => this.refresh());
-      } else {
-        this.refreshTimerSubscription?.unsubscribe();
-      }
-    });
   }
 
   ngOnDestroy(): void {
     this.unsubscribe.next();
     this.unsubscribe.complete();
+  }
+
+  // page gets visible: (auto)refresh
+  // page gets hidden: disable autorefresh 
+  @HostListener('document:visibilitychange')
+  onVisibilityChange() {
+    if (!this.document.hidden) {
+      if (this.autoRefreshControl.value) {
+        // enabling autoRefresh refreshes immediately
+        this.autoRefresh(true);
+      } else {
+        this.refresh();
+      }
+    } else {
+      if (this.autoRefreshControl.value) {
+        this.autoRefresh(false);
+      }
+    }
   }
 
   errorMeter(): boolean {
@@ -183,6 +196,14 @@ export class AppComponent implements OnInit, OnDestroy {
       },
       error: () => { }
     });
+  }
+
+  private autoRefresh(enable: boolean) {
+    if (enable) {
+      this.refreshTimerSubscription = this.refreshTimer$.subscribe(_ => this.refresh());
+    } else {
+      this.refreshTimerSubscription?.unsubscribe();
+    }
   }
 
   onChargeModeChange(event: MatButtonToggleChange): void {
