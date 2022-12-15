@@ -55,21 +55,36 @@ spec:
   selector:
     app: pvcontrol
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
 metadata:
   name: pvcontrol-ingress
-  annotations:
-    kubernetes.io/ingress.class: "traefik"
-    traefik.ingress.kubernetes.io/rewrite-target: /
 spec:
-  rules:
-    - http:
-        paths:
-          - path: /pvcontrol
-            pathType: Prefix
-            backend:
-              service:
-                name: pvcontrol-service
-                port:
-                  number: 8080
+  entryPoints:
+    - web
+  routes:
+  - kind: Rule
+    match: Path(`/pvcontrol`) || PathPrefix(`/pvcontrol/`)
+    middlewares:
+    - name: pvcontrol-stripprefix
+    - name: pvcontrol-compress
+    services:
+    - name: pvcontrol-service
+      port: 8080
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: pvcontrol-stripprefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /pvcontrol
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: pvcontrol-compress
+spec:
+  compress:
+    minResponseBodyBytes: 2048

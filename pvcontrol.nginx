@@ -8,5 +8,15 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Prefix /;
+
+        gzip on;
+        gzip_min_length 2048;
+        gzip_comp_level 6;
+        gzip_types
+            text/plain
+            text/html
+            text/css
+            application/javascript
+            application/json;
     }
 }
