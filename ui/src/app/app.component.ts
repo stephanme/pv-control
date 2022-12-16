@@ -1,13 +1,12 @@
 import { Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
-import { Subject, Subscription, timer } from 'rxjs';
+import { interval, Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
@@ -33,7 +32,6 @@ import { AsyncPipe, DecimalPipe, DOCUMENT, NgIf } from '@angular/common';
     MatCardModule,
     MatIconModule,
     MatButtonModule,
-    MatSlideToggleModule,
     MatSnackBarModule,
     MatButtonToggleModule,
   ]
@@ -45,8 +43,9 @@ export class AppComponent implements OnInit, OnDestroy {
   PhaseMode = PhaseMode;
 
   busy$ = this.httpStatusService.busy();
-  autoRefreshControl = this.fb.control(false);
-  refreshTimer$ = timer(0, 30000).pipe(takeUntil(this.unsubscribe));
+  // refresh every 30s, initial delay 200ms to make refresh visible and avoid network issues
+  static readonly REFRESH_DELAY = 30000;
+  refreshTimer$ = timer(200, AppComponent.REFRESH_DELAY).pipe(takeUntil(this.unsubscribe));
   refreshTimerSubscription: Subscription | null = null;
 
   pvControl: PvControl = {
@@ -119,8 +118,10 @@ export class AppComponent implements OnInit, OnDestroy {
         duration: 10000
       });
     });
-    this.autoRefreshControl.valueChanges.subscribe(enable => { this.autoRefresh(enable ?? false); });
+    // immediate initial refresh on app load
     this.refresh();
+    // interval() is replaced later by refreshTimer$ that has a small initial delay to make the refresh visible
+    this.refreshTimerSubscription = interval(AppComponent.REFRESH_DELAY).pipe(takeUntil(this.unsubscribe)).subscribe(_ => this.refresh());
   }
 
   ngOnDestroy(): void {
@@ -133,16 +134,12 @@ export class AppComponent implements OnInit, OnDestroy {
   @HostListener('document:visibilitychange')
   onVisibilityChange() {
     if (!this.document.hidden) {
-      if (this.autoRefreshControl.value) {
-        // enabling autoRefresh refreshes immediately
-        this.autoRefresh(true);
-      } else {
-        this.refresh();
+      if (!this.refreshTimerSubscription) {
+        this.refreshTimerSubscription = this.refreshTimer$.subscribe(_ => this.refresh());
       }
     } else {
-      if (this.autoRefreshControl.value) {
-        this.autoRefresh(false);
-      }
+      this.refreshTimerSubscription?.unsubscribe();
+      this.refreshTimerSubscription = null;
     }
   }
 
@@ -196,14 +193,6 @@ export class AppComponent implements OnInit, OnDestroy {
       },
       error: () => { }
     });
-  }
-
-  private autoRefresh(enable: boolean) {
-    if (enable) {
-      this.refreshTimerSubscription = this.refreshTimer$.subscribe(_ => this.refresh());
-    } else {
-      this.refreshTimerSubscription?.unsubscribe();
-    }
   }
 
   onChargeModeChange(event: MatButtonToggleChange): void {

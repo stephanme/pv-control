@@ -42,7 +42,6 @@ $ui-theme: mat.define-light-theme((
 @include mat.card-theme($ui-theme);
 @include mat.icon-theme($ui-theme);
 @include mat.icon-button-theme($ui-theme);
-@include mat.slide-toggle-theme($ui-theme);
 @include mat.snack-bar-theme($ui-theme);
 @include mat.button-toggle-theme($ui-theme);
 

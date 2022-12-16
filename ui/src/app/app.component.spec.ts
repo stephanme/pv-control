@@ -9,7 +9,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -47,7 +46,6 @@ describe('AppComponent', () => {
         MatIconModule,
         MatButtonModule,
         MatButtonToggleModule,
-        MatSlideToggleModule,
         MatSnackBarModule,
         AppComponent
       ],
@@ -92,6 +90,11 @@ describe('AppComponent', () => {
       }
     };
 
+    // unsubscribe from refresh timer started in ngOnInit()
+    // otherwise tests hang when getting mat test harness (waits for async events)
+    fixture.detectChanges();
+    component.refreshTimerSubscription?.unsubscribe();
+    
     chargeModeOff = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeOFF' }));
     chargeModeMax = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeMAX' }));
     chargeModePvOnly = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModePV_ONLY' }));
