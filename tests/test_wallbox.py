@@ -44,10 +44,12 @@ class GoeWallboxTest(unittest.TestCase):
             '{"version":"B","tme":"2812221313","rbc":"93","rbt":"1020214865","car":"4","amp":"6","err":"0","ast":"0","alw":"1","stp":"0","cbl":"32","pha":"8","tmp":"16","dws":"686812","dwo":"0","adi":"0","uby":"0","eto":"95930","wst":"3","txi":"0","nrg":[221,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0],"fwv":"041.0","sse":"005434","wss":"FRITZ!Box7580EO","wke":"********************","wen":"1","cdi":"0","tof":"101","tds":"1","lbr":"20","aho":"3","afi":"7","azo":"1","ama":"32","al1":"10","al2":"16","al3":"20","al4":"24","al5":"32","cid":"255","cch":"65535","cfi":"65280","lse":"1","ust":"0","wak":"ab539ebe51","r1x":"0","dto":"0","nmo":"0","sch":"AAAAAAAAAAAAAAAA","sdp":"0","eca":"0","ecr":"0","ecd":"0","ec4":"0","ec5":"0","ec6":"0","ec7":"0","ec8":"0","ec9":"0","ec1":"0","rca":"B96FBD5A","rcr":"","rcd":"","rc4":"","rc5":"","rc6":"","rc7":"","rc8":"","rc9":"","rc1":"","rna":"","rnm":"","rne":"","rn4":"","rn5":"","rn6":"","rn7":"","rn8":"","rn9":"","rn1":"","loe":0,"lot":0,"lom":0,"lop":0,"log":"","lon":0,"lof":0,"loa":0,"lch":7799,"mce":0,"mcs":"","mcp":0,"mcu":"","mck":"","mcc":0}'
         )
         wb = self.wallbox._json_2_wallbox_data(wb_json, False)
-        self.assertEqual(WallboxData(0, WbError.OK, CarStatus.ChargingFinished, 6, True, False, 1, 0, 0, 686812/360, 9593000, 16.0), wb)
+        self.assertEqual(WallboxData(0, WbError.OK, CarStatus.ChargingFinished, 6, True, False, 1, 0, 0, 686812 / 360, 9593000, 16.0), wb)
         # phase relay error
         wb = self.wallbox._json_2_wallbox_data(wb_json, True)
-        self.assertEqual(WallboxData(0, WbError.PHASE_RELAY_ERR, CarStatus.ChargingFinished, 6, True, True, 1, 0, 0, 686812/360, 9593000, 16.0), wb)
+        self.assertEqual(
+            WallboxData(0, WbError.PHASE_RELAY_ERR, CarStatus.ChargingFinished, 6, True, True, 1, 0, 0, 686812 / 360, 9593000, 16.0), wb
+        )
 
     @patch.object(GoeWallbox, "trigger_reset")
     @patch("pvcontrol.relay.writeChannel1")
