@@ -263,9 +263,13 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         power = int(json["nrg"][11]) * 10
         charged_energy = int(json["dws"]) / 360.0
         total_energy = int(json["eto"]) * 100
-        # tma is an array of different temperatures, exact meaning is not specified
+        # v2: tmp
+        # v3: tma is an array of different temperatures, exact meaning is not specified
         # use the lowest temperature that should match the outside temperature as good as possible
-        temperature = min(json["tma"])
+        if "tma" in json:
+            temperature = min(json["tma"])
+        else:
+            temperature = int(json["tmp"])
         # check if phases_in is consistent with phase relay state, WB errors dominate
         if wb_error == WbError.OK or wb_error > WbError.INTERNAL:
             if self.phases_to_relay(phases_in) != phase_relay:

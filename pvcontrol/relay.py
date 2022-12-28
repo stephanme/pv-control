@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 logger.info(f"Running on {platform.machine()} / {sys.platform}")
-if "x86" in platform.machine() or "darwin" == sys.platform:
+if "x86" in platform.machine() or "darwin" == sys.platform or "win32" == sys.platform:
     logger.warning("Using fake_rpi")
     from fake_rpi.RPi import GPIO
 else:
