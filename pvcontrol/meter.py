@@ -160,7 +160,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
 
 @dataclass
 class FroniusMeterConfig(BaseConfig):
-    url: str = "http://fronius.fritz.box"  # TODO: default host name?
+    url: str = "http://fronius.fritz.box"
     timeout: int = 5  # [s] request timeout
 
 
@@ -199,6 +199,47 @@ class FroniusMeter(Meter[FroniusMeterConfig]):
                 return self.get_data()
 
 
+@dataclass
+class SolarWattMeterConfig(BaseConfig):
+    url: str = "http://solarwatt.fritz.box"
+    location_guid: str = ""
+    timeout: int = 5  # [s] request timeout
+
+
+class SolarWattMeter(Meter[SolarWattMeterConfig]):
+    def __init__(self, config: SolarWattMeterConfig):
+        super().__init__(config)
+        self._power_flow_url = f"{config.url}/rest/kiwigrid/wizard/devices"
+        self._location_guid = config.location_guid
+        self._timeout = config.timeout
+
+    def _read_data(self) -> MeterData:
+        try:
+            res = requests.get(self._power_flow_url, timeout=self._timeout)
+            res.raise_for_status()
+            meter_data = self._json_2_meter_data(res.json())
+            self.reset_error_counter()
+            return meter_data
+        except Exception as e:
+            logger.error(e)
+            errcnt = self.inc_error_counter()
+            if errcnt > 3:
+                return MeterData(errcnt)
+            else:
+                return self.get_data()
+
+    def _json_2_meter_data(self, json: typing.Dict) -> MeterData:
+        location_data = next(i for i in json["result"]["items"] if i["guid"] == self._location_guid)["tagValues"]
+        pv = location_data["PowerProduced"]["value"]
+        consumption = location_data["PowerConsumed"]["value"]
+        grid = location_data["PowerConsumedFromGrid"]["value"]  # + from grid, - to grid
+        grid -= location_data["PowerOut"]["value"]
+        energy_consumption = location_data["WorkConsumed"]["value"]
+        energy_consumption_grid = location_data["WorkConsumedFromGrid"]["value"]
+        energy_consumption_pv = location_data["WorkConsumedFromProducers"]["value"]
+        return MeterData(0, pv, consumption, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv)
+
+
 class MeterFactory:
     @classmethod
     def newMeter(cls, type: str, wb: Wallbox, **kwargs) -> Meter:
@@ -206,6 +247,8 @@ class MeterFactory:
             return KostalMeter(KostalMeterConfig(**kwargs))
         if type == "FroniusMeter":
             return FroniusMeter(FroniusMeterConfig(**kwargs))
+        if type == "SolarWattMeter":
+            return SolarWattMeter(SolarWattMeterConfig(**kwargs))
         if type == "SimulatedMeter":
             return SimulatedMeter(SimulatedMeterConfig(**kwargs), wb)
         else:
