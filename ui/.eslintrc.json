@@ -19,6 +19,7 @@
         "plugin:@angular-eslint/recommended",
         "plugin:@angular-eslint/template/process-inline-templates"
       ],
+      "plugins": ["unused-imports"],      
       "rules": {
         "@angular-eslint/component-selector": [
           "error",
@@ -35,7 +36,8 @@
             "style": "camelCase",
             "type": "attribute"
           }
-        ]
+        ],
+        "unused-imports/no-unused-imports": "error"        
       }
     },
     {
