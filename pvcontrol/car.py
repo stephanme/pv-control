@@ -180,7 +180,7 @@ class VolkswagenIDCarConfig(CarConfig):
 
 
 class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
-    mobile_api_uri = "https://mobileapi.apps.emea.vwapps.io"
+    mobile_api_uri = "https://emea.bff.cariad.digital/vehicle/v1"
 
     def __init__(self, config: VolkswagenIDCarConfig):
         super().__init__(config)
@@ -190,7 +190,7 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
     @classmethod
     def _login(cls, user: str, password: str) -> OAuth2Session:
         vw_identity_service_uri = "https://identity.vwgroup.io"
-        vwapps_login_service_uri = "https://login.apps.emea.vwapps.io"
+        vwapps_login_service_uri = "https://emea.bff.cariad.digital/user-login"
         client = OAuth2Session(
             client_id="a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com",
             redirect_uri="weconnect://authenticated",
@@ -198,7 +198,7 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
             nonce="NZ2Q3T6jak0E5pDh",  # TODO: random
         )
         client.session.mount("weconnect://", WeConnectHttpAdapter())
-        uri, state = client.create_authorization_url(f"{vwapps_login_service_uri}/authorize", response_type="code id_token token")
+        uri, state = client.create_authorization_url(f"{vwapps_login_service_uri}/v1/authorize", response_type="code id_token token")
         # GET https://login.apps.emea.vwapps.io/authorize?... -> 303
         # GET https://identity.vwgroup.io/oidc/v1/authorize?... -> 302
         # GET https://identity.vwgroup.io/signin-service/v1/signin/a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com?...
@@ -242,14 +242,8 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
         )
         authorization_response.raise_for_status()
         if "terms-and-conditions" in authorization_response.url:
-            logger.info(f"Accepting updated ToS: {authorization_response.url}")
-            tos_response = client.session.get(authorization_response.url, withhold_token=True)
-            tos_response.raise_for_status()
-            tos_form_parser = HtmlFormParser(tos_response.text, "emailPasswordForm")
-            authorization_response = client.session.post(
-                f"{vw_identity_service_uri}{tos_form_parser.action}", data=tos_form_parser.hidden_input_values, withhold_token=True
-            )
-            authorization_response.raise_for_status()
+            logger.info("Updated ToS. Please accept under https://www.volkswagen.de/de/besitzer-und-nutzer/myvolkswagen.html")
+            raise Exception("Need to accept ToS")
 
         token = client.fetch_token(authorization_response=authorization_response.url)
         # print(f"token={token}")
@@ -309,13 +303,14 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
 
             # TODO: get vin if not configured
             if self._client is not None:
-                status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=fuelstatus")
+                status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=all")
                 if status_res.status_code == 401:
                     # auth error -> refresh token
                     VolkswagenIDCar._refresh_token(self._client)
-                    status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=fuelstatus")
+                    status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=all")
                 status_res.raise_for_status()
                 status = status_res.json()
+                # print(f"{status}")
                 range_status = status["fuelStatus"]["rangeStatus"]["value"]
                 battery_status = range_status["primaryEngine"]
                 self.reset_error_counter()
