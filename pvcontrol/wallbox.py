@@ -260,6 +260,8 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         phases = int(json["pha"])
         phases_in = (phases >> 3) % 2 + (phases >> 4) % 2 + (phases >> 5) % 2
         phases_out = phases % 2 + (phases >> 1) % 2 + (phases >> 2) % 2  # TODO use current or power data not phases
+        # can't have phases_out > phases_in (older go-e has problems here on low currents)
+        phases_out = min(phases_out, phases_in)
         power = int(json["nrg"][11]) * 10
         charged_energy = int(json["dws"]) / 360.0
         total_energy = int(json["eto"]) * 100
