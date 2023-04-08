@@ -802,6 +802,39 @@ class ChargeControllerPVTest(unittest.TestCase):
         self.assertEqual(ChargeMode.MANUAL, self.controller.get_data().desired_mode)
         self.assertEqual(ChargeMode.OFF, self.controller.get_data().mode)
 
+    def test_charge_control_pv_only_when_car_connected(self):
+        self.controller.set_desired_mode(ChargeMode.OFF)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+        self.controller.get_config().enable_charging_when_connecting_car = ChargeMode.PV_ONLY
+        data = [
+            {
+                "test": "OFF, 1.4kW PV, no car",
+                "pv": 2000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=2000, power_consumption=0, power_grid=-2000),
+                "expected_wb": WallboxData(phase_relay=False, phases_in=1, phases_out=0, allow_charging=False, max_current=16),
+            },
+            {
+                "test": "OFF, 1.4kW PV, car connected -> PV_ONLY",
+                "pv": 2000,
+                "home": 0,
+                "car": CarStatus.WaitingForVehicle,
+                "expected_m": MeterData(power_pv=2000, power_consumption=1840, power_grid=-2000 + 1840),
+                "expected_wb": WallboxData(phase_relay=False, phases_in=1, phases_out=1, allow_charging=True, max_current=8, power=1840),
+            },
+            {
+                "test": "PV_ONLY, 1.4kW PV, 1x6A, charging with PV_ONLY",
+                "pv": 2000,
+                "home": 0,
+                "car": CarStatus.Charging,  # reported by car not because PV switched off
+                "expected_m": MeterData(power_pv=2000, power_consumption=1840, power_grid=-2000 + 1840),
+                "expected_wb": WallboxData(phase_relay=False, phases_in=1, phases_out=1, allow_charging=True, max_current=8, power=1840),
+            },
+        ]
+        self.runControllerTest(data)
+        self.assertEqual(ChargeMode.PV_ONLY, self.controller.get_data().desired_mode)
+        self.assertEqual(ChargeMode.PV_ONLY, self.controller.get_data().mode)
+
     def test_charge_control_pv_all(self):
         self.controller.set_desired_mode(ChargeMode.PV_ALL)
         data = [

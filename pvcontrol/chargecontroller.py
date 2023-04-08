@@ -54,6 +54,7 @@ class ChargeControllerConfig(BaseConfig):
     cycle_time: int = 30  # [s] control loop cycle time, used by scheduler
     enable_phase_switching: bool = True  # set to False of phase relay is not in operation
     enable_auto_phase_switching: bool = True  # automatic phase switching depending on available PV
+    enable_charging_when_connecting_car: ChargeMode = ChargeMode.OFF
     line_voltage: float = 230  # [V]
     current_rounding_offset: float = 0.1  # [A] offset for max_current rounding
     power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
@@ -184,9 +185,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
     # TODO rename
     def _control_charge_mode(self, wb: WallboxData) -> None:
+        ctl = self.get_data()
         # Switch to OFF when car gets unplugged (NoVehicle)
         # 5 min delay to allow PV mode before connecting car
-        ctl = self.get_data()
         if ctl.mode in [ChargeMode.PV_ONLY, ChargeMode.PV_ALL] and wb.error == 0 and wb.car_status == CarStatus.NoVehicle:
             self._charge_mode_pv_to_off_delay -= self.get_config().cycle_time
             if self._charge_mode_pv_to_off_delay <= 0:
@@ -194,8 +195,14 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         else:
             self._charge_mode_pv_to_off_delay = 5 * 60  # configurable?
 
-        # TODO: enable charging when RFID is recognized
-        # !!! RFID sets allow_charging (but a phase switching may be needed)
+        # enable charging if configured and car gets connected (WaitingForVehicle)
+        if (
+            ctl.mode == ChargeMode.OFF
+            and wb.error == 0
+            and wb.car_status == CarStatus.WaitingForVehicle
+            and self.get_config().enable_charging_when_connecting_car != ChargeMode.OFF
+        ):
+            self.set_desired_mode(self.get_config().enable_charging_when_connecting_car)
 
     # TODO: prevent too fast switching, use energy to grid and time instead of power
     def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
