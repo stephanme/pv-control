@@ -1,4 +1,4 @@
-import { Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
+import { ApplicationRef, Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { interval, Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -38,6 +38,8 @@ import { AsyncPipe, DecimalPipe, DOCUMENT, NgIf } from '@angular/common';
 })
 export class AppComponent implements OnInit, OnDestroy {
   private unsubscribe: Subject<void> = new Subject();
+
+  darkTheme = false;
 
   ChargeMode = ChargeMode;
   PhaseMode = PhaseMode;
@@ -107,7 +109,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   constructor(
-    private fb: FormBuilder, private snackBar: MatSnackBar,
+    private appRef: ApplicationRef, private fb: FormBuilder, private snackBar: MatSnackBar,
     private httpStatusService: HttpStatusService, private pvControlService: PvControlService,
     @Inject(DOCUMENT) private document: Document) { }
 
@@ -118,6 +120,21 @@ export class AppComponent implements OnInit, OnDestroy {
         duration: 10000
       });
     });
+    if (window.matchMedia) {
+      this.darkTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (this.darkTheme) {
+        this.document.body.classList.add('dark-theme');
+      }
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
+        this.darkTheme = e.matches;
+        if (this.darkTheme) {
+          this.document.body.classList.add('dark-theme');
+        } else {
+          this.document.body.classList.remove('dark-theme');
+        }
+        this.appRef.tick(); // refresh UI
+      });
+    }
     // immediate initial refresh on app load
     this.refresh();
     // interval() is replaced later by refreshTimer$ that has a small initial delay to make the refresh visible
@@ -160,21 +177,21 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   colorHome(): string {
-    return this.errorMeter() ? 'col-grey' : 'col-primary';
+    return this.errorMeter() ? 'col-grey' : 'mat-primary';
   }
 
   errorCar(): boolean {
     return this.pvControl.car.error > 3;
   }
   colorCar(): string {
-    return this.errorCar() ? 'col-grey' : 'col-primary';
+    return this.errorCar() ? 'col-grey' : 'mat-primary';
   }
 
   errorWallbox(): boolean {
     return this.pvControl.wallbox.error > 3;
   }
   colorWallbox(): string {
-    return this.errorWallbox() ? 'col-grey' : 'col-primary';
+    return this.errorWallbox() ? 'col-grey' : 'mat-primary';
   }
 
   refresh(): void {
