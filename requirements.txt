@@ -6,23 +6,25 @@
 #
 authlib==1.2.0
     # via -r requirements.in
-certifi==2022.12.7
+blinker==1.6.2
+    # via flask
+certifi==2023.5.7
     # via requests
 cffi==1.15.1
     # via cryptography
-charset-normalizer==3.0.1
+charset-normalizer==3.1.0
     # via requests
 click==8.1.3
     # via flask
-cryptography==39.0.1
+cryptography==40.0.2
     # via authlib
 fake-rpi==0.7.1 ; "x86" in platform_machine or "darwin" == sys_platform or "win32" == sys_platform
     # via -r requirements.in
-flask==2.2.3
+flask==2.3.2
     # via -r requirements.in
 idna==3.4
     # via requests
-importlib-metadata==6.0.0
+importlib-metadata==6.6.0
     # via flask
 itsdangerous==2.1.2
     # via flask
@@ -32,7 +34,7 @@ markupsafe==2.1.2
     # via
     #   jinja2
     #   werkzeug
-numpy==1.24.2  ; "x86" in platform_machine or 'darwin' == sys_platform or "win32" == sys_platform
+numpy==1.24.3  ; "x86" in platform_machine or 'darwin' == sys_platform or "win32" == sys_platform
     # via fake-rpi
 prometheus-client==0.16.0
     # via -r requirements.in
@@ -48,9 +50,9 @@ RPi.GPIO==0.7.1; ('arm' in platform_machine or 'aarch64' == platform_machine) an
     # via -r requirements.in, manually added
 six==1.16.0
     # via python-dateutil
-urllib3==1.26.14
+urllib3==2.0.2
     # via requests
-werkzeug==2.2.3
+werkzeug==2.3.3
     # via flask
 zipp==3.15.0
     # via importlib-metadata
