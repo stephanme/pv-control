@@ -120,7 +120,7 @@ class PvControlChargeModeViewTest(unittest.TestCase):
         r = self.app.put("/api/pvcontrol/controller/desired_mode", json="invalid")
         self.assertEqual(400, r.status_code)
         r = self.app.put("/api/pvcontrol/controller/desired_mode", data="invalid")
-        self.assertEqual(400, r.status_code)
+        self.assertEqual(415, r.status_code)
         self.controller.set_desired_mode.assert_not_called()
 
 
@@ -148,5 +148,5 @@ class PvControlPhaseModeViewTest(unittest.TestCase):
         r = self.app.put("/api/pvcontrol/controller/phase_mode", json="invalid")
         self.assertEqual(400, r.status_code)
         r = self.app.put("/api/pvcontrol/controller/phase_mode", data="invalid")
-        self.assertEqual(400, r.status_code)
+        self.assertEqual(415, r.status_code)
         self.controller.set_phase_mode.assert_not_called()
