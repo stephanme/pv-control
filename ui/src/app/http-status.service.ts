@@ -11,9 +11,6 @@ export class HttpStatusService {
   private busySubject = new BehaviorSubject<boolean>(false);
   private httpErrorSubject = new Subject<string>();
 
-  constructor() {
-  }
-
   incBusy(): void {
     this.busyCnt++;
     if (this.busyCnt === 1) {
@@ -41,7 +38,7 @@ export class HttpStatusService {
   }
 }
 
-
+// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 export function statusInterceptor(req: HttpRequest<any>, next: HttpHandlerFn): Observable<HttpEvent<any>> {
   const statusService = inject(HttpStatusService);
   statusService.incBusy();

@@ -16,10 +16,14 @@
         "createDefaultProgram": true
       },
       "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
         "plugin:@angular-eslint/recommended",
         "plugin:@angular-eslint/template/process-inline-templates"
       ],
-      "plugins": ["unused-imports"],      
+      "plugins": [
+        "unused-imports"
+      ],
       "rules": {
         "@angular-eslint/component-selector": [
           "error",
@@ -37,7 +41,8 @@
             "type": "attribute"
           }
         ],
-        "unused-imports/no-unused-imports": "error"        
+        "@typescript-eslint/no-empty-function": "off",
+        "unused-imports/no-unused-imports": "error"
       }
     },
     {

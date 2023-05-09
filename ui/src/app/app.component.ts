@@ -138,7 +138,7 @@ export class AppComponent implements OnInit, OnDestroy {
     // immediate initial refresh on app load
     this.refresh();
     // interval() is replaced later by refreshTimer$ that has a small initial delay to make the refresh visible
-    this.refreshTimerSubscription = interval(AppComponent.REFRESH_DELAY).pipe(takeUntil(this.unsubscribe)).subscribe(_ => this.refresh());
+    this.refreshTimerSubscription = interval(AppComponent.REFRESH_DELAY).pipe(takeUntil(this.unsubscribe)).subscribe(() => this.refresh());
   }
 
   ngOnDestroy(): void {
@@ -152,7 +152,7 @@ export class AppComponent implements OnInit, OnDestroy {
   onVisibilityChange() {
     if (!this.document.hidden) {
       if (!this.refreshTimerSubscription) {
-        this.refreshTimerSubscription = this.refreshTimer$.subscribe(_ => this.refresh());
+        this.refreshTimerSubscription = this.refreshTimer$.subscribe(() => this.refresh());
       }
     } else {
       this.refreshTimerSubscription?.unsubscribe();
