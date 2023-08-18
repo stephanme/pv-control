@@ -106,12 +106,20 @@ class LoginFormParserTest(unittest.TestCase):
 
     <script type="text/javascript">...</script>
     <script>
-          window._IDK = {
-
-            templateModel: { "clientLegalEntityModel": { "clientId": "a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com", "clientAppName": "We Connect ID", "clientAppDisplayName": "We Connect ID.", "legalEntityInfo": { "name": "Volkswagen", "shortName": "VOLKSWAGEN", "productName": "Volkswagen ID", "theme": "volkswagen_d6", "defaultLanguage": "en", "termAndConditionsType": "DEFAULT", "legalProperties": { "revokeDataContact": "info-datenschutz@volkswagen.de", "imprintText": "IMPRINT", "countryOfJurisdiction": "DE" } }, "imprintTextKey": "imprint.link.text" }, "template": "loginAuthenticate", "hmac": "hmac value", "useClientRendering": true, "emailPasswordForm": { "email": "test@gmail.com", "password": null }, "error": null, "relayState": "12345", "nextButtonDisabled": false, "enableNextButtonAfterSeconds": 0, "postAction": "login/authenticate", "identifierUrl": "login/identifier" },
+        window._IDK = {
+            templateModel: {"clientLegalEntityModel":{"clientId":"a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com","clientAppName":"We Connect ID.","clientAppDisplayName":"Volkswagen App","legalEntityInfo":{"name":"Volkswagen","shortName":"VOLKSWAGEN","productName":"Volkswagen ID","theme":"volkswagen_d6","defaultLanguage":"en","termAndConditionsType":"DEFAULT","legalProperties":{"revokeDataContact":"info-datenschutz@volkswagen.de","imprintText":"IMPRINT","countryOfJurisdiction":"DE"}},"informalLanguage":false,"legalEntityCode":"volkswagen","imprintTextKey":"imprint.link.text"},"template":"loginAuthenticate","hmac":"hmac value","useClientRendering":true,"titleKey":"title.login.password","title":null,"emailPasswordForm":{"@class":"com.volkswagen.identitykit.signin.domain.model.dto.EmailPasswordForm","email":"test@gmail.com","password":null},"error":null,"relayState":"12345","nextButtonDisabled":false,"enableNextButtonAfterSeconds":0,"postAction":"login/authenticate","identifierUrl":"login/identifier"},
+            disabledFeatures: {
+                isFooterEnabled: true,
+            },
             currentLocale: 'en',
             csrf_parameterName: '_csrf',
-            csrf_token: 'csrf value'
+            csrf_token: 'csrf value',
+            userSession: {
+                userId: '',
+                countryOfResidence: ''
+            },
+            baseUrl: 'https://identity.vwgroup.io',
+            consentBaseUrl: 'http://consentapi-service.idk-peu.svc.cluster.local:8080'
         }
     </script>
 </head>
