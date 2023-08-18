@@ -22,6 +22,7 @@ class CarData(BaseData):
     data_captured_at: datetime = datetime.min
     soc: float = 0  # [%] state of charge
     cruising_range: int = 0  # [km]
+    mileage: int = 0  # [km]
 
 
 @dataclass
@@ -37,6 +38,7 @@ class Car(BaseService[C, CarData]):
 
     _metrics_pvc_car_soc = prometheus_client.Gauge("pvcontrol_car_soc_ratio", "State of Charge")
     _metrics_pvc_car_range = prometheus_client.Gauge("pvcontrol_car_cruising_range_meters", "Remaining cruising range")
+    _metrics_pvc_car_mileage = prometheus_client.Gauge("pvcontrol_car_mileage_meters", "Mileage")
 
     def __init__(self, config: C):
         super().__init__(config)
@@ -48,6 +50,7 @@ class Car(BaseService[C, CarData]):
         self._set_data(d)
         Car._metrics_pvc_car_soc.set(d.soc / 100)
         Car._metrics_pvc_car_range.set(d.cruising_range * 1000)
+        Car._metrics_pvc_car_mileage.set(d.mileage * 1000)
         return d
 
     def _read_data(self) -> CarData:
@@ -62,7 +65,7 @@ class SimulatedCar(Car[CarConfig]):
         self._set_data(d)
 
     def _read_data(self) -> CarData:
-        return CarData(error=0, data_captured_at=datetime.now(), cruising_range=150, soc=50)
+        return CarData(error=0, data_captured_at=datetime.now(), cruising_range=150, soc=50, mileage=10000)
 
 
 # just to permanently grey out car SOC in UI
@@ -146,7 +149,7 @@ class LoginFormParser(HTMLParser):
                 _json = _json.replace("'", '"')
                 # replace unquoted property names
                 # \1 did not work for unknown reasons (python 3.7.10)
-                _json = re.sub(r"^\s*(\w+):", '"\g<1>":', _json, 0, re.MULTILINE)  # noqa: W605
+                _json = re.sub(r"^\s*(\w+):", '"\g<1>":', _json, count=0, flags=re.MULTILINE)  # noqa: W605
                 # remove comma after last property
                 _json = re.sub(r",\s*}", "}", _json)
                 _json = "{" + _json + "}"
@@ -313,15 +316,17 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
                     status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=all")
                 status_res.raise_for_status()
                 status = status_res.json()
-                print(f"{status}")
+                # print(f"{status}")
                 range_status = status["fuelStatus"]["rangeStatus"]["value"]
                 battery_status = range_status["primaryEngine"]
+                odometer_status = status["measurements"]["odometerStatus"]
                 self.reset_error_counter()
                 return CarData(
                     error=0,
                     data_captured_at=dateutil.parser.isoparse(range_status["carCapturedTimestamp"]),
                     cruising_range=battery_status["remainingRange_km"],
                     soc=battery_status["currentSOC_pct"],
+                    mileage=odometer_status["value"]["odometer"],
                 )
         except HTTPError as e:
             # enforce login on 401
