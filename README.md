@@ -161,6 +161,7 @@ pip install -r requirements-dev.txt -U
 pip-compile --upgrade --resolver backtracking --allow-unsafe requirements.in
 
 # edit requirements.txt and add/edit platform specific dependencies: RPi.GPIO, fake-rpi, numpy
+# check that all requirements are available for arm7 on https://www.piwheels.org/packages.html, especially cryptography
 pip install -r requirements.txt -U
 ```
 
