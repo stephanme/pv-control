@@ -186,6 +186,7 @@ class VolkswagenIDCarConfig(CarConfig):
 
 class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
     mobile_api_uri = "https://emea.bff.cariad.digital/vehicle/v1"
+    user_agent = {"User-Agent": "curl"}  # default "python-requests/2.31.0" leads to 403
 
     def __init__(self, config: VolkswagenIDCarConfig):
         super().__init__(config)
@@ -203,6 +204,7 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
             nonce="NZ2Q3T6jak0E5pDh",  # TODO: random
         )
         client.session.mount("weconnect://", WeConnectHttpAdapter())
+        client.session.headers.update(VolkswagenIDCar.user_agent)
         uri, state = client.create_authorization_url(f"{vwapps_login_service_uri}/v1/authorize", response_type="code id_token token")
         # GET https://login.apps.emea.vwapps.io/authorize?... -> 303
         # GET https://identity.vwgroup.io/oidc/v1/authorize?... -> 302
@@ -274,6 +276,7 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
         )
         # print(f"api_token={api_token}")
         api_client = OAuth2Session(token=api_token, token_endpoint=f"{vwapps_login_service_uri}/refresh/v1")
+        api_client.session.headers.update(VolkswagenIDCar.user_agent)
         return api_client
 
     @classmethod
