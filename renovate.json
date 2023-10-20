@@ -8,6 +8,10 @@
       "matchDatasources": ["docker"],
       "matchPackagePatterns": ["python"],
       "enabled": false
+    },
+    {
+      "matchPackageNames": ["zone.js"],
+      "allowedVersions": "<0.14"
     }
   ]
 }
