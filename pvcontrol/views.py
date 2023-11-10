@@ -35,7 +35,7 @@ class JSONProvider(flask.json.provider.DefaultJSONProvider):
 class StaticResourcesView(flask.views.MethodView):
     def get(self, path):
         max_age = 31536000 if StaticResourcesView.is_immutable_resource(path) else None  # 1y in seconds 365*24*60*60
-        return flask.send_from_directory("../ui/dist/ui", path, max_age=max_age)
+        return flask.send_from_directory("../ui/dist/ui/browser", path, max_age=max_age)
 
     _angular_hashed_files_pattern = re.compile(r"\w+\.[0-9a-fA-F]{16,}\.\w+")
 

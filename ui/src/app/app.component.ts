@@ -20,7 +20,7 @@ import { AsyncPipe, DecimalPipe, DOCUMENT, NgIf } from '@angular/common';
   standalone: true,
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
+  styleUrl: './app.component.scss',
   imports: [
     // from CommonModule
     AsyncPipe,
