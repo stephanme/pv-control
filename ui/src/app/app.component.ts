@@ -14,7 +14,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { HttpStatusService } from './http-status.service';
 import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control.service';
-import { AsyncPipe, DecimalPipe, DOCUMENT, NgIf } from '@angular/common';
+import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
 
 @Component({
   standalone: true,
@@ -25,7 +25,6 @@ import { AsyncPipe, DecimalPipe, DOCUMENT, NgIf } from '@angular/common';
     // from CommonModule
     AsyncPipe,
     DecimalPipe,
-    NgIf,
     // other modules not yet available standalone
     ReactiveFormsModule,
     MatToolbarModule,

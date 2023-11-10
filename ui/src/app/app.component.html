@@ -48,9 +48,12 @@
         <mat-card-header>
           <mat-card-title class="flex-row">
             <mat-icon class="flex-grow" [inline]="true" [class]="colorWallbox()">ev_station</mat-icon>
-            <span id="car-max-current" *ngIf="isCharging" class="flex-none text-center" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
-            <span id="car-charge-power" *ngIf="isCharging" class="flex-grow text-right" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
-            <mat-icon id="car-charge-state" *ngIf="!isCharging" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone" [class.col-grey-two-tone-icon]="errorWallbox()" [class.col-default-two-tone-icon]="!errorWallbox()">{{chargingStateIcon}}</mat-icon>
+            @if (isCharging) {
+              <span id="car-max-current" class="flex-none text-center" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+              <span id="car-charge-power" class="flex-grow text-right" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
+            } @else {
+              <mat-icon id="car-charge-state" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone" [class.col-grey-two-tone-icon]="errorWallbox()" [class.col-default-two-tone-icon]="!errorWallbox()">{{chargingStateIcon}}</mat-icon>
+            }
           </mat-card-title>
         </mat-card-header>
         <mat-card-content>
