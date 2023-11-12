@@ -6,7 +6,6 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -31,7 +30,6 @@ import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
     MatCardModule,
     MatIconModule,
     MatButtonModule,
-    MatSnackBarModule,
     MatButtonToggleModule,
   ]
 })

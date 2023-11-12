@@ -20,6 +20,7 @@
 @include mat.toolbar-theme(themes.$light-theme);
 @include mat.card-theme(themes.$light-theme);
 @include mat.icon-theme(themes.$light-theme);
+@include mat.button-theme(themes.$light-theme);
 @include mat.icon-button-theme(themes.$light-theme);
 @include mat.snack-bar-theme(themes.$light-theme);
 @include mat.button-toggle-theme(themes.$light-theme);
@@ -55,6 +56,7 @@
   @include mat.toolbar-color(themes.$dark-theme);
   @include mat.card-color(themes.$dark-theme);
   @include mat.icon-color(themes.$dark-theme);
+  @include mat.button-color(themes.$dark-theme);
   @include mat.icon-button-color(themes.$dark-theme);
   @include mat.snack-bar-color(themes.$dark-theme);
   @include mat.button-toggle-color(themes.$dark-theme);
