@@ -1,6 +1,6 @@
-import { ApplicationRef, Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
+import { ApplicationRef, ChangeDetectionStrategy, Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
-import { interval, Subject, Subscription, timer } from 'rxjs';
+import { Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -18,6 +18,7 @@ import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
 
 @Component({
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -46,7 +47,7 @@ export class AppComponent implements OnInit, OnDestroy {
   busy$ = this.httpStatusService.busy();
   // refresh every 30s, initial delay 200ms to make refresh visible and avoid network issues
   static readonly REFRESH_DELAY = 30000;
-  refreshTimer$ = timer(200, AppComponent.REFRESH_DELAY).pipe(takeUntil(this.unsubscribe));
+  refreshTimer$ = timer(200, AppComponent.REFRESH_DELAY);
   refreshTimerSubscription: Subscription | null = null;
 
   pvControl: PvControl = {
@@ -134,13 +135,11 @@ export class AppComponent implements OnInit, OnDestroy {
         this.appRef.tick(); // refresh UI
       });
     }
-    // immediate initial refresh on app load
-    this.refresh();
-    // interval() is replaced later by refreshTimer$ that has a small initial delay to make the refresh visible
-    this.refreshTimerSubscription = interval(AppComponent.REFRESH_DELAY).pipe(takeUntil(this.unsubscribe)).subscribe(() => this.refresh());
+    this.startAutoRefresh();
   }
 
   ngOnDestroy(): void {
+    this.stopAutoRefresh();
     this.unsubscribe.next();
     this.unsubscribe.complete();
   }
@@ -150,13 +149,21 @@ export class AppComponent implements OnInit, OnDestroy {
   @HostListener('document:visibilitychange')
   onVisibilityChange() {
     if (!this.document.hidden) {
-      if (!this.refreshTimerSubscription) {
-        this.refreshTimerSubscription = this.refreshTimer$.subscribe(() => this.refresh());
-      }
+      this.startAutoRefresh();
     } else {
-      this.refreshTimerSubscription?.unsubscribe();
-      this.refreshTimerSubscription = null;
+      this.stopAutoRefresh();
     }
+  }
+
+  startAutoRefresh() {
+    if (!this.refreshTimerSubscription) {
+      this.refreshTimerSubscription = this.refreshTimer$.subscribe(() => this.refresh());
+    }
+  }
+
+  stopAutoRefresh() {
+    this.refreshTimerSubscription?.unsubscribe();
+    this.refreshTimerSubscription = null;    
   }
 
   errorMeter(): boolean {

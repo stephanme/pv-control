@@ -90,11 +90,12 @@ describe('AppComponent', () => {
       }
     };
 
-    // unsubscribe from refresh timer started in ngOnInit()
-    // otherwise tests hang when getting mat test harness (waits for async events)
+    jasmine.clock().install();
+    // wait for ngInit
     fixture.detectChanges();
-    component.refreshTimerSubscription?.unsubscribe();
-    
+    // pass initial 200ms wait for first refresh
+    jasmine.clock().tick(300);
+
     chargeModeOff = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeOFF' }));
     chargeModeMax = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModeMAX' }));
     chargeModePvOnly = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModePV_ONLY' }));
@@ -104,6 +105,7 @@ describe('AppComponent', () => {
   });
 
   afterEach(() => {
+    jasmine.clock().uninstall();
     httpMock.verify();
   });
 
