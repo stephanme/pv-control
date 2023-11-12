@@ -8,7 +8,6 @@ describe('HttpStatusService', () => {
   let service: HttpStatusService;
   let http: HttpClient;
   let httpMock: HttpTestingController;
-  let busy = false;
   let httpErr: string | undefined;
 
   beforeEach(() => {
@@ -20,8 +19,6 @@ describe('HttpStatusService', () => {
       ]
     });
     service = TestBed.inject(HttpStatusService);
-    busy = false;
-    service.busy().subscribe(b => busy = b);
     httpErr = undefined;
     service.httpError().subscribe(e => httpErr = e);
     http = TestBed.inject(HttpClient);
@@ -33,15 +30,15 @@ describe('HttpStatusService', () => {
   });
 
   it('should report busy requests', () => {
-    expect(busy).toBe(false);
+    expect(service.busy()).toBe(false);
     http.get('/').subscribe(() => {
-      expect(busy).toBe(true);
+      expect(service.busy()).toBe(true);
     });
 
     const req = httpMock.expectOne('/');
     req.flush({});
 
-    expect(busy).toBe(false);
+    expect(service.busy()).toBe(false);
     expect(httpErr).toBeUndefined();
   });
 
@@ -53,7 +50,7 @@ describe('HttpStatusService', () => {
       statusText: 'Internal Server Error'
     });
 
-    expect(busy).toBe(false);
+    expect(service.busy()).toBe(false);
     expect(httpErr).toBe('HTTP 500 Internal Server Error - GET /');
   });
 });

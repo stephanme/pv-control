@@ -3,7 +3,7 @@
   <span>PV Control</span>
   <span class="flex-grow"></span>
   <button id="refresh" mat-icon-button aria-label="Refresh" (click)="refresh()">
-    <mat-icon [class.spin]="busy$ | async">autorenew</mat-icon>
+    <mat-icon [class.spin]="busy()">autorenew</mat-icon>
   </button>
 </mat-toolbar>
 <div class="content">

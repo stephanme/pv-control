@@ -1,6 +1,6 @@
 import { HttpRequest, HttpEvent, HttpErrorResponse, HttpHandlerFn } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { inject, Injectable, signal } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
 import { tap, finalize } from 'rxjs/operators';
 
 @Injectable({
@@ -8,29 +8,26 @@ import { tap, finalize } from 'rxjs/operators';
 })
 export class HttpStatusService {
   private busyCnt = 0;
-  private busySubject = new BehaviorSubject<boolean>(false);
+  private _busy = signal(false);
+  busy = this._busy.asReadonly();
   private httpErrorSubject = new Subject<string>();
 
   incBusy(): void {
     this.busyCnt++;
     if (this.busyCnt === 1) {
-      this.busySubject.next(true);
+      this._busy.set(true);
     }
   }
 
   decBusy(): void {
     this.busyCnt--;
     if (this.busyCnt === 0) {
-      this.busySubject.next(false);
+      this._busy.set(false);
     }
   }
 
   notifyHttpError(msg: string): void {
     this.httpErrorSubject.next(msg);
-  }
-
-  busy(): Observable<boolean> {
-    return this.busySubject.asObservable();
   }
 
   httpError(): Observable<string> {

@@ -1,7 +1,6 @@
 import { ApplicationRef, ChangeDetectionStrategy, Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
-import { Subject, Subscription, timer } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subscription, timer } from 'rxjs';
 
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
@@ -37,14 +36,13 @@ import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
   ]
 })
 export class AppComponent implements OnInit, OnDestroy {
-  private unsubscribe: Subject<void> = new Subject();
-
   darkTheme = false;
 
   ChargeMode = ChargeMode;
   PhaseMode = PhaseMode;
 
-  busy$ = this.httpStatusService.busy();
+  busy = this.httpStatusService.busy;
+  httpErrorSubscription?: Subscription;
   // refresh every 30s, initial delay 200ms to make refresh visible and avoid network issues
   static readonly REFRESH_DELAY = 30000;
   refreshTimer$ = timer(200, AppComponent.REFRESH_DELAY);
@@ -114,7 +112,7 @@ export class AppComponent implements OnInit, OnDestroy {
     @Inject(DOCUMENT) private document: Document) { }
 
   ngOnInit(): void {
-    this.httpStatusService.httpError().pipe(takeUntil(this.unsubscribe)).subscribe(errmsg => {
+    this.httpErrorSubscription = this.httpStatusService.httpError().subscribe(errmsg => {
       console.log(`httpError: ${errmsg}`);
       this.snackBar.open(errmsg, 'Dismiss', {
         duration: 10000
@@ -140,8 +138,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopAutoRefresh();
-    this.unsubscribe.next();
-    this.unsubscribe.complete();
+    this.httpErrorSubscription?.unsubscribe();
   }
 
   // page gets visible: (auto)refresh
