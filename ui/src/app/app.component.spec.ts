@@ -114,7 +114,6 @@ describe('AppComponent', () => {
   it('should render the app', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.pvControl).toEqual(pvControlData);
     expect(component.chargeModeControl.value).toBe(ChargeMode.OFF);
     expect(await chargeModeOff.isChecked()).toBeTrue();
     expect(component.phaseModeControl.value).toBe(PhaseMode.AUTO);
@@ -150,7 +149,6 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     expect(refreshIcon.className).not.toContain('spin');
-    expect(component.pvControl).toEqual(pvControlData);
     expect(component.chargeModeControl.value).toBe(ChargeMode.OFF);
 
     pvControlData.controller.mode = ChargeMode.PV_ONLY;
@@ -161,7 +159,6 @@ describe('AppComponent', () => {
     expect(refreshIcon.className).toContain('spin');
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.pvControl).toEqual(pvControlData);
     expect(component.chargeModeControl.value).toBe(ChargeMode.PV_ONLY);
     expect(component.phaseModeControl.enabled).toBeTrue();
     expect(component.phaseModeControl.value).toBe(PhaseMode.CHARGE_1P);
@@ -208,7 +205,6 @@ describe('AppComponent', () => {
   it('should allow to switch to "PV only" charging', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.pvControl).toEqual(pvControlData);
     await chargeModePvOnly.check();
 
     const req = httpMock.expectOne('./api/pvcontrol/controller/desired_mode');
@@ -224,7 +220,6 @@ describe('AppComponent', () => {
     pvControlData.controller.desired_mode = ChargeMode.MANUAL;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.pvControl).toEqual(pvControlData);
     expect(await chargeModeOff.isChecked()).toBeTrue();
   });
 
@@ -233,14 +228,12 @@ describe('AppComponent', () => {
     pvControlData.controller.mode = ChargeMode.MAX;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.pvControl).toEqual(pvControlData);
     expect(await chargeModeMax.isChecked()).toBeTrue();
   });
 
   it('should allow to switch to "1 phase" charging', async () => {
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
 
-    expect(component.pvControl).toEqual(pvControlData);
     await phaseModeCharge1P.check();
 
     const req = httpMock.expectOne('./api/pvcontrol/controller/phase_mode');
@@ -294,22 +287,22 @@ describe('AppComponent', () => {
     }
   };
 
-  it('should support chargingStateIcon()', () => {
+  it('should support wallboxChargingIcon()', () => {
     pvControlData.wallbox.phases_out = 0;
     pvControlData.wallbox.car_status = 0; // unknown
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_unknown');
+    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_unknown');
 
     pvControlData.wallbox.car_status = 1; // NoVehicle
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('power_off');
+    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('power_off');
     pvControlData.wallbox.car_status = 2; // Charging
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_charging_50');
+    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_charging_50');
     pvControlData.wallbox.car_status = 3; // WaitingForVehicle
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('hourglass_bottom');
+    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('hourglass_bottom');
 
     pvControlData.wallbox.car_status = 4; // ChargingFinished
     pvControlData.wallbox.allow_charging = false;
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_50');
+    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_50');
     pvControlData.wallbox.allow_charging = true;
-    expect(AppComponent.chargingStateIcon(pvControlData)).toBe('battery_full');
+    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_full');
   });
 });

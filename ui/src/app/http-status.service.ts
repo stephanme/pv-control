@@ -1,6 +1,6 @@
 import { HttpRequest, HttpEvent, HttpErrorResponse, HttpHandlerFn } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { tap, finalize } from 'rxjs/operators';
 
 @Injectable({
@@ -8,9 +8,10 @@ import { tap, finalize } from 'rxjs/operators';
 })
 export class HttpStatusService {
   private busyCnt = 0;
+
   private _busy = signal(false);
   busy = this._busy.asReadonly();
-  private httpErrorSubject = new Subject<string>();
+  public readonly httpError: WritableSignal<{errmsg: string} | null> = signal(null);
 
   incBusy(): void {
     this.busyCnt++;
@@ -27,11 +28,8 @@ export class HttpStatusService {
   }
 
   notifyHttpError(msg: string): void {
-    this.httpErrorSubject.next(msg);
-  }
-
-  httpError(): Observable<string> {
-    return this.httpErrorSubject.asObservable();
+    // wrap errmsg into object to notify about the same errmsg as well
+    this.httpError.set({errmsg: msg});
   }
 }
 

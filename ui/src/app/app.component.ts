@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, Inject, OnDestroy, OnInit, signal, effect, computed, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { Subscription, timer } from 'rxjs';
 
@@ -43,75 +43,77 @@ export class AppComponent implements OnInit, OnDestroy {
   PhaseMode = PhaseMode;
 
   busy = this.httpStatusService.busy;
-  httpErrorSubscription?: Subscription;
   // refresh every 30s, initial delay 200ms to make refresh visible and avoid network issues
   static readonly REFRESH_DELAY = 30000;
   refreshTimer$ = timer(200, AppComponent.REFRESH_DELAY);
   refreshTimerSubscription: Subscription | null = null;
 
-  // last data fetched from server
-  pvControl: PvControl = {
-    meter: {
-      error: 0,
-      power_pv: 0,
-      power_consumption: 0,
-      power_grid: 0,
-    },
-    wallbox: {
-      error: 0,
-      allow_charging: false,
-      max_current: 0,
-      phases_in: 1,
-      phases_out: 0,
-      power: 0,
-      temperature: 0,
-    },
-    controller: {
-      error: 0,
-      mode: ChargeMode.OFF,
-      desired_mode: ChargeMode.OFF,
-      phase_mode: PhaseMode.DISABLED,
-    },
-    car: {
-      error: 0,
-      soc: 0,
-      cruising_range: 0
+  
+  // pv card
+  meterError = signal(false);
+  pvIconColor = computed(() => this.meterError() ? 'col-grey' : 'col-yellow');
+  pvPower = signal(0);
+
+  // grid data
+  gridPower = signal(0);
+  gridIconColor = computed(() => {
+    if (this.meterError()) {
+      return 'col-grey';
+    } else {
+      return (this.gridPower() <= 0) ? 'col-green' : 'col-red';
     }
-  };
-  // pre-calculated fields from pvControl
-  errorMeter = false;
-  errorWallbox = false;
-  errorCar = false;
-  colorPv = 'col-yellow';
-  colorGrid = 'col-red';
-  colorHome= 'col-primary';
-  colorCar = 'col-primary';
-  colorWallbox= 'col-primary';
+  });
 
-  isCharging = false;
-  chargingStateIcon = 'power_off';
+  // home card
+  powerConsumption = signal(0);
+  homePower = computed(() => this.powerConsumption() - this.wallboxPower());
+  homeIconColor = computed(() => this.meterError() ? 'col-grey' : 'col-primary');
 
+  // car card
+  carError = signal(false);
+  carIconColor = computed(() => this.carError() ? 'col-grey' : 'col-primary');
+  carSOC = signal(0);
+
+  // charge mode card
+  // wallbox
+  wallboxError = signal(false);
+  wallboxIconColor = computed(() => this.wallboxError() ? 'col-grey' : 'col-primary');
+  wallboxCharging = computed(() => this.wallboxPhasesOut() > 0);
+  wallboxPhasesOut = signal(0);
+  wallboxMaxCurrent = signal(0);
+  wallboxPower = signal(0);
+  wallboxChargingIcon = signal('power_off');
+  wallboxChargingIconColor = computed(() => this.wallboxError() ? 'col-grey-two-tone-icon' : 'col-default-two-tone-icon');
+  // charge mode
+  chargeMode = signal(ChargeMode.OFF);
   chargeModeControl = this.fb.control(ChargeMode.OFF);
+  // phase mode
+  wallboxPhasesIn = signal(1);
   phaseModeControl = this.fb.control({value: PhaseMode.DISABLED, disabled: true});
+
+  // temp card
+  wallboxTemperature = signal(0);
 
   constructor(
     private fb: FormBuilder, private snackBar: MatSnackBar,
     private httpStatusService: HttpStatusService, private pvControlService: PvControlService,
-    @Inject(DOCUMENT) private document: Document) { }
+    @Inject(DOCUMENT) private document: Document) { 
+      effect(() => {
+        const err = this.httpStatusService.httpError();
+        if (err) {
+          this.snackBar.open(err.errmsg, 'Dismiss', {
+            duration: 10000
+          });  
+        }
+      });  
+    }
 
   ngOnInit(): void {
-    this.httpErrorSubscription = this.httpStatusService.httpError().subscribe(errmsg => {
-      console.log(`httpError: ${errmsg}`);
-      this.snackBar.open(errmsg, 'Dismiss', {
-        duration: 10000
-      });
-    });
     this.startAutoRefresh();
   }
 
   ngOnDestroy(): void {
     this.stopAutoRefresh();
-    this.httpErrorSubscription?.unsubscribe();
   }
 
   // page gets visible: (auto)refresh
@@ -139,24 +141,24 @@ export class AppComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.pvControlService.getPvControl().subscribe({
       next: pv => {
-        this.pvControl = pv;
-        
-        this.errorMeter = pv.meter.error > 3;
-        this.errorWallbox = pv.wallbox.error > 3;
-        this.errorCar = pv.car.error > 3;
+        this.meterError.set(pv.meter.error > 3);
+        this.pvPower.set(pv.meter.power_pv);
+        this.gridPower.set(pv.meter.power_grid);
+        this.powerConsumption.set(pv.meter.power_consumption);
 
-        if (this.errorMeter) {
-          this.colorPv = this.colorHome = this.colorGrid = 'col-grey';
-        } else {
-          this.colorPv = 'col-yellow';
-          this.colorHome = 'col-primary';
-          this.colorGrid = (pv.meter.power_grid <= 0) ? 'col-green' : 'col-red';
-        }
-        this.colorCar = this.errorCar ? 'col-grey' : 'col-primary';
-        this.colorWallbox = this.errorWallbox ? 'col-grey' : 'col-primary';
-        
-        this.isCharging = pv.wallbox.phases_out > 0;
-        this.chargingStateIcon = AppComponent.chargingStateIcon(pv);
+        this.wallboxError.set(pv.wallbox.error > 3);
+        this.wallboxPower.set(pv.wallbox.power);
+        this.wallboxPhasesIn.set(pv.wallbox.phases_in);
+        this.wallboxPhasesOut.set(pv.wallbox.phases_out);
+        this.wallboxMaxCurrent.set(pv.wallbox.max_current);
+        this.wallboxTemperature.set(pv.wallbox.temperature);
+
+        this.carError.set(pv.car.error > 3);
+        this.carSOC.set(pv.car.soc);
+
+        this.chargeMode.set(pv.controller.mode);
+        this.wallboxChargingIcon.set(AppComponent.wallboxChargingIcon(pv));
+
         // map desired_mode==MANUAL to current mode -> show real status if e.g. somebody changes current via app/WB
         let mode = pv.controller.desired_mode;
         if (mode === ChargeMode.MANUAL) {
@@ -190,7 +192,7 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
-  static chargingStateIcon(pv: PvControl): string {
+  static wallboxChargingIcon(pv: PvControl): string {
     switch (pv.wallbox.car_status) {
       case 1: // NoVehicle
         return 'power_off';

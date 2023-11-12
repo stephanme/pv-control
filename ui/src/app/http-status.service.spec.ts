@@ -8,7 +8,6 @@ describe('HttpStatusService', () => {
   let service: HttpStatusService;
   let http: HttpClient;
   let httpMock: HttpTestingController;
-  let httpErr: string | undefined;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -19,8 +18,6 @@ describe('HttpStatusService', () => {
       ]
     });
     service = TestBed.inject(HttpStatusService);
-    httpErr = undefined;
-    service.httpError().subscribe(e => httpErr = e);
     http = TestBed.inject(HttpClient);
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -39,7 +36,7 @@ describe('HttpStatusService', () => {
     req.flush({});
 
     expect(service.busy()).toBe(false);
-    expect(httpErr).toBeUndefined();
+    expect(service.httpError()).toBeNull();
   });
 
   it('should report http errors', () => {
@@ -51,6 +48,6 @@ describe('HttpStatusService', () => {
     });
 
     expect(service.busy()).toBe(false);
-    expect(httpErr).toBe('HTTP 500 Internal Server Error - GET /');
+    expect(service.httpError()!.errmsg).toBe('HTTP 500 Internal Server Error - GET /');
   });
 });
