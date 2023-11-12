@@ -11,24 +11,24 @@
     <div>
       <mat-card id="card-pv">
         <mat-card-header>
-          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorPv()">wb_sunny</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="errorMeter()">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span></mat-card-title>
+          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorPv">wb_sunny</mat-icon>
+            <span class="flex-grow text-right" [class.col-grey]="errorMeter">{{pvControl.meter.power_pv/1000|number:'1.1-1'}} kW</span></mat-card-title>
         </mat-card-header>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-grid">
         <mat-card-header>
-          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorGrid()">power</mat-icon>
-          <span class="flex-grow text-right" [class.col-grey]="errorMeter()">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span></mat-card-title>
+          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorGrid">power</mat-icon>
+          <span class="flex-grow text-right" [class.col-grey]="errorMeter">{{pvControl.meter.power_grid/1000|number:'1.1-1'}} kW</span></mat-card-title>
         </mat-card-header>
       </mat-card>
     </div>
     <div>
       <mat-card id="card-home">
         <mat-card-header>
-          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorHome()">home</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="errorMeter()">{{(pvControl.meter.power_consumption - pvControl.wallbox.power)/1000|number:'1.1-1'}} kW</span>
+          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorHome">home</mat-icon>
+            <span class="flex-grow text-right" [class.col-grey]="errorMeter">{{(pvControl.meter.power_consumption - pvControl.wallbox.power)/1000|number:'1.1-1'}} kW</span>
           </mat-card-title>
         </mat-card-header>
       </mat-card>
@@ -36,8 +36,8 @@
     <div>
       <mat-card id="card-car">
         <mat-card-header>
-          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorCar()">electric_car</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="errorCar()">{{pvControl.car.soc|number:'1.0-0'}} %</span>
+          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorCar">electric_car</mat-icon>
+            <span class="flex-grow text-right" [class.col-grey]="errorCar">{{pvControl.car.soc|number:'1.0-0'}} %</span>
           </mat-card-title>
         </mat-card-header>
       </mat-card>
@@ -47,12 +47,12 @@
       <mat-card id="card-chargemode">
         <mat-card-header>
           <mat-card-title class="flex-row">
-            <mat-icon class="flex-grow" [inline]="true" [class]="colorWallbox()">ev_station</mat-icon>
+            <mat-icon class="flex-grow" [inline]="true" [class]="colorWallbox">ev_station</mat-icon>
             @if (isCharging) {
-              <span id="car-max-current" class="flex-none text-center" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
-              <span id="car-charge-power" class="flex-grow text-right" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
+              <span id="car-max-current" class="flex-none text-center" [class.col-grey]="errorWallbox">{{pvControl.wallbox.phases_out}}x {{pvControl.wallbox.max_current}} A</span>
+              <span id="car-charge-power" class="flex-grow text-right" [class.col-grey]="errorWallbox">{{pvControl.wallbox.power/1000|number:'1.1-1'}} kW</span>
             } @else {
-              <mat-icon id="car-charge-state" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone" [class.col-grey-two-tone-icon]="errorWallbox()" [class.col-default-two-tone-icon]="!errorWallbox()">{{chargingStateIcon}}</mat-icon>
+              <mat-icon id="car-charge-state" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone" [class.col-grey-two-tone-icon]="errorWallbox" [class.col-default-two-tone-icon]="!errorWallbox">{{chargingStateIcon}}</mat-icon>
             }
           </mat-card-title>
         </mat-card-header>
@@ -78,8 +78,8 @@
     <div>
       <mat-card id="card-temp">
         <mat-card-header>
-          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorWallbox()">thermostat</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="errorWallbox()">{{pvControl.wallbox.temperature|number:'1.0-0'}} °C</span>
+          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="colorWallbox">thermostat</mat-icon>
+            <span class="flex-grow text-right" [class.col-grey]="errorWallbox">{{pvControl.wallbox.temperature|number:'1.0-0'}} °C</span>
           </mat-card-title>
         </mat-card-header>
       </mat-card>

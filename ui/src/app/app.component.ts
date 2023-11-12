@@ -48,6 +48,7 @@ export class AppComponent implements OnInit, OnDestroy {
   refreshTimer$ = timer(200, AppComponent.REFRESH_DELAY);
   refreshTimerSubscription: Subscription | null = null;
 
+  // last data fetched from server
   pvControl: PvControl = {
     meter: {
       error: 0,
@@ -76,35 +77,21 @@ export class AppComponent implements OnInit, OnDestroy {
       cruising_range: 0
     }
   };
+  // pre-calculated fields from pvControl
+  errorMeter = false;
+  errorWallbox = false;
+  errorCar = false;
+  colorPv = 'col-yellow';
+  colorGrid = 'col-red';
+  colorHome= 'mat-primary';
+  colorCar = 'mat-primary';
+  colorWallbox= 'mat-primary';
+
   isCharging = false;
   chargingStateIcon = 'power_off';
 
   chargeModeControl = this.fb.control(ChargeMode.OFF);
   phaseModeControl = this.fb.control(PhaseMode.AUTO);
-
-  static isCharging(pv: PvControl): boolean {
-    return pv.wallbox.phases_out > 0;
-  }
-
-  static chargingStateIcon(pv: PvControl): string {
-    switch (pv.wallbox.car_status) {
-      case 1: // NoVehicle
-        return 'power_off';
-      case 2: // Charging
-        return 'battery_charging_50';
-      case 3: // WaitingForVehicle
-        return 'hourglass_bottom';
-      case 4: // ChargingFinished
-        // TODO: SOC (allow_charging=on but not charging -> car rejected charging)
-        if (pv.wallbox.allow_charging) {
-          return 'battery_full';
-        } else {
-          return 'battery_50';
-        }
-      default: // unknown
-        return 'battery_unknown';
-    }
-  }
 
   constructor(
     private appRef: ApplicationRef, private fb: FormBuilder, private snackBar: MatSnackBar,
@@ -163,45 +150,26 @@ export class AppComponent implements OnInit, OnDestroy {
     this.refreshTimerSubscription = null;    
   }
 
-  errorMeter(): boolean {
-    return this.pvControl.meter.error > 3;
-  }
-
-  colorPv(): string {
-    return this.errorMeter() ? 'col-grey' : 'col-yellow';
-  }
-
-  colorGrid(): string {
-    if (this.errorMeter()) {
-      return 'col-grey';
-    } else {
-      return (this.pvControl.meter.power_grid <= 0) ? 'col-green' : 'col-red';
-    }
-  }
-
-  colorHome(): string {
-    return this.errorMeter() ? 'col-grey' : 'mat-primary';
-  }
-
-  errorCar(): boolean {
-    return this.pvControl.car.error > 3;
-  }
-  colorCar(): string {
-    return this.errorCar() ? 'col-grey' : 'mat-primary';
-  }
-
-  errorWallbox(): boolean {
-    return this.pvControl.wallbox.error > 3;
-  }
-  colorWallbox(): string {
-    return this.errorWallbox() ? 'col-grey' : 'mat-primary';
-  }
-
   refresh(): void {
     this.pvControlService.getPvControl().subscribe({
       next: pv => {
         this.pvControl = pv;
-        this.isCharging = AppComponent.isCharging(pv);
+        
+        this.errorMeter = pv.meter.error > 3;
+        this.errorWallbox = pv.wallbox.error > 3;
+        this.errorCar = pv.car.error > 3;
+
+        if (this.errorMeter) {
+          this.colorPv = this.colorHome = this.colorGrid = 'col-grey';
+        } else {
+          this.colorPv = 'col-yellow';
+          this.colorHome = 'mat-primary';
+          this.colorGrid = (pv.meter.power_grid <= 0) ? 'col-green' : 'col-red';
+        }
+        this.colorCar = this.errorCar ? 'col-grey' : 'mat-primary';
+        this.colorWallbox = this.errorWallbox ? 'col-grey' : 'mat-primary';
+        
+        this.isCharging = pv.wallbox.phases_out > 0;
         this.chargingStateIcon = AppComponent.chargingStateIcon(pv);
         // map desired_mode==MANUAL to current mode -> show real status if e.g. somebody changes current via app/WB
         let mode = pv.controller.desired_mode;
@@ -229,5 +197,25 @@ export class AppComponent implements OnInit, OnDestroy {
       next: () => { },
       error: () => { }
     });
+  }
+
+  static chargingStateIcon(pv: PvControl): string {
+    switch (pv.wallbox.car_status) {
+      case 1: // NoVehicle
+        return 'power_off';
+      case 2: // Charging
+        return 'battery_charging_50';
+      case 3: // WaitingForVehicle
+        return 'hourglass_bottom';
+      case 4: // ChargingFinished
+        // TODO: SOC (allow_charging=on but not charging -> car rejected charging)
+        if (pv.wallbox.allow_charging) {
+          return 'battery_full';
+        } else {
+          return 'battery_50';
+        }
+      default: // unknown
+        return 'battery_unknown';
+    }
   }
 }

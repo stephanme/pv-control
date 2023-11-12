@@ -281,15 +281,6 @@ describe('AppComponent', () => {
     }
   };
 
-  it('should support isCharging()', () => {
-    pvControlData.wallbox.phases_out = 0;
-    expect(AppComponent.isCharging(pvControlData)).toBeFalse();
-    pvControlData.wallbox.phases_out = 1;
-    expect(AppComponent.isCharging(pvControlData)).toBeTrue();
-    pvControlData.wallbox.phases_out = 3;
-    expect(AppComponent.isCharging(pvControlData)).toBeTrue();
-  });
-
   it('should support chargingStateIcon()', () => {
     pvControlData.wallbox.phases_out = 0;
     pvControlData.wallbox.car_status = 0; // unknown
