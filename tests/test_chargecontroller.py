@@ -296,6 +296,29 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
         self.assertEqual(1, self.wallbox.get_data().phases_in)
 
 
+class ChargeControllerDisabledPhaseSwitchingHostnameTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.wallbox = SimulatedWallbox(WallboxConfig())
+        self.meter = TestMeter(self.wallbox)
+        reset_controller_metrics()
+
+    def test_matching_hostname(self):
+        self.controller = ChargeController(
+            ChargeControllerConfig(enable_phase_switching_on_host_only="pi1"), self.meter, self.wallbox, "pi1"
+        )
+        self.assertTrue(self.controller._enable_phase_switching)
+        self.controller.run()  # init
+        self.assertEqual(PhaseMode.AUTO, self.controller.get_data().phase_mode)
+
+    def test_wrong_hostname(self):
+        self.controller = ChargeController(
+            ChargeControllerConfig(enable_phase_switching_on_host_only="pi1"), self.meter, self.wallbox, "pi2"
+        )
+        self.assertFalse(self.controller._enable_phase_switching)
+        self.controller.run()  # init
+        self.assertEqual(PhaseMode.DISABLED, self.controller.get_data().phase_mode)
+
+
 class ChargeControllerManualModeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.wallbox = SimulatedWallbox(WallboxConfig())

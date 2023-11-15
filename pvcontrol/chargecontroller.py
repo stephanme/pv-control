@@ -54,7 +54,9 @@ class ChargeControllerData(BaseData):
 class ChargeControllerConfig(BaseConfig):
     cycle_time: int = 30  # [s] control loop cycle time, used by scheduler
     enable_phase_switching: bool = True  # set to False of phase relay is not in operation
-    enable_phase_switching_on_host_only = ""  # if set, phase switching is only allowed when running on specified host (env var: HOSTNAME)
+    enable_phase_switching_on_host_only: str = (
+        ""  # if set, phase switching is only allowed when running on specified host (env var: HOSTNAME)
+    )
     enable_auto_phase_switching: bool = True  # automatic phase switching depending on available PV
     enable_charging_when_connecting_car: ChargeMode = ChargeMode.OFF
     line_voltage: float = 230  # [V]
