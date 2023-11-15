@@ -31,6 +31,7 @@ export enum ChargeMode {
 }
 
 export enum PhaseMode {
+  DISABLED = 'DISABLED',
   AUTO = 'AUTO',
   CHARGE_1P = 'CHARGE_1P',
   CHARGE_3P = 'CHARGE_3P',

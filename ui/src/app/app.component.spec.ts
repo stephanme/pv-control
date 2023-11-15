@@ -161,6 +161,7 @@ describe('AppComponent', () => {
 
     expect(component.pvControl).toEqual(pvControlData);
     expect(component.chargeModeControl.value).toBe(ChargeMode.PV_ONLY);
+    expect(component.phaseModeControl.enabled).toBeTrue();
     expect(component.phaseModeControl.value).toBe(PhaseMode.CHARGE_1P);
     expect(await chargeModePvOnly.isChecked()).toBeTrue();
     expect(await phaseModeCharge1P.isChecked()).toBeTrue();
@@ -247,6 +248,16 @@ describe('AppComponent', () => {
 
     expect(await phaseModeCharge1P.isChecked()).toBeTrue();
     expect(await phaseModeAuto.isChecked()).toBeFalse();
+  });
+
+  it('should support disabled phase relay', async () => {
+    pvControlData.controller.phase_mode = PhaseMode.DISABLED;
+    httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
+    fixture.detectChanges();
+
+    expect(component.phaseModeControl.disabled).toBeTrue();
+    expect(await phaseModeAuto.isChecked()).toBeFalse();
+    expect(await phaseModeAuto.isDisabled()).toBeTrue();
   });
 });
 

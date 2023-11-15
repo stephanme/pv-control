@@ -37,6 +37,7 @@ class ChargeMode(str, enum.Enum):
 
 @enum.unique
 class PhaseMode(str, enum.Enum):
+    DISABLED = "DISABLED"  # phase relay is not in operation
     AUTO = "AUTO"  # PV switches between 1 and 3 phases
     CHARGE_1P = "CHARGE_1P"
     CHARGE_3P = "CHARGE_3P"
@@ -53,6 +54,7 @@ class ChargeControllerData(BaseData):
 class ChargeControllerConfig(BaseConfig):
     cycle_time: int = 30  # [s] control loop cycle time, used by scheduler
     enable_phase_switching: bool = True  # set to False of phase relay is not in operation
+    enable_phase_switching_on_host_only = ""  # if set, phase switching is only allowed when running on specified host (env var: HOSTNAME)
     enable_auto_phase_switching: bool = True  # automatic phase switching depending on available PV
     enable_charging_when_connecting_car: ChargeMode = ChargeMode.OFF
     line_voltage: float = 230  # [V]
@@ -80,7 +82,8 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         "pvcontrol_controller_charged_energy_wh_total", "Energy charged into car by source", ["source"]
     )
 
-    def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox):
+    # hostname - optional parameter to enable/disable phase switching depending on where pvcontrol runs (k8s hostname)
+    def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox, hostname=""):
         super().__init__(config)
         self._meter = meter
         self._wallbox = wallbox
@@ -93,6 +96,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._last_energy_consumption = 0.0  # total counter value, must be initialized first with data from meter
         self._last_energy_consumption_grid = 0.0  # total counter value, must be initialized first with data from meter
         # config
+        self._enable_phase_switching = self._is_enable_phase_switching(hostname)
+        if not self._enable_phase_switching:
+            self.set_phase_mode(PhaseMode.DISABLED)
         self._min_supported_current = wallbox.get_config().min_supported_current
         self._max_supported_current = wallbox.get_config().max_supported_current
         min_power_1phase = self._min_supported_current * config.line_voltage
@@ -110,11 +116,19 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         ChargeController._metrics_pvc_controller_charged_energy.labels("grid")
         ChargeController._metrics_pvc_controller_charged_energy.labels("pv")
 
+    def _is_enable_phase_switching(self, hostname: str) -> bool:
+        if self.get_config().enable_phase_switching:
+            require_hostname = self.get_config().enable_phase_switching_on_host_only
+            return not require_hostname or require_hostname == hostname
+        return False
+
     def set_desired_mode(self, mode: ChargeMode) -> None:
         logger.info(f"set_desired_mode: {self.get_data().desired_mode} -> {mode}")
         self.get_data().desired_mode = mode
 
     def set_phase_mode(self, mode: PhaseMode) -> None:
+        if not self._enable_phase_switching:
+            mode = PhaseMode.DISABLED
         self.get_data().phase_mode = mode
 
     @_metrics_pvc_controller_processing.time()
@@ -212,8 +226,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             self._wallbox.trigger_reset()
             return True
 
-        config = self.get_config()
-        if config.enable_phase_switching:
+        if self._enable_phase_switching:
             available_power = -m.power_grid + wb.power
             desired_phases = self._desired_phases(available_power, wb.phases_in)
             if wb.error == 0 and desired_phases != wb.phases_in:
@@ -224,11 +237,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                     # charging off and wait one cylce
                     self._set_allow_charging(False, skip_delay=True)
                 return True
-            else:
-                return False
-        else:
-            self.set_phase_mode(PhaseMode.CHARGE_1P if wb.phases_in == 1 else PhaseMode.CHARGE_3P)
-            return False
+        return False
 
     def _desired_phases(self, available_power: float, current_phases: int):
         # TODO 2 phase charging
@@ -341,5 +350,5 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
 class ChargeControllerFactory:
     @classmethod
-    def newController(cls, meter: Meter, wb: Wallbox, **kwargs) -> ChargeController:
-        return ChargeController(ChargeControllerConfig(**kwargs), meter, wb)
+    def newController(cls, meter: Meter, wb: Wallbox, hostname="", **kwargs) -> ChargeController:
+        return ChargeController(ChargeControllerConfig(**kwargs), meter, wb, hostname)

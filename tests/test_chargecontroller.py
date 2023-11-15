@@ -274,12 +274,12 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
 
         c = self.controller.get_data()
         self.assertEqual(ChargeMode.OFF, c.mode)
-        self.assertEqual(PhaseMode.CHARGE_3P, c.phase_mode)
+        self.assertEqual(PhaseMode.DISABLED, c.phase_mode)
         self.assertEqual(3, self.wallbox.get_data().phases_in)
 
         self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
         self.controller.run()
-        self.assertEqual(PhaseMode.CHARGE_3P, c.phase_mode)
+        self.assertEqual(PhaseMode.DISABLED, c.phase_mode)
         self.assertEqual(3, self.wallbox.get_data().phases_in)
 
     def test_1P(self):
@@ -287,12 +287,12 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.TestCase):
         c = self.controller.get_data()
 
         self.assertEqual(ChargeMode.OFF, c.mode)
-        self.assertEqual(PhaseMode.CHARGE_1P, c.phase_mode)
+        self.assertEqual(PhaseMode.DISABLED, c.phase_mode)
         self.assertEqual(1, self.wallbox.get_data().phases_in)
 
         self.controller.set_phase_mode(PhaseMode.AUTO)
         self.controller.run()
-        self.assertEqual(PhaseMode.CHARGE_1P, c.phase_mode)
+        self.assertEqual(PhaseMode.DISABLED, c.phase_mode)
         self.assertEqual(1, self.wallbox.get_data().phases_in)
 
 

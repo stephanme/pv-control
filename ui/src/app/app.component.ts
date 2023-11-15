@@ -58,7 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
       error: 0,
       allow_charging: false,
       max_current: 0,
-      phases_in: 3,
+      phases_in: 1,
       phases_out: 0,
       power: 0,
       temperature: 0,
@@ -67,7 +67,7 @@ export class AppComponent implements OnInit, OnDestroy {
       error: 0,
       mode: ChargeMode.OFF,
       desired_mode: ChargeMode.OFF,
-      phase_mode: PhaseMode.AUTO,
+      phase_mode: PhaseMode.DISABLED,
     },
     car: {
       error: 0,
@@ -89,7 +89,7 @@ export class AppComponent implements OnInit, OnDestroy {
   chargingStateIcon = 'power_off';
 
   chargeModeControl = this.fb.control(ChargeMode.OFF);
-  phaseModeControl = this.fb.control(PhaseMode.AUTO);
+  phaseModeControl = this.fb.control({value: PhaseMode.DISABLED, disabled: true});
 
   constructor(
     private appRef: ApplicationRef, private fb: FormBuilder, private snackBar: MatSnackBar,
@@ -176,6 +176,11 @@ export class AppComponent implements OnInit, OnDestroy {
         }
         this.chargeModeControl.setValue(mode);
         this.phaseModeControl.setValue(pv.controller.phase_mode);
+        if (pv.controller.phase_mode === PhaseMode.DISABLED) {
+          this.phaseModeControl.disable()
+        } else {
+          this.phaseModeControl.enable()
+        }
       },
       error: () => { }
     });
