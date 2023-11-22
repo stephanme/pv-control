@@ -39,7 +39,7 @@ Restarting pv-control (e.g. for updates) doesn't change the state of the relay. 
 
 ```
 python -m pvcontrol --help
-usage: __main__.py [-h] [-m METER] [-w WALLBOX] [-a CAR] [-c CONFIG] [--host HOST] [--port PORT] [--basehref BASEHREF]
+usage: __main__.py [-h] [-m METER] [-w WALLBOX] [-r RELAY] [-a CAR] [-c CONFIG] [--hostname HOSTNAME] [--host HOST] [--port PORT] [--basehref BASEHREF]
 
 PV Control
 
@@ -47,8 +47,10 @@ optional arguments:
   -h, --help            show this help message and exit
   -m METER, --meter METER
   -w WALLBOX, --wallbox WALLBOX
+  -r RELAY, --relay RELAY
   -a CAR, --car CAR
   -c CONFIG, --config CONFIG
+  --hostname HOSTNAME   server hostname, can be used to enable/disable phase relay on k8s
   --host HOST           server host (default: 0.0.0.0)
   --port PORT           server port (default: 8080)
   --basehref BASEHREF   URL prefix to match ng base-href param (no leading /)
@@ -57,12 +59,16 @@ optional arguments:
 METER, WALLBOX and CAR refer to implementation classes for the energy meter, the wallbox and the car:
 - METER = KostalMeter|FroniusMeter|SimulatedMeter
 - WALLBOX = GoeWallbox|SimulatedWallbox|SimulatedWallboxWithRelay
+- RELAY = RaspiPhaseRelay|SimulatedPhaseRelay
 - CAR = VolkswagenIDCar|SimulatedCar|NoCar
 
-CONFIG is a json with 'meter', 'wallbox', 'car' and 'controller' configuration structures. The config parameters depend on the METER, WALLBOX and CAR type. See the corresponding ...Config data classes
+CONFIG is a json with 'meter', 'wallbox', 'relay', 'car' and 'controller' configuration structures. The config parameters depend on the METER, WALLBOX, RELAY and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py` and `chargecontroller.py`.
 
-HOST, PORT and BASEHREF configure the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s. 
+HOST, PORT and BASEHREF configure the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s.
+
+HOSTNAME should be set to the host or node name where pvcontrol is running (e.g. by k8s metadata). Allows to automatically disable the phase relay when not deployed on correct hardware, i.e. pv-control still works but with
+reduced functionality.
 
 ## Installation
 
@@ -105,15 +111,14 @@ pvcontrol can be updated using the `update-pvcontrol.sh` script. Prerequisites:
 - pvcontrol was installed as described above
 - `update-pvcontrol.sh` script copied into home directory of raspberry
 - Usage
-  - `./update-pvcontrol.sh` - update to latest successful build result fn main branch
+  - `./update-pvcontrol.sh` - update to latest successful build result of main branch
   - `./update-pvcontrol.sh <version>` - update to specified version (github release tag, e.g. v4)
 
 ## Installation on k8s
 
-Tested on Raspberry Pi 4 with Raspberry Pi OS Lite (Debian 11, 64 bit).
+Tested on Raspberry Pi 4 with Raspberry Pi OS Lite (Debian 12, 64 bit).
 
-Example k8s yamls for deploying pv-control:
-- https://github.com/stephanme/pv-control/blob/main/pvcontrol.yaml
+Example k8s manifest for deploying pv-control:
 - https://github.com/stephanme/pv-monitoring/blob/main/pvcontrol/pvcontrol.yaml
 
 ## Development

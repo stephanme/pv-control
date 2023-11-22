@@ -4,6 +4,7 @@ import re
 import flask
 import flask.views
 import flask.json
+from pvcontrol.relay import PhaseRelay
 from pvcontrol.service import BaseService
 from pvcontrol.meter import Meter
 from pvcontrol.wallbox import CarStatus, SimulatedWallbox, Wallbox
@@ -48,9 +49,10 @@ class StaticResourcesView(flask.views.MethodView):
 
 
 class PvControlView(flask.views.MethodView):
-    def __init__(self, version: str, meter: Meter, wb: Wallbox, controller: ChargeController, car: Car):
+    def __init__(self, version: str, meter: Meter, wb: Wallbox, relay: PhaseRelay, controller: ChargeController, car: Car):
         self._meter = meter
         self._wb = wb
+        self._relay = relay
         self._controller = controller
         self._car = car
         self._version = version
@@ -61,6 +63,7 @@ class PvControlView(flask.views.MethodView):
             "controller": self._controller.get_data(),
             "meter": self._meter.get_data(),
             "wallbox": self._wb.get_data(),
+            "relay": self._relay.get_data(),
             "car": self._car.get_data(),
         }
         return flask.jsonify(res)

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import logging
 import prometheus_client
 
+from pvcontrol.relay import PhaseRelay
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.meter import Meter, MeterData
 from pvcontrol.wallbox import CarStatus, Wallbox, WallboxData, WbError
@@ -53,10 +54,6 @@ class ChargeControllerData(BaseData):
 @dataclass
 class ChargeControllerConfig(BaseConfig):
     cycle_time: int = 30  # [s] control loop cycle time, used by scheduler
-    enable_phase_switching: bool = True  # set to False of phase relay is not in operation
-    enable_phase_switching_on_host_only: str = (
-        ""  # if set, phase switching is only allowed when running on specified host (env var: HOSTNAME)
-    )
     enable_auto_phase_switching: bool = True  # automatic phase switching depending on available PV
     enable_charging_when_connecting_car: ChargeMode = ChargeMode.OFF
     line_voltage: float = 230  # [V]
@@ -85,10 +82,11 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
     )
 
     # hostname - optional parameter to enable/disable phase switching depending on where pvcontrol runs (k8s hostname)
-    def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox, hostname=""):
+    def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox, relay: PhaseRelay):
         super().__init__(config)
         self._meter = meter
         self._wallbox = wallbox
+        self._relay = relay
         self._set_data(ChargeControllerData())
         self._charge_mode_pv_to_off_delay = 5 * 60  # configurable?
         self._pv_allow_charging_value = False
@@ -98,7 +96,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self._last_energy_consumption = 0.0  # total counter value, must be initialized first with data from meter
         self._last_energy_consumption_grid = 0.0  # total counter value, must be initialized first with data from meter
         # config
-        self._enable_phase_switching = self._is_enable_phase_switching(hostname)
+        self._enable_phase_switching = self._relay.is_enabled()
         if not self._enable_phase_switching:
             self.set_phase_mode(PhaseMode.DISABLED)
         self._min_supported_current = wallbox.get_config().min_supported_current
@@ -117,12 +115,6 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         # init metrics with labels
         ChargeController._metrics_pvc_controller_charged_energy.labels("grid")
         ChargeController._metrics_pvc_controller_charged_energy.labels("pv")
-
-    def _is_enable_phase_switching(self, hostname: str) -> bool:
-        if self.get_config().enable_phase_switching:
-            require_hostname = self.get_config().enable_phase_switching_on_host_only
-            return not require_hostname or require_hostname == hostname
-        return False
 
     def set_desired_mode(self, mode: ChargeMode) -> None:
         logger.info(f"set_desired_mode: {self.get_data().desired_mode} -> {mode}")
@@ -352,5 +344,5 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
 class ChargeControllerFactory:
     @classmethod
-    def newController(cls, meter: Meter, wb: Wallbox, hostname="", **kwargs) -> ChargeController:
-        return ChargeController(ChargeControllerConfig(**kwargs), meter, wb, hostname)
+    def newController(cls, meter: Meter, wb: Wallbox, relay: PhaseRelay, **kwargs) -> ChargeController:
+        return ChargeController(ChargeControllerConfig(**kwargs), meter, wb, relay)

@@ -4,6 +4,7 @@ import unittest
 import unittest.mock as mock
 import flask
 from pvcontrol import views
+from pvcontrol.relay import PhaseRelayData
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.meter import MeterData
 from pvcontrol.wallbox import WallboxData
@@ -45,17 +46,20 @@ class PvControlViewTest(unittest.TestCase):
         self.app = app.test_client()
         self.meter_data = MeterData(5000, 3000, 2000)
         self.wb_data = WallboxData()
+        self.relay_data = PhaseRelayData()
         self.controller_data = ChargeControllerData()
         self.car_data = CarData()
         meter = mock.Mock()
         meter.get_data.return_value = self.meter_data
         wb = mock.Mock()
         wb.get_data.return_value = self.wb_data
+        relay = mock.Mock()
+        relay.get_data.return_value = self.relay_data
         controller = mock.Mock()
         controller.get_data.return_value = self.controller_data
         car = mock.Mock()
         car.get_data.return_value = self.car_data
-        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", "v1", meter, wb, controller, car))
+        app.add_url_rule("/api/pvcontrol", view_func=views.PvControlView.as_view("get_pvcontrol", "v1", meter, wb, relay, controller, car))
 
     def test_pvcontrol_api(self):
         r = self.app.get("/api/pvcontrol")
@@ -64,6 +68,7 @@ class PvControlViewTest(unittest.TestCase):
         assert json is not None
         self.assertEqual(self.meter_data.__dict__, json["meter"])
         self.assertEqual(self.wb_data.__dict__, json["wallbox"])
+        self.assertEqual(self.relay_data.__dict__, json["relay"])
         self.assertEqual(self.controller_data.__dict__, json["controller"])
         _car = json["car"]
         self.assertRegex(
