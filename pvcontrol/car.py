@@ -322,14 +322,19 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
                 # print(f"{status}")
                 range_status = status["fuelStatus"]["rangeStatus"]["value"]
                 battery_status = range_status["primaryEngine"]
-                odometer_status = status["measurements"]["odometerStatus"]
+                mileage = self.get_data().mileage
+                try:
+                    mileage = status["measurements"]["odometerStatus"]["value"]["odometer"]
+                except Exception:
+                    # ignore missing mileage
+                    logger.warning("mileage/odometer data missing")
                 self.reset_error_counter()
                 return CarData(
                     error=0,
                     data_captured_at=dateutil.parser.isoparse(range_status["carCapturedTimestamp"]),
                     cruising_range=battery_status["remainingRange_km"],
                     soc=battery_status["currentSOC_pct"],
-                    mileage=odometer_status["value"]["odometer"],
+                    mileage=mileage,
                 )
         except HTTPError as e:
             # enforce login on 401
@@ -338,7 +343,7 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
             logger.error(e)
             self.inc_error_counter()
         except Exception as e:
-            logger.error(e)
+            logger.error(repr(e))
             self.inc_error_counter()
 
         return self.get_data()

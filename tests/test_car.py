@@ -158,9 +158,9 @@ class VolkswagenIDCarTest(unittest.TestCase):
         print(f"car_data={c}")
         self.assertGreater(c.soc, 0)
         self.assertGreater(c.cruising_range, 0)
-        self.assertGreater(c.mileage, 0)
         self.assertEqual(0, c.error)
         self.assertIsInstance(c.data_captured_at, datetime.datetime)
+        self.assertGreater(c.mileage, 0)
         # read second time, no login needed
         c = self.car.read_data()
         self.assertEqual(0, c.error)
