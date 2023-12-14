@@ -50,7 +50,7 @@ jobs:
         echo -n ${{ github.sha }} > version
         tar --exclude ./pvcontrol/__pycache__ -zcv -f pv-control.tar.gz ./pvcontrol/ ./ui/dist/ui/ requirements.txt *.md LICENSE version
     - name: Archive distribution
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pv-control.tar.gz
         path: pv-control.tar.gz
