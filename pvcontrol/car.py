@@ -192,6 +192,8 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
         super().__init__(config)
         self._client = None
         self._vin = config.vin
+        # additional jobs: charging, climatisation
+        self._carStatusUrl = f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=fuelStatus,measurements"
 
     @classmethod
     def _login(cls, user: str, password: str) -> OAuth2Session:
@@ -312,11 +314,11 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
 
             # TODO: get vin if not configured
             if self._client is not None:
-                status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=all")
+                status_res = self._client.get(self._carStatusUrl)
                 if status_res.status_code == 401:
                     # auth error -> refresh token
                     VolkswagenIDCar._refresh_token(self._client)
-                    status_res = self._client.get(f"{VolkswagenIDCar.mobile_api_uri}/vehicles/{self._vin}/selectivestatus?jobs=all")
+                    status_res = self._client.get(self._carStatusUrl)
                 status_res.raise_for_status()
                 status = status_res.json()
                 # print(f"{status}")
