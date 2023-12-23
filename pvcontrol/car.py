@@ -28,6 +28,7 @@ class CarData(BaseData):
 @dataclass
 class CarConfig(BaseConfig):
     cycle_time: int = 5 * 60  # [s] cycle time for reading car data, used by scheduler
+    energy_one_percent_soc: int = 580  # [Wh]
 
 
 C = typing.TypeVar("C", bound=CarConfig)  # type of configuration
@@ -39,10 +40,12 @@ class Car(BaseService[C, CarData]):
     _metrics_pvc_car_soc = prometheus_client.Gauge("pvcontrol_car_soc_ratio", "State of Charge")
     _metrics_pvc_car_range = prometheus_client.Gauge("pvcontrol_car_cruising_range_meters", "Remaining cruising range")
     _metrics_pvc_car_mileage = prometheus_client.Gauge("pvcontrol_car_mileage_meters", "Mileage")
+    _metrics_pvc_car_energy_consumption = prometheus_client.Counter("pvcontrol_car_energy_consumption_wh", "Energy Consumption")
 
     def __init__(self, config: C):
         super().__init__(config)
         self._set_data(CarData())
+        self._last_soc = 0
 
     def read_data(self) -> CarData:
         """Read meter data and report metrics. The data is cached."""
@@ -51,6 +54,10 @@ class Car(BaseService[C, CarData]):
         Car._metrics_pvc_car_soc.set(d.soc / 100)
         Car._metrics_pvc_car_range.set(d.cruising_range * 1000)
         Car._metrics_pvc_car_mileage.set(d.mileage * 1000)
+        if d.soc < self._last_soc:
+            # soc [0..100%], 100% = 58kWh = 58.000 Wh
+            Car._metrics_pvc_car_energy_consumption.inc((self._last_soc - d.soc) * self.get_config().energy_one_percent_soc)
+        self._last_soc = d.soc
         return d
 
     def _read_data(self) -> CarData:
@@ -60,12 +67,13 @@ class Car(BaseService[C, CarData]):
 class SimulatedCar(Car[CarConfig]):
     def __init__(self, config: CarConfig):
         super().__init__(config)
+        self.set_data(CarData(error=0, data_captured_at=datetime.now(), cruising_range=150, soc=50, mileage=10000))
 
     def set_data(self, d: CarData):
         self._set_data(d)
 
     def _read_data(self) -> CarData:
-        return CarData(error=0, data_captured_at=datetime.now(), cruising_range=150, soc=50, mileage=10000)
+        return self.get_data()
 
 
 # just to permanently grey out car SOC in UI

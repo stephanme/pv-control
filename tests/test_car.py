@@ -3,7 +3,7 @@ import logging
 import datetime
 import json
 import os
-from pvcontrol.car import HtmlFormParser, LoginFormParser, VolkswagenIDCar, VolkswagenIDCarConfig
+from pvcontrol.car import Car, CarConfig, CarData, HtmlFormParser, LoginFormParser, VolkswagenIDCar, VolkswagenIDCarConfig, SimulatedCar
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 # logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
@@ -176,3 +176,41 @@ class VolkswagenIDCarTest(unittest.TestCase):
         c = self.car.read_data()
         self.assertEqual(1, c.error)
         self.assertEqual(0, c.soc)
+
+
+class SimulatedCarTest(unittest.TestCase):
+    def setUp(self):
+        self.car = SimulatedCar(CarConfig())
+
+    def test_energy_consumption(self):
+        c = self.car.read_data()
+        self.assertEqual(50, c.soc)
+        self.assertEqual(0, Car._metrics_pvc_car_energy_consumption._value.get())
+
+        # driving
+        self.car.set_data(CarData(soc=49))
+        c = self.car.read_data()
+        self.assertEqual(49, c.soc)
+        self.assertEqual(580, Car._metrics_pvc_car_energy_consumption._value.get())
+
+        self.car.set_data(CarData(soc=40))
+        c = self.car.read_data()
+        self.assertEqual(40, c.soc)
+        self.assertEqual(5800, Car._metrics_pvc_car_energy_consumption._value.get())
+
+        # not driving
+        c = self.car.read_data()
+        self.assertEqual(40, c.soc)
+        self.assertEqual(5800, Car._metrics_pvc_car_energy_consumption._value.get())
+
+        # charging
+        self.car.set_data(CarData(soc=50))
+        c = self.car.read_data()
+        self.assertEqual(50, c.soc)
+        self.assertEqual(5800, Car._metrics_pvc_car_energy_consumption._value.get())
+
+        # driving
+        self.car.set_data(CarData(soc=40))
+        c = self.car.read_data()
+        self.assertEqual(40, c.soc)
+        self.assertEqual(2 * 5800, Car._metrics_pvc_car_energy_consumption._value.get())
