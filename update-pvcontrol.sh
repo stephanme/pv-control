@@ -14,7 +14,7 @@ else
     gh release download "$1" -R stephanme/pv-control --pattern 'pv-control.tar.gz' --output pv-control.tar.gz
 fi
 mkdir -p pvcontrol && tar -xzf pv-control.tar.gz -C ./pvcontrol
-pip install -r pvcontrol/requirements.txt
+~/.env/bin/pip install -r pvcontrol/requirements.txt
 sudo mv /usr/local/bin/pvcontrol /usr/local/bin/pvcontrol-old
 sudo mv ./pvcontrol /usr/local/bin/pvcontrol
 sudo systemctl restart pvcontrol.service

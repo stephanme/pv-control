@@ -75,13 +75,14 @@ reduced functionality.
 Pre-requisites:
 - Raspberry Pi 2 with Raspberry Pi OS Lite (Debian 12), or newer model
 - [Raspberry Pi Expansion Board, Power Relay](https://www.waveshare.com/rpi-relay-board.htm)
-- Python 3.11
+- Python 3.11, needs a [venv](https://www.raspberrypi.com/documentation/computers/os.html#python-on-raspberry-pi) on Debias 12 for pip
 - download `pv-control.tar.gz` package (release artifacts or from github actions)
 
 The following procedure installs pvcontrol behind an nginx on port 80.
 
 ```
-sudo apt install python3-pip
+python -m venv --system-site-packages ~/.env
+source ~/.env/bin/activate
 
 sudo mkdir -p /usr/local/bin/pvcontrol 
 sudo tar -xzf pv-control.tar.gz -C /usr/local/bin/pvcontrol
