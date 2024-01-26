@@ -58,7 +58,9 @@ class RelayType(str, enum.Enum):
 @dataclass
 class PhaseRelayConfig(BaseConfig):
     enable_phase_switching: bool = True  # set to False of phase relay is not in operation
-    installed_on_host: str = ""  # if set, phase switching is only allowed when running on specified host (passed to pvcontrol via --hostname option, e.g. k8s nodeName)
+    installed_on_host: str = (
+        ""  # if set, phase switching is only allowed when running on specified host (passed to pvcontrol via --hostname option, e.g. k8s nodeName)
+    )
     phase_relay_type: RelayType = RelayType.NO
 
 
