@@ -18,7 +18,7 @@ click==8.1.7
     # via flask
 cryptography==42.0.0
     # via authlib
-flask==3.0.1
+flask==3.0.2
     # via -r requirements.in
 idna==3.6
     # via requests
