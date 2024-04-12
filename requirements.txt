@@ -20,7 +20,7 @@ cryptography==42.0.3
     # via authlib
 flask==3.0.2
     # via -r requirements.in
-idna==3.6
+idna==3.7
     # via requests
 itsdangerous==2.1.2
     # via flask
