@@ -38,7 +38,7 @@ pymodbustcp==0.2.1
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via -r requirements.in
-requests==2.31.0
+requests==2.32.1
     # via -r requirements.in
 RPi.GPIO==0.7.1; ('arm' in platform_machine or 'aarch64' == platform_machine) and 'linux' in sys_platform
     # via -r requirements.in, manually added
