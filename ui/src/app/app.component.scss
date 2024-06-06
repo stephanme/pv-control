@@ -26,12 +26,12 @@ mat-card-content {
 // = mat-primary + mat-body-strong
 .active {
   font-weight: 500;
-  color: mat.get-color-from-palette(themes.$light-primary, 'default') !important;
+  color: mat.m2-get-color-from-palette(themes.$light-primary, 'default') !important;
 }
 :host-context(.dark-theme) {
   .active {
     font-weight: 500;
-    color: mat.get-color-from-palette(themes.$dark-primary, 'default') !important;
+    color: mat.m2-get-color-from-palette(themes.$dark-primary, 'default') !important;
   }
 }
 
