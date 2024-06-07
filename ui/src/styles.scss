@@ -31,7 +31,7 @@ html {
   }
 
   // only include colors to avoid style duplication (see https://material.angular.io/guide/duplicate-theming-styles)
-  .dark-theme {
+  @media (prefers-color-scheme: dark) {
     @include mat.core-color(themes.$dark-theme);
 
     @include mat.toolbar-color(themes.$dark-theme);

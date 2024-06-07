@@ -8,9 +8,7 @@
 /* enforce mat-elevation-z4, fix shadow color for dark theme */
 mat-card.mat-mdc-card {
   @include mat.elevation(4);
-}
-:host-context(.dark-theme) {
-  mat-card.mat-mdc-card {
+  @media (prefers-color-scheme: dark) {
     @include mat.elevation(4, white);
   }
 }
@@ -32,10 +30,7 @@ mat-card-content {
 .active {
   font-weight: 500;
   color: mat.get-theme-color(themes.$light-theme, primary) !important;
-}
-:host-context(.dark-theme) {
-  .active {
-    font-weight: 500;
+  @media (prefers-color-scheme: dark) {
     color: mat.get-theme-color(themes.$dark-theme, primary) !important;
   }
 }

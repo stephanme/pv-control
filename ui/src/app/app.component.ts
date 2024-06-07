@@ -1,4 +1,4 @@
-import { ApplicationRef, ChangeDetectionStrategy, Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { Subscription, timer } from 'rxjs';
 
@@ -34,8 +34,6 @@ import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
   ]
 })
 export class AppComponent implements OnInit, OnDestroy {
-  darkTheme = false;
-
   ChargeMode = ChargeMode;
   PhaseMode = PhaseMode;
 
@@ -92,7 +90,7 @@ export class AppComponent implements OnInit, OnDestroy {
   phaseModeControl = this.fb.control({value: PhaseMode.DISABLED, disabled: true});
 
   constructor(
-    private appRef: ApplicationRef, private fb: FormBuilder, private snackBar: MatSnackBar,
+    private fb: FormBuilder, private snackBar: MatSnackBar,
     private httpStatusService: HttpStatusService, private pvControlService: PvControlService,
     @Inject(DOCUMENT) private document: Document) { }
 
@@ -103,21 +101,6 @@ export class AppComponent implements OnInit, OnDestroy {
         duration: 10000
       });
     });
-    if (window.matchMedia) {
-      this.darkTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (this.darkTheme) {
-        this.document.body.classList.add('dark-theme');
-      }
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
-        this.darkTheme = e.matches;
-        if (this.darkTheme) {
-          this.document.body.classList.add('dark-theme');
-        } else {
-          this.document.body.classList.remove('dark-theme');
-        }
-        this.appRef.tick(); // refresh UI
-      });
-    }
     this.startAutoRefresh();
   }
 
