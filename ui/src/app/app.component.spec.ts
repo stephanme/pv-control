@@ -20,6 +20,7 @@ import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 import { AppComponent } from './app.component';
 import { ChargeMode, PhaseMode, PvControl } from './pv-control.service';
 import { statusInterceptor } from './http-status.service';
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 
 
 describe('AppComponent', () => {
@@ -52,6 +53,7 @@ describe('AppComponent', () => {
         AppComponent
       ],
       providers: [
+        provideExperimentalZonelessChangeDetection(),
         provideHttpClient(withInterceptors([statusInterceptor])), 
         provideHttpClientTesting(),
       ]
@@ -94,7 +96,7 @@ describe('AppComponent', () => {
 
     jasmine.clock().install();
     // wait for ngInit
-    fixture.detectChanges();
+    await fixture.whenStable();
     // pass initial 200ms wait for first refresh
     jasmine.clock().tick(300);
 
@@ -135,7 +137,6 @@ describe('AppComponent', () => {
     pvControlData.wallbox.car_status = 1;
     pvControlData.wallbox.phases_out = 0;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
-    fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.css('#car-max-current'))).toBeNull();
     expect(fixture.debugElement.query(By.css('#car-charge-power'))).toBeNull();
@@ -146,7 +147,7 @@ describe('AppComponent', () => {
     const refreshIcon = fixture.debugElement.query(By.css('#refresh mat-icon')).nativeElement;
 
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(refreshIcon.className).not.toContain('spin');
     expect(component.chargeModeControl.value).toBe(ChargeMode.OFF);
@@ -186,7 +187,7 @@ describe('AppComponent', () => {
     pvControlData.car.error = 4;
     pvControlData.wallbox.error = 4;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(fixture.debugElement.query(By.css('#card-pv mat-icon')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-pv span')).nativeElement.className).toContain('col-grey');
@@ -248,7 +249,7 @@ describe('AppComponent', () => {
   it('should support disabled phase relay', async () => {
     pvControlData.controller.phase_mode = PhaseMode.DISABLED;
     httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(component.phaseModeControl.disabled).toBeTrue();
     expect(await phaseModeAuto.isChecked()).toBeFalse();
