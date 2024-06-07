@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, HostListener, Inject, OnDestroy, On
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { Subscription, timer } from 'rxjs';
 
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatToolbar } from '@angular/material/toolbar';
+import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
+import { MatIcon } from '@angular/material/icon';
+import { MatIconButton } from '@angular/material/button';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -24,13 +24,18 @@ import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
     // from CommonModule
     AsyncPipe,
     DecimalPipe,
+    // material components
+    MatCard,
+    MatCardContent,
+    MatCardHeader,
+    MatCardTitle,
+    MatIcon,
+    MatIconButton,
+    MatButtonToggle,
+    MatButtonToggleGroup,
+    MatToolbar,
     // other modules not yet available standalone
     ReactiveFormsModule,
-    MatToolbarModule,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatButtonToggleModule,
   ]
 })
 export class AppComponent implements OnInit, OnDestroy {
