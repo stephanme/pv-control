@@ -81,9 +81,9 @@ export class AppComponent implements OnInit, OnDestroy {
   errorCar = false;
   colorPv = 'col-yellow';
   colorGrid = 'col-red';
-  colorHome= 'mat-primary';
-  colorCar = 'mat-primary';
-  colorWallbox= 'mat-primary';
+  colorHome= 'col-primary';
+  colorCar = 'col-primary';
+  colorWallbox= 'col-primary';
 
   isCharging = false;
   chargingStateIcon = 'power_off';
@@ -161,11 +161,11 @@ export class AppComponent implements OnInit, OnDestroy {
           this.colorPv = this.colorHome = this.colorGrid = 'col-grey';
         } else {
           this.colorPv = 'col-yellow';
-          this.colorHome = 'mat-primary';
+          this.colorHome = 'col-primary';
           this.colorGrid = (pv.meter.power_grid <= 0) ? 'col-green' : 'col-red';
         }
-        this.colorCar = this.errorCar ? 'col-grey' : 'mat-primary';
-        this.colorWallbox = this.errorWallbox ? 'col-grey' : 'mat-primary';
+        this.colorCar = this.errorCar ? 'col-grey' : 'col-primary';
+        this.colorWallbox = this.errorWallbox ? 'col-grey' : 'col-primary';
         
         this.isCharging = pv.wallbox.phases_out > 0;
         this.chargingStateIcon = AppComponent.chargingStateIcon(pv);

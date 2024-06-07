@@ -14,22 +14,52 @@
 // Alternatively, you can import and @include the theme mixins for each component
 // that you are using.
 
-@include mat.core-theme(themes.$light-theme);
+html {
+  @include mat.core-theme(themes.$light-theme);
 
-// https://github.com/angular/components/blob/main/src/material/core/theming/_all-theme.scss
-@include mat.toolbar-theme(themes.$light-theme);
-@include mat.card-theme(themes.$light-theme);
-@include mat.icon-theme(themes.$light-theme);
-@include mat.button-theme(themes.$light-theme);
-@include mat.icon-button-theme(themes.$light-theme);
-@include mat.snack-bar-theme(themes.$light-theme);
-@include mat.button-toggle-theme(themes.$light-theme);
+  // https://github.com/angular/components/blob/main/src/material/core/theming/_all-theme.scss
+  @include mat.toolbar-theme(themes.$light-theme);
+  @include mat.card-theme(themes.$light-theme);
+  @include mat.icon-theme(themes.$light-theme);
+  @include mat.button-theme(themes.$light-theme);
+  @include mat.icon-button-theme(themes.$light-theme);
+  @include mat.snack-bar-theme(themes.$light-theme);
+  @include mat.button-toggle-theme(themes.$light-theme);
 
-@include mat.typography-hierarchy(themes.$light-theme);
+  .col-primary {
+    color: mat.get-theme-color(themes.$light-theme, primary);
+  }
+
+  // only include colors to avoid style duplication (see https://material.angular.io/guide/duplicate-theming-styles)
+  .dark-theme {
+    @include mat.core-color(themes.$dark-theme);
+
+    @include mat.toolbar-color(themes.$dark-theme);
+    @include mat.card-color(themes.$dark-theme);
+    @include mat.icon-color(themes.$dark-theme);
+    @include mat.button-color(themes.$dark-theme);
+    @include mat.icon-button-color(themes.$dark-theme);
+    @include mat.snack-bar-color(themes.$dark-theme);
+    @include mat.button-toggle-color(themes.$dark-theme);
+
+    .col-primary {
+      color: mat.get-theme-color(themes.$dark-theme, primary);
+    }
+  
+    .col-default-two-tone-icon {
+      color: transparent;
+      background: white;
+      background-clip: text;
+      -webkit-background-clip: text;  
+    }    
+  }
+}
 
 .col-grey {
   color: #9E9E9E;
 }
+
+// https://github.com/material-components/material-components-web-react/issues/730#issuecomment-1071052873
 .col-grey-two-tone-icon {
   color: transparent;
   background: #9E9E9E;
@@ -47,27 +77,6 @@
 
 .col-red {
   color: #dc3545;
-}
-
-// only include colors to avoid style duplication (see https://material.angular.io/guide/duplicate-theming-styles)
-.dark-theme {
-  @include mat.core-color(themes.$dark-theme);
-
-  @include mat.toolbar-color(themes.$dark-theme);
-  @include mat.card-color(themes.$dark-theme);
-  @include mat.icon-color(themes.$dark-theme);
-  @include mat.button-color(themes.$dark-theme);
-  @include mat.icon-button-color(themes.$dark-theme);
-  @include mat.snack-bar-color(themes.$dark-theme);
-  @include mat.button-toggle-color(themes.$dark-theme);
-
-  // https://github.com/material-components/material-components-web-react/issues/730#issuecomment-1071052873
-  .col-default-two-tone-icon {
-    color: transparent;
-    background: white;
-    background-clip: text;
-    -webkit-background-clip: text;  
-  }
 }
 
 /* You can add global styles to this file, and also import other style files */
