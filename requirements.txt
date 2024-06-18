@@ -44,7 +44,7 @@ RPi.GPIO==0.7.1; ('arm' in platform_machine or 'aarch64' == platform_machine) an
     # via -r requirements.in, manually added
 six==1.16.0
     # via python-dateutil
-urllib3==2.2.1
+urllib3==2.2.2
     # via requests
 werkzeug==3.0.3
     # via flask
