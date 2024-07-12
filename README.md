@@ -173,4 +173,4 @@ pip install -r requirements.txt -U
 
 ## CI and Release
 
-A docker container [stephanme/pv-control](https://hub.docker.com/r/stephanme/pv-control/tags) is built for every commit via github actions. The arm image is intended to run on a k8s cluster on a Raspberry node.
+A docker container [ghcr.io/stephanme/pv-control](https://github.com/stephanme/pv-control/pkgs/container/pv-control) is built for every commit via github actions. The arm image is intended to run on a k8s cluster on a Raspberry node.
