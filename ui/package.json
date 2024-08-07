@@ -24,13 +24,13 @@
     "tslib": "2.6.3"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "18.1.2",
+    "@angular-devkit/build-angular": "18.1.4",
     "@angular-eslint/builder": "18.1.0",
     "@angular-eslint/eslint-plugin": "18.1.0",
     "@angular-eslint/eslint-plugin-template": "18.1.0",
     "@angular-eslint/schematics": "18.1.0",
     "@angular-eslint/template-parser": "18.1.0",
-    "@angular/cli": "18.1.2",
+    "@angular/cli": "18.1.4",
     "@angular/compiler-cli": "18.1.2",
     "@types/jasmine": "5.1.4",
     "@types/node": "20.14.12",
