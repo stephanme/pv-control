@@ -34,7 +34,7 @@ prometheus-client==0.20.0
     # via -r requirements.in
 pycparser==2.22
     # via cffi
-pymodbustcp==0.2.1
+pymodbustcp==0.3.0
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via -r requirements.in
