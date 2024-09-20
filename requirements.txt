@@ -30,7 +30,7 @@ markupsafe==2.1.5
     # via
     #   jinja2
     #   werkzeug
-prometheus-client==0.20.0
+prometheus-client==0.21.0
     # via -r requirements.in
 pycparser==2.22
     # via cffi
