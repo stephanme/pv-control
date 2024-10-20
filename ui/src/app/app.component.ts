@@ -205,7 +205,7 @@ export class AppComponent implements OnInit, OnDestroy {
         if (pv.wallbox.allow_charging) {
           return 'battery_full';
         } else {
-          return 'battery_50';
+          return 'battery_3_bar';
         }
       default: // unknown
         return 'battery_unknown';

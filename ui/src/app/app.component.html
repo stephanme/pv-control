@@ -52,7 +52,7 @@
               <span id="car-max-current" class="flex-none text-center" [class.col-grey]="wallboxError()">{{wallboxPhasesOut()}}x {{wallboxMaxCurrent()}} A</span>
               <span id="car-charge-power" class="flex-grow text-right" [class.col-grey]="wallboxError()">{{wallboxPower()/1000|number:'1.1-1'}} kW</span>
             } @else {
-              <mat-icon id="car-charge-state" [inline]="true" class="flex-grow text-right" fontSet="material-icons-two-tone" [class]="wallboxChargingIconColor()">{{wallboxChargingIcon()}}</mat-icon>
+              <mat-icon id="car-charge-state" [inline]="true" class="flex-grow text-right" [class]="wallboxChargingIconColor()">{{wallboxChargingIcon()}}</mat-icon>
             }
           </mat-card-title>
         </mat-card-header>
@@ -78,7 +78,7 @@
     <div>
       <mat-card id="card-temp">
         <mat-card-header>
-          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="wallboxIconColor()">thermostat</mat-icon>
+          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="wallboxIconColor()">thermometer</mat-icon>
             <span class="flex-grow text-right" [class.col-grey]="wallboxError()">{{wallboxTemperature()|number:'1.0-0'}} °C</span>
           </mat-card-title>
         </mat-card-header>

@@ -44,27 +44,12 @@ html {
 
     .col-primary {
       color: mat.get-theme-color(themes.$dark-theme, primary);
-    }
-  
-    .col-default-two-tone-icon {
-      color: transparent;
-      background: white;
-      background-clip: text;
-      -webkit-background-clip: text;  
-    }    
+    }  
   }
 }
 
 .col-grey {
   color: #9E9E9E;
-}
-
-// https://github.com/material-components/material-components-web-react/issues/730#issuecomment-1071052873
-.col-grey-two-tone-icon {
-  color: transparent;
-  background: #9E9E9E;
-  background-clip: text;
-  -webkit-background-clip: text;  
 }
 
 .col-yellow {
