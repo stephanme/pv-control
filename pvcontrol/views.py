@@ -38,13 +38,15 @@ class StaticResourcesView(flask.views.MethodView):
         max_age = 31536000 if StaticResourcesView.is_immutable_resource(path) else None  # 1y in seconds 365*24*60*60
         return flask.send_from_directory("../ui/dist/ui/browser", path, max_age=max_age)
 
-    _angular_hashed_files_pattern = re.compile(r"\w+\.[0-9a-fA-F]{16,}\.\w+")
+    _angular_hashed_files_pattern = re.compile(r"\w+-[0-9a-zA-Z]{8,}\.\w+")
 
     @classmethod
     def is_immutable_resource(cls, path: str) -> bool:
         # short cut for
         if path == "index.html":
             return False
+        # remove any path prefix
+        path = path.split("/")[-1]
         return True if StaticResourcesView._angular_hashed_files_pattern.match(path) is not None else False
 
 

@@ -34,8 +34,10 @@ class StaticResourcesViewTest(unittest.TestCase):
         self.assertFalse(views.StaticResourcesView.is_immutable_resource("index.html"))
         self.assertFalse(views.StaticResourcesView.is_immutable_resource("main.js"))
         self.assertFalse(views.StaticResourcesView.is_immutable_resource("assets/android-chrome-192x192.png"))
-        self.assertTrue(views.StaticResourcesView.is_immutable_resource("main.b0dc5c2db2936007.js"))
-        self.assertTrue(views.StaticResourcesView.is_immutable_resource("styles.8b5dbd984bf44745.css"))
+        self.assertTrue(views.StaticResourcesView.is_immutable_resource("main-CJJAB4LV.js"))
+        self.assertTrue(views.StaticResourcesView.is_immutable_resource("chunk-NSPGX3AG.js"))
+        self.assertTrue(views.StaticResourcesView.is_immutable_resource("styles-KDI3WURQ.css"))
+        self.assertTrue(views.StaticResourcesView.is_immutable_resource("media/matsymbols-U55GHSFU.woff2"))
 
 
 class PvControlViewTest(unittest.TestCase):
