@@ -48,11 +48,6 @@ html {
   }
 }
 
-// use filled icons by default, downloading only filled icons doesn't work (see index.html)
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 1
-}
-
 .col-grey {
   color: #9E9E9E;
 }
@@ -143,6 +138,37 @@ body {
 
 .grid-col-span-2 {
   grid-column: span 2 / auto;
+}
+
+// self-hosted material symbols
+// for development: add to index.html:
+//   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0..1,0&display=block&icon_names=autorenew,battery_3_bar,battery_charging_50,battery_full,battery_unknown,electric_car,ev_station,home,hourglass_bottom,power,power_off,thermometer,wb_sunny" />
+// Note: icon_names param doesn't work with FILL=1, only with FILL=0..1
+// for production: download the font and save as matsymbols.woff2 in src/media folder
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(./media/matsymbols.woff2) format('woff2');
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 1 /* use filled icons by default */
 }
 
 /* others */
