@@ -48,6 +48,11 @@ html {
   }
 }
 
+// use filled icons by default, downloading only filled icons doesn't work (see index.html)
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 1
+}
+
 .col-grey {
   color: #9E9E9E;
 }

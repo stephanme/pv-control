@@ -302,7 +302,7 @@ describe('AppComponent', () => {
 
     pvControlData.wallbox.car_status = 4; // ChargingFinished
     pvControlData.wallbox.allow_charging = false;
-    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_50');
+    expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_3_bar');
     pvControlData.wallbox.allow_charging = true;
     expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_full');
   });
