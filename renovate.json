@@ -5,9 +5,13 @@
   ],
   "packageRules": [
     {
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["python"],
-      "enabled": false
+      "matchDatasources": [
+        "docker"
+      ],
+      "enabled": false,
+      "matchPackageNames": [
+        "/python/"
+      ]
     }
   ]
 }
