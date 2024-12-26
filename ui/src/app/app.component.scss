@@ -1,5 +1,4 @@
 @use '@angular/material' as mat;
-@use '../themes';
 
 .content {
   padding: 16px;
@@ -29,10 +28,14 @@ mat-card-content {
 // = mat-primary + mat-body-strong
 .active {
   font-weight: 500;
-  color: mat.get-theme-color(themes.$light-theme, primary) !important;
-  @media (prefers-color-scheme: dark) {
-    color: mat.get-theme-color(themes.$dark-theme, primary) !important;
-  }
+  color: var(--mat-sys-primary) !important;
+}
+
+// less font-weight for button toggles unless active
+#card-chargemode {
+  @include mat.button-toggle-overrides((
+    label-text-weight: 400,
+  ));
 }
 
 .grid-template-pv {
