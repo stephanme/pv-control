@@ -7,7 +7,8 @@
 // Include the common styles for Angular Material. We include this here so that you only
 // have to load a single css file for Angular Material in your app.
 // Be sure that you only ever include this mixin once!
-@include mat.core();
+@include mat.elevation-classes();
+@include mat.app-background();
 
 
 // Include theme styles for core and each component used in your app.
@@ -15,7 +16,8 @@
 // that you are using.
 
 html {
-  @include mat.core-theme(themes.$light-theme);
+  @include mat.elevation-classes();
+  @include mat.app-background();
 
   // https://github.com/angular/components/blob/main/src/material/core/theming/_all-theme.scss
   @include mat.toolbar-theme(themes.$light-theme);
@@ -32,7 +34,8 @@ html {
 
   // only include colors to avoid style duplication (see https://material.angular.io/guide/duplicate-theming-styles)
   @media (prefers-color-scheme: dark) {
-    @include mat.core-color(themes.$dark-theme);
+    @include mat.elevation-classes();
+    @include mat.app-background();
 
     @include mat.toolbar-color(themes.$dark-theme);
     @include mat.card-color(themes.$dark-theme);

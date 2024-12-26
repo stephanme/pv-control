@@ -12,31 +12,29 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { HttpStatusService } from './http-status.service';
 import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control.service';
-import { AsyncPipe, DecimalPipe, DOCUMENT } from '@angular/common';
+import { DecimalPipe, DOCUMENT } from '@angular/common';
 
 @Component({
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss',
-  imports: [
-    // from CommonModule
-    AsyncPipe,
-    DecimalPipe,
-    // material components
-    MatCard,
-    MatCardContent,
-    MatCardHeader,
-    MatCardTitle,
-    MatIcon,
-    MatIconButton,
-    MatButtonToggle,
-    MatButtonToggleGroup,
-    MatToolbar,
-    // other modules not yet available standalone
-    ReactiveFormsModule,
-  ]
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrl: './app.component.scss',
+    imports: [
+        // from CommonModule
+        DecimalPipe,
+        // material components
+        MatCard,
+        MatCardContent,
+        MatCardHeader,
+        MatCardTitle,
+        MatIcon,
+        MatIconButton,
+        MatButtonToggle,
+        MatButtonToggleGroup,
+        MatToolbar,
+        // other modules not yet available standalone
+        ReactiveFormsModule,
+    ]
 })
 export class AppComponent implements OnInit, OnDestroy {
   ChargeMode = ChargeMode;
