@@ -3,6 +3,7 @@ import logging
 # configure logging before initializing further modules
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+logging.getLogger("pyModbusTCP.client").setLevel(logging.INFO)
 
 import argparse
 import json
