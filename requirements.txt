@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe requirements.in
 #
-authlib==1.5.0
+authlib==1.5.1
     # via -r requirements.in
 blinker==1.9.0
     # via flask
