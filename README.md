@@ -75,7 +75,9 @@ reduced functionality.
 Pre-requisites:
 - Raspberry Pi 2 with Raspberry Pi OS Lite (Debian 12), or newer model
 - [Raspberry Pi Expansion Board, Power Relay](https://www.waveshare.com/rpi-relay-board.htm)
-- Python 3.11, needs a [venv](https://www.raspberrypi.com/documentation/computers/os.html#python-on-raspberry-pi) on Debias 12 for pip
+- Python 3.13
+  - installation like described in (https://wiki.lupsha.com/how-to-upgrade-to-python-3-12-on-raspberry-pi/)
+  - needs a [venv](https://www.raspberrypi.com/documentation/computers/os.html#python-on-raspberry-pi) on Debias 12 for pip
 - download `pv-control.tar.gz` package (release artifacts or from github actions)
 
 The following procedure installs pvcontrol behind an nginx on port 80.
@@ -127,7 +129,7 @@ Example k8s manifest for deploying pv-control:
 pv-control contains a number of mock implementations for wallbox and inverter/power meter to allow testing and local development.
 
 Basic setup:
-- Python 3.11 (use pyenv and create a virtual env pv-control-3.11)
+- Python 3.13 (use pyenv and create a virtual env pv-control-3.13)
 - a recent version of node and npm (see Angular requirements)
 
 How to run locally:
@@ -137,7 +139,7 @@ npm install
 ng build
 
 # in pv-control
-pyenv activate pv-control-3.11
+pyenv activate pv-control-3.13
 pip install -r requirements.txt
 python -m pvcontrol
 
@@ -161,7 +163,7 @@ npm run test
 For reproducible builds, requirements.txt shall pin all packages using [pip-compile](https://github.com/jazzband/pip-tools).
 Update Python deps:
 ```
-# pyenv activate pv-control-3.11
+# pyenv activate pv-control-3.13
 python -m pip install --upgrade pip
 pip install -r requirements-dev.txt -U
 pip-compile --upgrade --resolver backtracking --allow-unsafe requirements.in
