@@ -3,7 +3,7 @@ FROM python:3.11-bullseye AS builder
 # install/compile wheels
 WORKDIR /usr/src/app
 COPY requirements.txt ./
-RUN pip wheel --no-cache-dir --prefer-binary --extra-index-url https://www.piwheels.org/simple --wheel-dir /usr/wheels -r requirements.txt
+RUN pip wheel --no-cache-dir --prefer-binary --wheel-dir /usr/wheels -r requirements.txt
 
 
 FROM python:3.11-slim-bullseye
