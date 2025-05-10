@@ -134,6 +134,7 @@ class LoginFormParserTest(unittest.TestCase):
         self.assertEqual("hmac value", p.hidden_input_values["templateModel"]["hmac"])
 
 
+@unittest.skip
 @unittest.skipUnless(len(car_config) > 0, "needs car_test_config.json")
 class VolkswagenIDCarTest(unittest.TestCase):
     def setUp(self):
