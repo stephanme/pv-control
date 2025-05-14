@@ -1,6 +1,8 @@
+import asyncio
+from contextlib import suppress
 import datetime
 import threading
-from typing import Callable
+from typing import Awaitable, Callable
 
 
 class Scheduler:
@@ -35,3 +37,33 @@ class Scheduler:
 
     def is_started(self) -> bool:
         return self._started
+
+
+class AsyncScheduler:
+    def __init__(self, interval: float, coro: Awaitable):
+        self._interval = interval
+        self._coro = coro
+        self._task = None
+
+    async def start(self):
+        if self._task:
+            return
+        self._task = asyncio.create_task(self._run())
+
+    async def stop(self) -> None:
+        if self._task:
+            task = self._task
+            self._task = None
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+
+    def is_started(self) -> bool:
+        return self._task is not None
+
+    async def _run(self) -> None:
+        while True:
+            await asyncio.gather(
+                self._coro(),
+                asyncio.sleep(self._interval),
+            )

@@ -13,6 +13,10 @@ from requests import PreparedRequest, Response
 from requests.adapters import BaseAdapter
 from requests.exceptions import HTTPError
 from pvcontrol.service import BaseConfig, BaseData, BaseService
+from aiohttp import ClientSession
+from myskoda import MySkoda
+from myskoda.models.charging import Charging
+from myskoda.models.health import Health
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +51,9 @@ class Car(BaseService[C, CarData]):
         self._set_data(CarData())
         self._last_soc = 0
 
-    def read_data(self) -> CarData:
+    async def read_data(self) -> CarData:
         """Read meter data and report metrics. The data is cached."""
-        d = self._read_data()
+        d = await self._read_data()
         self._set_data(d)
         Car._metrics_pvc_car_soc.set(d.soc / 100)
         Car._metrics_pvc_car_range.set(d.cruising_range * 1000)
@@ -60,7 +64,7 @@ class Car(BaseService[C, CarData]):
         self._last_soc = d.soc
         return d
 
-    def _read_data(self) -> CarData:
+    async def _read_data(self) -> CarData:
         return self.get_data()
 
 
@@ -72,9 +76,6 @@ class SimulatedCar(Car[CarConfig]):
     def set_data(self, d: CarData):
         self._set_data(d)
 
-    def _read_data(self) -> CarData:
-        return self.get_data()
-
 
 # just to permanently grey out car SOC in UI
 class NoCar(Car[CarConfig]):
@@ -85,7 +86,7 @@ class NoCar(Car[CarConfig]):
         self.inc_error_counter()
         self.inc_error_counter()
 
-    def _read_data(self) -> CarData:
+    async def _read_data(self) -> CarData:
         return CarData(data_captured_at=datetime.now())
 
 
@@ -192,6 +193,7 @@ class VolkswagenIDCarConfig(CarConfig):
     disabled: bool = False
 
 
+# TODO: convert to asyncio
 class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
     mobile_api_uri = "https://emea.bff.cariad.digital/vehicle/v1"
     user_agent = {"User-Agent": "curl"}  # default "python-requests/2.31.0" leads to 403
@@ -309,7 +311,7 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
         # print(f"api_token refreshed={api_token}")
         client.token = api_token
 
-    def _read_data(self) -> CarData:
+    async def _read_data(self) -> CarData:
         if self.get_config().disabled:
             self.inc_error_counter()
             return CarData()
@@ -359,6 +361,55 @@ class VolkswagenIDCar(Car[VolkswagenIDCarConfig]):
         return self.get_data()
 
 
+# myskoda lib uses asyncio, so it assumes a running event loop
+class SkodaCar(Car[VolkswagenIDCarConfig]):
+    def __init__(self, config: VolkswagenIDCarConfig):
+        super().__init__(config)
+        self._session = None
+        self._myskoda = None
+
+    async def _read_data(self) -> CarData:
+        if self.get_config().disabled:
+            self.inc_error_counter()
+            return CarData()
+
+        try:
+            if not self._myskoda:
+                await self._connect()
+
+            cfg = self.get_config()
+            charging: Charging = await self._myskoda.get_charging(cfg.vin)
+            health: Health = await self._myskoda.get_health(cfg.vin)
+
+            return CarData(
+                error=0,
+                data_captured_at=charging.car_captured_timestamp,
+                soc=charging.status.battery.state_of_charge_in_percent,
+                cruising_range=charging.status.battery.remaining_cruising_range_in_meters / 1000,
+                mileage=health.mileage_in_km,
+            )
+        except Exception as e:
+            logger.error(repr(e))
+            self.inc_error_counter()
+            await self.disconnect()  # enforce reconnection
+
+        return self.get_data()
+
+    async def _connect(self):
+        cfg = self.get_config()
+        self._session = ClientSession()
+        self._myskoda = MySkoda(self._session, mqtt_enabled=False)
+        await self._myskoda.connect(cfg.user, cfg.password)
+
+    async def disconnect(self):
+        if self._myskoda:
+            await self._myskoda.disconnect()
+            self._myskoda = None
+        if self._session:
+            await self._session.close()
+            self._session = None
+
+
 class CarFactory:
     @classmethod
     def newCar(cls, type: str, **kwargs) -> Car:
@@ -368,5 +419,7 @@ class CarFactory:
             return NoCar(CarConfig(**kwargs))
         elif type == "VolkswagenIDCar":
             return VolkswagenIDCar(VolkswagenIDCarConfig(**kwargs))
+        elif type == "SkodaCar":
+            return SkodaCar(VolkswagenIDCarConfig(**kwargs))
         else:
             raise ValueError(f"Bad car type: {type}")

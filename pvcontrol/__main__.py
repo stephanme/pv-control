@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import threading
 
 # configure logging before initializing further modules
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
@@ -17,7 +19,7 @@ from pvcontrol.chargecontroller import ChargeControllerFactory
 from pvcontrol.wallbox import WallboxFactory
 from pvcontrol.relay import PhaseRelayFactory
 from pvcontrol.car import CarFactory
-from pvcontrol.scheduler import Scheduler
+from pvcontrol.scheduler import AsyncScheduler, Scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +61,20 @@ meter = MeterFactory.newMeter(args.meter, wallbox, **config["meter"])
 car = CarFactory.newCar(args.car, **config["car"])
 controller = ChargeControllerFactory.newController(meter, wallbox, relay, **config["controller"])
 
+
+def start_event_loop():
+    asyncio.set_event_loop(event_loop)
+    event_loop.run_forever()
+
+
+event_loop = asyncio.new_event_loop()
+event_loop_thread = threading.Thread(target=start_event_loop, daemon=True)
+event_loop_thread.start()
+
 controller_scheduler = Scheduler(controller.get_config().cycle_time, controller.run)
 controller_scheduler.start()
-car_scheduler = Scheduler(car.get_config().cycle_time, car.read_data)
-car_scheduler.start()
+car_scheduler = AsyncScheduler(car.get_config().cycle_time, car.read_data)
+asyncio.run_coroutine_threadsafe(car_scheduler.start(), event_loop).result()
 
 flask.Flask.json_provider_class = views.JSONProvider
 app = flask.Flask(__name__)
@@ -89,8 +101,10 @@ if args.basehref:
     app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {args.basehref: app.wsgi_app})
 
 app.run(host=args.host, port=args.port)
+
 controller_scheduler.stop()
-car_scheduler.stop()
+asyncio.run_coroutine_threadsafe(car_scheduler.stop(), event_loop).result()
+
 # disable charging to play it safe
 # TODO: see ChargeMode.INIT handling
 logger.info("Set wallbox.allow_charging=False on shutdown.")
