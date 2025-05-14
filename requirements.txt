@@ -54,7 +54,7 @@ multidict==6.4.3
     # via
     #   aiohttp
     #   yarl
-myskoda==1.2.1
+myskoda==1.2.2
     # via -r requirements.in
 orjson==3.10.18
     # via mashumaro
