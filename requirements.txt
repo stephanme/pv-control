@@ -67,7 +67,7 @@ orjson==3.10.18
     # via mashumaro
 paho-mqtt==2.1.0
     # via aiomqtt
-prometheus-client==0.21.1
+prometheus-client==0.22.0
     # via -r requirements.in
 propcache==0.3.1
     # via
