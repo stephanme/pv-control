@@ -126,18 +126,18 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         self.get_data().phase_mode = mode
 
     @_metrics_pvc_controller_processing.time()
-    def run(self) -> None:
+    async def run(self) -> None:
         """Read charger data from wallbox and calculate set point"""
 
         # read current state: order is important for simulation
-        wb = self._wallbox.read_data()
-        m = self._meter.read_data()
+        wb = await self._wallbox.read_data()
+        m = await self._meter.read_data()
 
         self._meter_charged_energy(m, wb)
         self._control_charge_mode(wb)
         # skip one cycle whe switching phases
-        if not self._converge_phases(m, wb):
-            self._control_charging(m, wb)
+        if not await self._converge_phases(m, wb):
+            await self._control_charging(m, wb)
 
         # metrics
         ChargeController._metrics_pvc_controller_mode.state(self.get_data().mode)
@@ -213,11 +213,11 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             self.set_desired_mode(self.get_config().enable_charging_when_connecting_car)
 
     # TODO: prevent too fast switching, use energy to grid and time instead of power
-    def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
+    async def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
         if wb.error == 0 and wb.wb_error in [WbError.PHASE, WbError.PHASE_RELAY_ERR]:
             # may happen on raspberry reboot -> phase relay is switched off
             # TODO: back-off needed?
-            self._wallbox.trigger_reset()
+            await self._wallbox.trigger_reset()
             return True
 
         if self._enable_phase_switching:
@@ -226,10 +226,10 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             if wb.error == 0 and desired_phases != wb.phases_in:
                 # switch phase relay only if charging is off
                 if wb.phases_out == 0:
-                    self._wallbox.set_phases_in(desired_phases)
+                    await self._wallbox.set_phases_in(desired_phases)
                 else:
                     # charging off and wait one cylce
-                    self._set_allow_charging(False, skip_delay=True)
+                    await self._set_allow_charging(False, skip_delay=True)
                 return True
         return False
 
@@ -274,14 +274,14 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             else:  # OFF, MANUAL
                 return current_phases
 
-    def _control_charging(self, m: MeterData, wb: WallboxData) -> None:
+    async def _control_charging(self, m: MeterData, wb: WallboxData) -> None:
         mode = self.get_data().desired_mode
         if mode == ChargeMode.OFF:
-            self._set_allow_charging(False, skip_delay=True)
+            await self._set_allow_charging(False, skip_delay=True)
             self.set_desired_mode(ChargeMode.MANUAL)
         elif mode == ChargeMode.MAX:
-            self._wallbox.set_max_current(self._max_supported_current)
-            self._set_allow_charging(True, skip_delay=True)
+            await self._wallbox.set_max_current(self._max_supported_current)
+            await self._set_allow_charging(True, skip_delay=True)
             self.set_desired_mode(ChargeMode.MANUAL)
         elif mode == ChargeMode.MANUAL:
             # calc effective (manual) mode for UI
@@ -324,22 +324,22 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             else:
                 max_current = self._min_supported_current
                 desired_allow_charging = False
-            self._wallbox.set_max_current(max_current)
+            await self._wallbox.set_max_current(max_current)
 
             # set allow_charging if changed for at least allow_charging_delay
             if wb.allow_charging != desired_allow_charging:
                 self._pv_allow_charging_delay -= config.cycle_time
                 if self._pv_allow_charging_delay <= 0:
-                    self._set_allow_charging(desired_allow_charging)
+                    await self._set_allow_charging(desired_allow_charging)
             else:
                 self._pv_allow_charging_delay = config.pv_allow_charging_delay
 
         self.get_data().mode = mode
 
-    def _set_allow_charging(self, v: bool, skip_delay: bool = False):
+    async def _set_allow_charging(self, v: bool, skip_delay: bool = False):
         self._pv_allow_charging_value = v  # remember last set allow_charging value set by PV control
         self._pv_allow_charging_delay = self.get_config().pv_allow_charging_delay if not skip_delay else 0
-        self._wallbox.allow_charging(v)
+        await self._wallbox.allow_charging(v)
 
 
 class ChargeControllerFactory:

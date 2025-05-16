@@ -40,16 +40,16 @@ class Meter(BaseService[C, MeterData]):
         super().__init__(config)
         self._set_data(MeterData())
 
-    def read_data(self) -> MeterData:
+    async def read_data(self) -> MeterData:
         """Read meter data and report metrics. The data is cached."""
-        m = self._read_data()
+        m = await self._read_data()
         self._set_data(m)
         Meter._metrics_pvc_meter_power.labels("pv").set(m.power_pv)
         Meter._metrics_pvc_meter_power.labels("grid").set(m.power_grid)
         Meter._metrics_pvc_meter_power_consumption_total.set(m.power_consumption)
         return m
 
-    def _read_data(self) -> MeterData:
+    async def _read_data(self) -> MeterData:
         return self.get_data()
 
 
@@ -73,7 +73,7 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
     def get_config(self) -> SimulatedMeterConfig:
         return typing.cast(SimulatedMeterConfig, super().get_config())
 
-    def _read_data(self) -> MeterData:
+    async def _read_data(self) -> MeterData:
         t = time.time()
         power_car = self._wallbox.get_data().power
         config = self.get_config()
@@ -95,7 +95,7 @@ class TestMeter(Meter[BaseConfig]):
         self._wallbox = wallbox
         self.set_data(0, 0)
 
-    def _read_data(self) -> MeterData:
+    async def _read_data(self) -> MeterData:
         power_car = self._wallbox.get_data().power
         pv = self._pv
         consumption = self._home + power_car
@@ -129,7 +129,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
         super().__init__(config)
         self._modbusClient = ModbusClient(host=config.host, port=config.port, unit_id=config.unit_id, auto_open=True)
 
-    def _read_data(self) -> MeterData:
+    async def _read_data(self) -> MeterData:
         # kpc_home_power_consumption_watts (grid=108, pv=116) -> consumption
         # kpc_ac_power_total_watts #172 -> pv
         # kpc_powermeter_total_watts #252 -> grid
@@ -170,7 +170,7 @@ class FroniusMeter(Meter[FroniusMeterConfig]):
         self._power_flow_url = f"{config.url}/solar_api/v1/GetPowerFlowRealtimeData.fcgi"
         self._timeout = config.timeout
 
-    def _read_data(self) -> MeterData:
+    async def _read_data(self) -> MeterData:
         try:
             res = requests.get(self._power_flow_url, timeout=self._timeout)
             res.raise_for_status()
@@ -213,7 +213,7 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
         self._location_guid = config.location_guid
         self._timeout = config.timeout
 
-    def _read_data(self) -> MeterData:
+    async def _read_data(self) -> MeterData:
         try:
             res = requests.get(self._power_flow_url, timeout=self._timeout)
             res.raise_for_status()

@@ -19,7 +19,7 @@ from pvcontrol.chargecontroller import ChargeControllerFactory
 from pvcontrol.wallbox import WallboxFactory
 from pvcontrol.relay import PhaseRelayFactory
 from pvcontrol.car import CarFactory
-from pvcontrol.scheduler import AsyncScheduler, Scheduler
+from pvcontrol.scheduler import AsyncScheduler
 
 logger = logging.getLogger(__name__)
 
@@ -68,13 +68,18 @@ def start_event_loop():
 
 
 event_loop = asyncio.new_event_loop()
-event_loop_thread = threading.Thread(target=start_event_loop, daemon=True)
-event_loop_thread.start()
+threading.Thread(target=start_event_loop, daemon=True).start()
 
-controller_scheduler = Scheduler(controller.get_config().cycle_time, controller.run)
-controller_scheduler.start()
+controller_scheduler = AsyncScheduler(controller.get_config().cycle_time, controller.run)
 car_scheduler = AsyncScheduler(car.get_config().cycle_time, car.read_data)
-asyncio.run_coroutine_threadsafe(car_scheduler.start(), event_loop).result()
+
+
+async def async_init():
+    await controller_scheduler.start()
+    await car_scheduler.start()
+
+
+asyncio.run_coroutine_threadsafe(async_init(), event_loop).result()
 
 flask.Flask.json_provider_class = views.JSONProvider
 app = flask.Flask(__name__)
@@ -102,11 +107,17 @@ if args.basehref:
 
 app.run(host=args.host, port=args.port)
 
-controller_scheduler.stop()
-asyncio.run_coroutine_threadsafe(car_scheduler.stop(), event_loop).result()
 
-# disable charging to play it safe
-# TODO: see ChargeMode.INIT handling
-logger.info("Set wallbox.allow_charging=False on shutdown.")
-wallbox.allow_charging(False)
+async def async_shutdown():
+    await controller_scheduler.stop()
+    await car_scheduler.stop()
+    # disable charging to play it safe
+    # TODO: see ChargeMode.INIT handling
+    logger.info("Set wallbox.allow_charging=False on shutdown.")
+    await wallbox.allow_charging(False)
+
+
+asyncio.run_coroutine_threadsafe(async_shutdown(), event_loop).result()
+event_loop.stop()
+event_loop.close()
 logger.info("Stopped pvcontrol")

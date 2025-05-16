@@ -71,13 +71,13 @@ class Wallbox(BaseService[C, WallboxData]):
         super().__init__(config)
         self._set_data(WallboxData())
 
-    def read_data(self) -> WallboxData:
+    async def read_data(self) -> WallboxData:
         """Read wallbox data and report metrics. The data is cached."""
-        wb = self._read_data()
+        wb = await self._read_data()
         self._set_data(wb)
         return wb
 
-    def _read_data(self) -> WallboxData:
+    async def _read_data(self) -> WallboxData:
         """Override in sub classes"""
         return self.get_data()
 
@@ -93,16 +93,16 @@ class Wallbox(BaseService[C, WallboxData]):
 
     # set wallbox registers
 
-    def set_phases_in(self, phases: int):
+    async def set_phases_in(self, phases: int):
         pass
 
-    def set_max_current(self, max_current: int):
+    async def set_max_current(self, max_current: int):
         pass
 
-    def allow_charging(self, f: bool):
+    async def allow_charging(self, f: bool):
         pass
 
-    def trigger_reset(self):
+    async def trigger_reset(self):
         pass
 
 
@@ -113,7 +113,7 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
         super().__init__(config)
         self.trigger_reset_cnt = 0
 
-    def _read_data(self) -> WallboxData:
+    async def _read_data(self) -> WallboxData:
         old = self.get_data()
         wb = WallboxData(**old.__dict__)
         if wb.allow_charging and wb.car_status not in [CarStatus.NoVehicle, CarStatus.ChargingFinished]:
@@ -136,16 +136,16 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
     def set_car_status(self, status: CarStatus):
         self.get_data().car_status = status
 
-    def set_phases_in(self, phases: int):
+    async def set_phases_in(self, phases: int):
         self.get_data().phases_in = phases
 
-    def set_max_current(self, max_current: int):
+    async def set_max_current(self, max_current: int):
         self.get_data().max_current = max_current
 
-    def allow_charging(self, f: bool):
+    async def allow_charging(self, f: bool):
         self.get_data().allow_charging = f
 
-    def trigger_reset(self):
+    async def trigger_reset(self):
         self.trigger_reset_cnt += 1
 
     def decrement_charge_energy_for_tests(self):
@@ -162,12 +162,12 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
         self._relay = relay
         self.trigger_reset_cnt = 0
 
-    def _read_data(self) -> WallboxData:
+    async def _read_data(self) -> WallboxData:
         wb = super()._read_data()
         wb.phases_in = self._relay.get_phases()
         return wb
 
-    def set_phases_in(self, phases: int):
+    async def set_phases_in(self, phases: int):
         self._relay.set_phases(phases)
 
 
@@ -186,7 +186,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         self._mqtt_url = f"{config.url}/mqtt"
         self._timeout = config.timeout
 
-    def set_phases_in(self, phases: int):
+    async def set_phases_in(self, phases: int):
         errcnt = self.get_error_counter()
         phases_out = self.get_data().phases_out
         if errcnt == 0 and phases_out == 0:
@@ -194,11 +194,11 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             self._relay.set_phases(phases)
             logger.debug(f"set phases_in={phases}")
             time.sleep(self.get_config().switch_phases_reset_delay)
-            self.trigger_reset()
+            await self.trigger_reset()
         else:
             logger.warning(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
 
-    def set_max_current(self, max_current: int):
+    async def set_max_current(self, max_current: int):
         if max_current != self.get_data().max_current:
             try:
                 logger.debug(f"set max_current={max_current}")
@@ -208,7 +208,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             except Exception as e:
                 logger.error(e)
 
-    def allow_charging(self, f: bool):
+    async def allow_charging(self, f: bool):
         if f != self.get_data().allow_charging:
             try:
                 logger.debug(f"set allow_charging={f}")
@@ -218,14 +218,14 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             except Exception as e:
                 logger.error(e)
 
-    def trigger_reset(self):
+    async def trigger_reset(self):
         try:
             logger.debug("trigger reset")
             requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": "rst=1"})
         except Exception as e:
             logger.error(e)
 
-    def _read_data(self) -> WallboxData:
+    async def _read_data(self) -> WallboxData:
         try:
             res = requests.get(self._status_url, timeout=self._timeout)
             wb = self._json_2_wallbox_data(res.json())
