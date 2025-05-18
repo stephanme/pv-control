@@ -1,12 +1,13 @@
+import asyncio
 import logging
 from dataclasses import dataclass
 import enum
 import typing
-import requests
-import time
+import aiohttp
 import prometheus_client
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.relay import PhaseRelay
+from pvcontrol.utils import aiohttp_trace_config
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,9 @@ class Wallbox(BaseService[C, WallboxData]):
     async def trigger_reset(self):
         pass
 
+    async def close(self):
+        pass
+
 
 class SimulatedWallbox(Wallbox[WallboxConfig]):
     """A wallbox simulation for testing"""
@@ -185,6 +189,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         self._status_url = f"{config.url}/status"
         self._mqtt_url = f"{config.url}/mqtt"
         self._timeout = config.timeout
+        self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
 
     async def set_phases_in(self, phases: int):
         errcnt = self.get_error_counter()
@@ -193,7 +198,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             # relay ON = 1 phase
             self._relay.set_phases(phases)
             logger.debug(f"set phases_in={phases}")
-            time.sleep(self.get_config().switch_phases_reset_delay)
+            await asyncio.sleep(self.get_config().switch_phases_reset_delay)
             await self.trigger_reset()
         else:
             logger.warning(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
@@ -202,9 +207,9 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         if max_current != self.get_data().max_current:
             try:
                 logger.debug(f"set max_current={max_current}")
-                res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"})
-                wb = self._json_2_wallbox_data(res.json())
-                self._set_data(wb)
+                async with self._session.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"}) as res:
+                    wb = self._json_2_wallbox_data(await res.json())
+                    self._set_data(wb)
             except Exception as e:
                 logger.error(e)
 
@@ -212,25 +217,27 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         if f != self.get_data().allow_charging:
             try:
                 logger.debug(f"set allow_charging={f}")
-                res = requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"})
-                wb = self._json_2_wallbox_data(res.json())
-                self._set_data(wb)
+                async with self._session.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"}) as res:
+                    wb = self._json_2_wallbox_data(await res.json())
+                    self._set_data(wb)
             except Exception as e:
                 logger.error(e)
 
     async def trigger_reset(self):
         try:
             logger.debug("trigger reset")
-            requests.get(self._mqtt_url, timeout=self._timeout, params={"payload": "rst=1"})
+            async with self._session.get(self._mqtt_url, timeout=self._timeout, params={"payload": "rst=1"}) as res:
+                wb = self._json_2_wallbox_data(await res.json())
+                self._set_data(wb)
         except Exception as e:
             logger.error(e)
 
     async def _read_data(self) -> WallboxData:
         try:
-            res = requests.get(self._status_url, timeout=self._timeout)
-            wb = self._json_2_wallbox_data(res.json())
-            self.reset_error_counter()
-            return wb
+            async with self._session.get(self._status_url, timeout=self._timeout) as res:
+                wb = self._json_2_wallbox_data(await res.json())
+                self.reset_error_counter()
+                return wb
         except Exception as e:
             logger.error(e)
             self.inc_error_counter()
@@ -275,6 +282,9 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             temperature,
         )
         return wb
+
+    async def close(self):
+        await self._session.close()
 
 
 class WallboxFactory:

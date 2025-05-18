@@ -6,6 +6,7 @@ import threading
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 logging.getLogger("pyModbusTCP.client").setLevel(logging.INFO)
+logging.getLogger("aiohttp.trace").setLevel(logging.INFO)
 
 import argparse
 import json
@@ -55,12 +56,6 @@ for c in ["wallbox", "meter", "car", "controller", "relay"]:
     if c not in config:
         config[c] = {}
 
-relay = PhaseRelayFactory.newPhaseRelay(args.relay, args.hostname, **config["relay"])
-wallbox = WallboxFactory.newWallbox(args.wallbox, relay, **config["wallbox"])
-meter = MeterFactory.newMeter(args.meter, wallbox, **config["meter"])
-car = CarFactory.newCar(args.car, **config["car"])
-controller = ChargeControllerFactory.newController(meter, wallbox, relay, **config["controller"])
-
 
 def start_event_loop():
     asyncio.set_event_loop(event_loop)
@@ -70,11 +65,17 @@ def start_event_loop():
 event_loop = asyncio.new_event_loop()
 threading.Thread(target=start_event_loop, daemon=True).start()
 
-controller_scheduler = AsyncScheduler(controller.get_config().cycle_time, controller.run)
-car_scheduler = AsyncScheduler(car.get_config().cycle_time, car.read_data)
-
 
 async def async_init():
+    global controller_scheduler, car_scheduler, relay, wallbox, meter, car, controller
+    relay = PhaseRelayFactory.newPhaseRelay(args.relay, args.hostname, **config["relay"])
+    wallbox = WallboxFactory.newWallbox(args.wallbox, relay, **config["wallbox"])
+    meter = MeterFactory.newMeter(args.meter, wallbox, **config["meter"])
+    car = CarFactory.newCar(args.car, **config["car"])
+    controller = ChargeControllerFactory.newController(meter, wallbox, relay, **config["controller"])
+
+    controller_scheduler = AsyncScheduler(controller.get_config().cycle_time, controller.run)
+    car_scheduler = AsyncScheduler(car.get_config().cycle_time, car.read_data)
     await controller_scheduler.start()
     await car_scheduler.start()
 
@@ -115,9 +116,11 @@ async def async_shutdown():
     # TODO: see ChargeMode.INIT handling
     logger.info("Set wallbox.allow_charging=False on shutdown.")
     await wallbox.allow_charging(False)
+    await wallbox.close()
 
 
-asyncio.run_coroutine_threadsafe(async_shutdown(), event_loop).result()
+asyncio.run_coroutine_threadsafe(async_shutdown(), event_loop).result(timeout=1)
 event_loop.stop()
-event_loop.close()
+# TODO: unclear why loop doesn't stop, waiting 1s doesn't help
+# event_loop.close()
 logger.info("Stopped pvcontrol")

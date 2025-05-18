@@ -150,7 +150,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
                 0, pv, consumption_grid + consumption_pv, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv
             )
         else:
-            logger.error(f"Modbus error: {self._modbusClient.last_error_txt()}")
+            logger.error(f"Modbus error: {self._modbusClient.last_error_as_txt}")
             errcnt = self.inc_error_counter()
             if errcnt > 3:
                 return MeterData(errcnt)
