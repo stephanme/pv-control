@@ -208,6 +208,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             try:
                 logger.debug(f"set max_current={max_current}")
                 async with self._session.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"amx={max_current}"}) as res:
+                    res.raise_for_status()
                     wb = self._json_2_wallbox_data(await res.json())
                     self._set_data(wb)
             except Exception as e:
@@ -218,6 +219,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             try:
                 logger.debug(f"set allow_charging={f}")
                 async with self._session.get(self._mqtt_url, timeout=self._timeout, params={"payload": f"alw={int(f)}"}) as res:
+                    res.raise_for_status()
                     wb = self._json_2_wallbox_data(await res.json())
                     self._set_data(wb)
             except Exception as e:
@@ -227,6 +229,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         try:
             logger.debug("trigger reset")
             async with self._session.get(self._mqtt_url, timeout=self._timeout, params={"payload": "rst=1"}) as res:
+                res.raise_for_status()
                 wb = self._json_2_wallbox_data(await res.json())
                 self._set_data(wb)
         except Exception as e:
@@ -235,6 +238,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
     async def _read_data(self) -> WallboxData:
         try:
             async with self._session.get(self._status_url, timeout=self._timeout) as res:
+                res.raise_for_status()
                 wb = self._json_2_wallbox_data(await res.json())
                 self.reset_error_counter()
                 return wb

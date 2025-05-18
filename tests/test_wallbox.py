@@ -6,11 +6,14 @@ from pvcontrol.wallbox import CarStatus, GoeWallbox, GoeWallboxConfig, WallboxDa
 
 
 class GoeWallboxTest(unittest.IsolatedAsyncioTestCase):
-    def setUp(self) -> None:
+    async def asyncSetUp(self) -> None:
         self.relay = SimulatedPhaseRelay(PhaseRelayConfig())
         self.wallbox = GoeWallbox(GoeWallboxConfig(switch_phases_reset_delay=0), self.relay)
 
-    def test_error_counter(self):
+    async def asyncTearDown(self):
+        await self.wallbox.close()
+
+    async def test_error_counter(self):
         self.assertEqual(0, self.wallbox.get_error_counter())
         self.wallbox.inc_error_counter()
         self.assertEqual(1, self.wallbox.get_error_counter())
