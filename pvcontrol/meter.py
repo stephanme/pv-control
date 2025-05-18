@@ -1,15 +1,16 @@
 from dataclasses import dataclass
 import logging
 import math
-import requests
 import time
 import typing
+import aiohttp
 import prometheus_client
 from pyModbusTCP.client import ModbusClient
 import pyModbusTCP.utils as modbusUtils
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.wallbox import Wallbox
+from pvcontrol.utils import aiohttp_trace_config
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,9 @@ class Meter(BaseService[C, MeterData]):
 
     async def _read_data(self) -> MeterData:
         return self.get_data()
+
+    async def close(self):
+        pass
 
 
 @dataclass
@@ -171,14 +175,15 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
         self._power_flow_url = f"{config.url}/rest/kiwigrid/wizard/devices"
         self._location_guid = config.location_guid
         self._timeout = config.timeout
+        self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
 
     async def _read_data(self) -> MeterData:
         try:
-            res = requests.get(self._power_flow_url, timeout=self._timeout)
-            res.raise_for_status()
-            meter_data = self._json_2_meter_data(res.json())
-            self.reset_error_counter()
-            return meter_data
+            with self._session.get(self._power_flow_url, timeout=self._timeout) as res:
+                res.raise_for_status()
+                meter_data = self._json_2_meter_data(await res.json())
+                self.reset_error_counter()
+                return meter_data
         except Exception as e:
             logger.error(e)
             errcnt = self.inc_error_counter()
@@ -197,6 +202,9 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
         energy_consumption_grid = location_data["WorkConsumedFromGrid"]["value"]
         energy_consumption_pv = location_data["WorkConsumedFromProducers"]["value"]
         return MeterData(0, pv, consumption, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv)
+
+    async def close(self):
+        await self._session.close()
 
 
 class MeterFactory:

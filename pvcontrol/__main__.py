@@ -117,6 +117,7 @@ async def async_shutdown():
     logger.info("Set wallbox.allow_charging=False on shutdown.")
     await wallbox.allow_charging(False)
     await wallbox.close()
+    await meter.close()
 
 
 asyncio.run_coroutine_threadsafe(async_shutdown(), event_loop).result(timeout=1)
