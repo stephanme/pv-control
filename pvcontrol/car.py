@@ -157,8 +157,8 @@ class LoginFormParser(HTMLParser):
                 # single to double quotes (not always correct but good enough)
                 _json = _json.replace("'", '"')
                 # replace unquoted property names
-                # \1 did not work for unknown reasons (python 3.13.3), leads to flake8 syntax warning
-                _json = re.sub(r"^\s*(\w+):", '"\g<1>":', _json, count=0, flags=re.MULTILINE)  # noqa: W605
+                # \1 did not work for unknown reasons (python 3.13.3)
+                _json = re.sub(r"^\s*(\w+):", '"\\g<1>":', _json, count=0, flags=re.MULTILINE)  # noqa: W605
                 # remove comma after last property
                 _json = re.sub(r",\s*}", "}", _json)
                 _json = "{" + _json + "}"

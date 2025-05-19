@@ -27,7 +27,8 @@ def add_no_cache_header(response: flask.Response):
 
 
 class JSONProvider(flask.json.provider.DefaultJSONProvider):
-    def default(self, o):
+    # Positional parameter count mismatch; base method has 1, but override has 2 (reportIncompatibleMethodOverride) - unclear why
+    def default(self, o):  # type: ignore
         if isinstance(o, datetime.datetime):
             return o.isoformat()
         return super().default(o)

@@ -2,7 +2,7 @@ import asyncio
 from contextlib import suppress
 import datetime
 import threading
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
 
 
 class Scheduler:
@@ -40,7 +40,7 @@ class Scheduler:
 
 
 class AsyncScheduler:
-    def __init__(self, interval: float, coro: Callable[[], Awaitable[None]]):
+    def __init__(self, interval: float, coro: Callable[[], Awaitable[Any]]):
         self._interval = interval
         self._coro = coro
         self._task = None

@@ -9,6 +9,8 @@ from pvcontrol.service import BaseConfig, BaseData, BaseService
 
 logger = logging.getLogger(__name__)
 
+# GPIO is only awailable on raspi
+# pyright: reportPossiblyUnboundVariable=false, reportMissingModuleSource=false
 logger.info(f"Running on {platform.machine()} / {sys.platform}")
 if "x86" in platform.machine() or "darwin" == sys.platform or "win32" == sys.platform:
     logger.warning("GPIO not available")
