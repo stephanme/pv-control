@@ -82,15 +82,15 @@ class Wallbox(BaseService[C, WallboxData]):
         """Override in sub classes"""
         return self.get_data()
 
-    def _set_data(self, wb: WallboxData):
-        super()._set_data(wb)
-        Wallbox._metrics_pvc_wallbox_car_status.set(wb.car_status)
-        Wallbox._metrics_pvc_wallbox_power.set(wb.power)
-        Wallbox._metrics_pvc_wallbox_phases_in.set(wb.phases_in)
-        Wallbox._metrics_pvc_wallbox_phases_out.set(wb.phases_out)
-        Wallbox._metrics_pvc_wallbox_max_current.set(wb.max_current)
-        Wallbox._metrics_pvc_wallbox_allow_charging.set(wb.allow_charging)
-        Wallbox._metrics_pvc_wallbox_temperature.set(wb.temperature)
+    def _set_data(self, data: WallboxData):
+        super()._set_data(data)
+        Wallbox._metrics_pvc_wallbox_car_status.set(data.car_status)
+        Wallbox._metrics_pvc_wallbox_power.set(data.power)
+        Wallbox._metrics_pvc_wallbox_phases_in.set(data.phases_in)
+        Wallbox._metrics_pvc_wallbox_phases_out.set(data.phases_out)
+        Wallbox._metrics_pvc_wallbox_max_current.set(data.max_current)
+        Wallbox._metrics_pvc_wallbox_allow_charging.set(data.allow_charging)
+        Wallbox._metrics_pvc_wallbox_temperature.set(data.temperature)
 
     # set wallbox registers
 
@@ -167,7 +167,7 @@ class SimulatedWallboxWithRelay(SimulatedWallbox):
         self.trigger_reset_cnt = 0
 
     async def _read_data(self) -> WallboxData:
-        wb = super()._read_data()
+        wb = await super()._read_data()
         wb.phases_in = self._relay.get_phases()
         return wb
 
@@ -188,7 +188,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         self._relay = relay
         self._status_url = f"{config.url}/status"
         self._mqtt_url = f"{config.url}/mqtt"
-        self._timeout = config.timeout
+        self._timeout = aiohttp.ClientTimeout(total=config.timeout)
         self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
 
     async def set_phases_in(self, phases: int):

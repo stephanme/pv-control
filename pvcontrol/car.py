@@ -366,7 +366,7 @@ class SkodaCar(Car[VolkswagenIDCarConfig]):
     def __init__(self, config: VolkswagenIDCarConfig):
         super().__init__(config)
         self._session = None
-        self._myskoda = None
+        self._myskoda: MySkoda | None = None
 
     async def _read_data(self) -> CarData:
         if self.get_config().disabled:
@@ -374,19 +374,35 @@ class SkodaCar(Car[VolkswagenIDCarConfig]):
             return CarData()
 
         try:
-            if not self._myskoda:
-                await self._connect()
+            if self._myskoda is None:
+                self._myskoda = await self._connect()
 
             cfg = self.get_config()
             charging: Charging = await self._myskoda.get_charging(cfg.vin)
             health: Health = await self._myskoda.get_health(cfg.vin)
 
+            soc = 0
+            cruising_range = 0
+            if charging.car_captured_timestamp is not None:
+                # convert to datetime
+                car_captured_timestamp = charging.car_captured_timestamp
+            else:
+                car_captured_timestamp = datetime.now()
+            if charging.status is not None:
+                if charging.status.battery.state_of_charge_in_percent is not None:
+                    soc = charging.status.battery.state_of_charge_in_percent
+                if charging.status.battery.remaining_cruising_range_in_meters is not None:
+                    cruising_range = charging.status.battery.remaining_cruising_range_in_meters // 1000
+            if health.mileage_in_km is not None:
+                mileage = health.mileage_in_km
+            else:
+                mileage = 0
             return CarData(
                 error=0,
-                data_captured_at=charging.car_captured_timestamp,
-                soc=charging.status.battery.state_of_charge_in_percent,
-                cruising_range=charging.status.battery.remaining_cruising_range_in_meters / 1000,
-                mileage=health.mileage_in_km,
+                data_captured_at=car_captured_timestamp,
+                soc=soc,
+                cruising_range=cruising_range,
+                mileage=mileage,
             )
         except Exception as e:
             logger.error(repr(e))
@@ -395,11 +411,12 @@ class SkodaCar(Car[VolkswagenIDCarConfig]):
 
         return self.get_data()
 
-    async def _connect(self):
+    async def _connect(self) -> MySkoda:
         cfg = self.get_config()
         self._session = ClientSession()
         self._myskoda = MySkoda(self._session, mqtt_enabled=False)
         await self._myskoda.connect(cfg.user, cfg.password)
+        return self._myskoda
 
     async def disconnect(self):
         if self._myskoda:

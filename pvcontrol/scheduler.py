@@ -40,7 +40,7 @@ class Scheduler:
 
 
 class AsyncScheduler:
-    def __init__(self, interval: float, coro: Awaitable):
+    def __init__(self, interval: float, coro: Callable[[], Awaitable[None]]):
         self._interval = interval
         self._coro = coro
         self._task = None

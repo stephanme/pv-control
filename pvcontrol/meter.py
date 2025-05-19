@@ -174,12 +174,12 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
         super().__init__(config)
         self._power_flow_url = f"{config.url}/rest/kiwigrid/wizard/devices"
         self._location_guid = config.location_guid
-        self._timeout = config.timeout
+        self._timeout = aiohttp.ClientTimeout(total=config.timeout)
         self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
 
     async def _read_data(self) -> MeterData:
         try:
-            with self._session.get(self._power_flow_url, timeout=self._timeout) as res:
+            async with self._session.get(self._power_flow_url, timeout=self._timeout) as res:
                 res.raise_for_status()
                 meter_data = self._json_2_meter_data(await res.json())
                 self.reset_error_counter()

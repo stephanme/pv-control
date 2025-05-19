@@ -6,4 +6,5 @@ requests
 Authlib
 python-dateutil
 myskoda
-aiohttp[speedups]
+aiohttp
+aiodns
