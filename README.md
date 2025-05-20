@@ -150,6 +150,7 @@ How to run Python tests:
 ```
 pip install -r requirements-dev.txt
 python -m flake8
+pyright
 python -m unittest discover -s ./tests
 ```
 

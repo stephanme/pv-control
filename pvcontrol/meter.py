@@ -5,8 +5,7 @@ import time
 import typing
 import aiohttp
 import prometheus_client
-from pyModbusTCP.client import ModbusClient
-import pyModbusTCP.utils as modbusUtils
+from pymodbus.client import AsyncModbusTcpClient
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.wallbox import Wallbox
@@ -131,35 +130,53 @@ class KostalMeterConfig(BaseConfig):
 class KostalMeter(Meter[KostalMeterConfig]):
     def __init__(self, config: KostalMeterConfig):
         super().__init__(config)
-        self._modbusClient = ModbusClient(host=config.host, port=config.port, unit_id=config.unit_id, auto_open=True)
+        self._modbusClient = AsyncModbusTcpClient(config.host, port=config.port)
+        self._unit = config.unit_id
 
     async def _read_data(self) -> MeterData:
-        # kpc_home_power_consumption_watts (grid=108, pv=116) -> consumption
-        # kpc_ac_power_total_watts #172 -> pv
-        # kpc_powermeter_total_watts #252 -> grid
-        regs_grid = self._modbusClient.read_holding_registers(252, 2)
-        regs_consumption = self._modbusClient.read_holding_registers(108, 12)
-        regs_pv = self._modbusClient.read_holding_registers(172, 2)
-        if regs_consumption and regs_pv and regs_grid:
-            grid = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_grid)[0])
-            consumption_l = modbusUtils.word_list_to_long(regs_consumption)
-            consumption_grid = modbusUtils.decode_ieee(consumption_l[0])
-            energy_consumption_grid = modbusUtils.decode_ieee(consumption_l[2])
-            energy_consumption_pv = modbusUtils.decode_ieee(consumption_l[3])
-            consumption_pv = modbusUtils.decode_ieee(consumption_l[4])
-            energy_consumption = modbusUtils.decode_ieee(consumption_l[5])
-            pv = modbusUtils.decode_ieee(modbusUtils.word_list_to_long(regs_pv)[0])
+        try:
+            if not self._modbusClient.connected:
+                await self._modbusClient.connect()
+
+            # kpc_home_power_consumption_watts (grid=108, pv=116) -> consumption
+            # kpc_ac_power_total_watts #172 -> pv
+            # kpc_powermeter_total_watts #252 -> grid
+            regs_grid = await self._modbusClient.read_holding_registers(252, count=2, slave=self._unit)
+            if regs_grid.isError():
+                raise Exception(f"Error reading grid data: {regs_grid}")
+            regs_consumption = await self._modbusClient.read_holding_registers(108, count=12, slave=self._unit)
+            if regs_consumption.isError():
+                raise Exception(f"Error reading consumption data: {regs_grid}")
+            regs_pv = await self._modbusClient.read_holding_registers(172, count=2, slave=self._unit)
+            if regs_pv.isError():
+                raise Exception(f"Error reading pv data: {regs_grid}")
+
+            grid = typing.cast(
+                float, AsyncModbusTcpClient.convert_from_registers(regs_grid.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32)
+            )
+            consumption = typing.cast(
+                list[float], AsyncModbusTcpClient.convert_from_registers(regs_consumption.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32)
+            )
+            consumption_grid = consumption[0]
+            energy_consumption_grid = consumption[2]
+            energy_consumption_pv = consumption[3]
+            consumption_pv = consumption[4]
+            energy_consumption = consumption[5]
+            pv = typing.cast(float, AsyncModbusTcpClient.convert_from_registers(regs_pv.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32))
             self.reset_error_counter()
             return MeterData(
                 0, pv, consumption_grid + consumption_pv, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv
             )
-        else:
-            logger.error(f"Modbus error: {self._modbusClient.last_error_as_txt}")
+        except Exception as e:
+            logger.error(e)
             errcnt = self.inc_error_counter()
             if errcnt > 3:
                 return MeterData(errcnt)
             else:
                 return self.get_data()
+
+    async def close(self):
+        self._modbusClient.close()
 
 
 @dataclass

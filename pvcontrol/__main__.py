@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import threading
+from typing import cast
 
 # configure logging before initializing further modules
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
-logging.getLogger("pyModbusTCP.client").setLevel(logging.INFO)
+logging.getLogger("pymodbus.logging").setLevel(logging.INFO)
 logging.getLogger("aiohttp.trace").setLevel(logging.INFO)
 
 import argparse
@@ -15,11 +16,11 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 import prometheus_client
 
 from pvcontrol import views
-from pvcontrol.meter import MeterFactory
-from pvcontrol.chargecontroller import ChargeControllerFactory
-from pvcontrol.wallbox import WallboxFactory
-from pvcontrol.relay import PhaseRelayFactory
-from pvcontrol.car import CarFactory
+from pvcontrol.meter import Meter, MeterFactory
+from pvcontrol.chargecontroller import ChargeController, ChargeControllerFactory
+from pvcontrol.wallbox import Wallbox, WallboxFactory
+from pvcontrol.relay import PhaseRelay, PhaseRelayFactory
+from pvcontrol.car import Car, CarFactory
 from pvcontrol.scheduler import AsyncScheduler
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ for c in ["wallbox", "meter", "car", "controller", "relay"]:
         config[c] = {}
 
 
+# start event loop in a separate thread (because flask is blocking)
 def start_event_loop():
     asyncio.set_event_loop(event_loop)
     event_loop.run_forever()
@@ -64,6 +66,16 @@ def start_event_loop():
 
 event_loop = asyncio.new_event_loop()
 threading.Thread(target=start_event_loop, daemon=True).start()
+
+# Initialize the components in async funtion as some need a running event loop
+# see https://github.com/microsoft/pyright/discussions/2033 how to make pyright happy
+relay: PhaseRelay = cast(PhaseRelay, None)
+wallbox: Wallbox = cast(Wallbox, None)
+meter: Meter = cast(Meter, None)
+controller: ChargeController = cast(ChargeController, None)
+car: Car = cast(Car, None)
+controller_scheduler: AsyncScheduler = cast(AsyncScheduler, None)
+car_scheduler: AsyncScheduler = cast(AsyncScheduler, None)
 
 
 async def async_init():
@@ -81,7 +93,15 @@ async def async_init():
 
 
 asyncio.run_coroutine_threadsafe(async_init(), event_loop).result()
+assert isinstance(relay, PhaseRelay)
+assert isinstance(wallbox, Wallbox)
+assert isinstance(meter, Meter)
+assert isinstance(car, Car)
+assert isinstance(controller, ChargeController)
+assert isinstance(controller_scheduler, AsyncScheduler)
+assert isinstance(car_scheduler, AsyncScheduler)
 
+# setup web server
 flask.Flask.json_provider_class = views.JSONProvider
 app = flask.Flask(__name__)
 app.after_request(views.add_no_cache_header)
@@ -106,9 +126,11 @@ app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": prometheus_client
 if args.basehref:
     app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {args.basehref: app.wsgi_app})
 
+# run web server, blocks until shutdown
 app.run(host=args.host, port=args.port)
 
 
+# shutdown components and event loop
 async def async_shutdown():
     await controller_scheduler.stop()
     await car_scheduler.stop()
