@@ -397,6 +397,7 @@ class SkodaCar(Car[VolkswagenIDCarConfig]):
                 mileage = health.mileage_in_km
             else:
                 mileage = 0
+            self.reset_error_counter()
             return CarData(
                 error=0,
                 data_captured_at=car_captured_timestamp,
