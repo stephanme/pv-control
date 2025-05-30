@@ -3,7 +3,7 @@ name = "pvcontrol"
 version = "0.1.0"
 description = "Electric car charging controller for photovoltaic systems"
 readme = "README.md"
-requires-python = "==3.13"
+requires-python = "==3.13.3"
 
 [tool.pyright]
 include = ["pvcontrol"]
