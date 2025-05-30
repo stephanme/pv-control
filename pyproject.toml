@@ -1,5 +1,17 @@
-[tool.black]
-line-length = 140
+[project]
+name = "pvcontrol"
+version = "0.1.0"
+description = "Electric car charging controller for photovoltaic systems"
+readme = "README.md"
+requires-python = "==3.13"
 
 [tool.pyright]
 include = ["pvcontrol"]
+
+[tool.ruff]
+line-length = 140
+
+[tool.ruff.lint]
+select = ["E","F","W","B","C"]
+ignore = ["E501","E402","C901"]
+preview = true

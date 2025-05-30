@@ -1,4 +1,5 @@
 {
+  "editor.formatOnSave": true, 
   "python.testing.unittestArgs": [
     "-v",
     "-s",
@@ -10,5 +11,5 @@
   "python.testing.unittestEnabled": true,
   "cSpell.words": [
     "aiohappyeyeballs"
-  ],
+  ]
 }
