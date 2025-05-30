@@ -149,7 +149,8 @@ python -m pvcontrol
 How to run Python tests:
 ```
 pip install -r requirements-dev.txt
-python -m flake8
+ruff check
+ruff formatter --check
 pyright
 python -m unittest discover -s ./tests
 ```
