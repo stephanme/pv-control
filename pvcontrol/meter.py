@@ -1,9 +1,13 @@
+from contextlib import suppress
 from dataclasses import dataclass
 import logging
 import math
 import time
 import typing
 import aiohttp
+import pysmaplus
+import pysmaplus.definitions_webconnect
+import pysmaplus.sensor
 import prometheus_client
 from pymodbus.client import AsyncModbusTcpClient
 
@@ -224,6 +228,75 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
         await self._session.close()
 
 
+@dataclass
+class SmaTripowerMeterConfig(BaseConfig):
+    url: str = "http://sma.fritz.box"
+    verify_ssl: bool = False  # don't verify SSL certificate, useful for self-signed certificates
+    password: str = ""
+    device_id: str = ""  # device id of the tripower inverter
+
+
+class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
+    def __init__(self, config: SmaTripowerMeterConfig):
+        super().__init__(config)
+        self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config], connector=aiohttp.TCPConnector(ssl=config.verify_ssl))
+        self._smaDevice = pysmaplus.SMAwebconnect(self._session, config.url, password=config.password)
+        self._deviceId = config.device_id
+        self._sensors = pysmaplus.sensor.Sensors(
+            [
+                pysmaplus.definitions_webconnect.grid_power,
+                pysmaplus.definitions_webconnect.pv_power,
+                pysmaplus.definitions_webconnect.metering_power_absorbed,
+                pysmaplus.definitions_webconnect.metering_power_supplied,
+                pysmaplus.definitions_webconnect.total_yield,
+                pysmaplus.definitions_webconnect.metering_total_yield,
+                pysmaplus.definitions_webconnect.metering_total_absorbed,
+            ]
+        )
+        for sensor in self._sensors:
+            sensor.enabled = True  # enable all sensors
+
+    async def _read_data(self) -> MeterData:
+        try:
+            if self._smaDevice._sid is None:
+                await self._smaDevice.new_session()
+            await self._smaDevice.read(self._sensors, self._deviceId)
+            meter_data = self._sensors_2_meter_data()
+            self.reset_error_counter()
+            return meter_data
+        except Exception as e:
+            logger.error(e)
+            with suppress(Exception):
+                await self._smaDevice.close_session()
+            errcnt = self.inc_error_counter()
+            if errcnt > 3:
+                return MeterData(errcnt)
+            else:
+                return self.get_data()
+
+    def _sensors_2_meter_data(self) -> MeterData:
+        # TODO: check if this is correct, may need to consider battery power
+        consumption = self._sensors[pysmaplus.definitions_webconnect.grid_power.key].value
+
+        pv = self._sensors[pysmaplus.definitions_webconnect.pv_power.key].value
+
+        # + from grid, - to grid
+        grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_absorbed.key].value
+        grid -= self._sensors[pysmaplus.definitions_webconnect.metering_power_supplied.key].value
+
+        # battery charging is considered as home consumption
+        energy_to_grid = self._sensors[pysmaplus.definitions_webconnect.metering_total_yield.key].value * 1000
+        energy_pv = self._sensors[pysmaplus.definitions_webconnect.total_yield.key].value * 1000
+        energy_consumption_grid = self._sensors[pysmaplus.definitions_webconnect.metering_total_absorbed.key].value * 1000
+        energy_consumption_pv = energy_pv - energy_to_grid
+        energy_consumption = energy_consumption_grid + energy_consumption_pv
+        return MeterData(0, pv, consumption, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv)
+
+    async def close(self):
+        await self._smaDevice.close_session()
+        await self._session.close()
+
+
 class MeterFactory:
     @classmethod
     def newMeter(cls, type: str, wb: Wallbox, **kwargs) -> Meter:
@@ -231,6 +304,8 @@ class MeterFactory:
             return KostalMeter(KostalMeterConfig(**kwargs))
         if type == "SolarWattMeter":
             return SolarWattMeter(SolarWattMeterConfig(**kwargs))
+        if type == "SmaTripowerMeter":
+            return SmaTripowerMeter(SmaTripowerMeterConfig(**kwargs))
         if type == "SimulatedMeter":
             return SimulatedMeter(SimulatedMeterConfig(**kwargs), wb)
         else:

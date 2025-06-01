@@ -8,6 +8,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(n
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 logging.getLogger("pymodbus.logging").setLevel(logging.INFO)
 logging.getLogger("aiohttp.trace").setLevel(logging.INFO)
+logging.getLogger("pysmaplus").setLevel(logging.INFO)
 
 import argparse
 import json
