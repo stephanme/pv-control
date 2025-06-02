@@ -275,14 +275,16 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
                 return self.get_data()
 
     def _sensors_2_meter_data(self) -> MeterData:
-        # TODO: check if this is correct, may need to consider battery power
-        consumption = self._sensors[pysmaplus.definitions_webconnect.grid_power.key].value
+        overall_power = self._sensors[pysmaplus.definitions_webconnect.grid_power.key].value
+        power_from_grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_absorbed.key].value
+        power_to_grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_supplied.key].value
 
         pv = self._sensors[pysmaplus.definitions_webconnect.pv_power.key].value
 
         # + from grid, - to grid
-        grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_absorbed.key].value
-        grid -= self._sensors[pysmaplus.definitions_webconnect.metering_power_supplied.key].value
+        grid = power_from_grid - power_to_grid
+
+        consumption = overall_power - power_to_grid
 
         # battery charging is considered as home consumption
         energy_to_grid = self._sensors[pysmaplus.definitions_webconnect.metering_total_yield.key].value * 1000
