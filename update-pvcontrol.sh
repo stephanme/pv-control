@@ -13,7 +13,7 @@ else
 fi
 rm -rf pvcontrol
 mkdir -p pvcontrol && tar -xzf pv-control.tar.gz -C ./pvcontrol
-~/.env/bin/pip install -r pvcontrol/requirements.txt
+~/pv-control-3.13/bin/pip3 install -r pvcontrol/requirements.txt
 sudo rm -rf /usr/local/bin/pvcontrol-old
 sudo mv /usr/local/bin/pvcontrol /usr/local/bin/pvcontrol-old
 sudo mv ./pvcontrol /usr/local/bin/pvcontrol

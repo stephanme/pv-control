@@ -75,18 +75,21 @@ reduced functionality.
 Pre-requisites:
 - Raspberry Pi 2 with Raspberry Pi OS Lite (Debian 12), or newer model
 - [Raspberry Pi Expansion Board, Power Relay](https://www.waveshare.com/rpi-relay-board.htm)
-- Python 3.13
-  - installation like described in (https://wiki.lupsha.com/how-to-upgrade-to-python-3-12-on-raspberry-pi/)
-  - needs a [venv](https://www.raspberrypi.com/documentation/computers/os.html#python-on-raspberry-pi) on Debias 12 for pip
+- Python 3.13, pip
+  - installation using [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - download `pv-control.tar.gz` package (release artifacts or from github actions)
 
 The following procedure installs pvcontrol behind an nginx on port 80.
 
 ```
-python -m venv --system-site-packages ~/.env
-source ~/.env/bin/activate
+# preparation of python venv
+uv venv pv-control-3.13 --python 3.13
+source ~/pv-control-3.13/bin/activate
+python -m ensurepip --upgrade
+sudo apt install libffi-dev
 
-sudo mkdir -p /usr/local/bin/pvcontrol 
+# pvcontrol
+sudo mkdir -p /usr/local/bin/pvcontrol
 sudo tar -xzf pv-control.tar.gz -C /usr/local/bin/pvcontrol
 cd /usr/bin/pvcontrol
 pip install -r requirements.txt

@@ -12,7 +12,7 @@ aiohttp==3.12.6
     # via
     #   -r requirements.in
     #   myskoda
-    #   pysma
+    #   pysma-plus
 aiomqtt==2.4.0
     # via myskoda
 aiosignal==1.3.2
@@ -22,7 +22,7 @@ asyncio==3.4.3
 attrs==25.3.0
     # via
     #   aiohttp
-    #   pysma
+    #   pysma-plus
 authlib==1.6.0
     # via -r requirements.in
 blinker==1.9.0
@@ -39,6 +39,12 @@ click==8.2.1
     # via flask
 cryptography==45.0.3
     # via authlib
+dataclasses-struct==0.8.4
+    # via pysma-plus
+defusedxml==0.7.1
+    # via untangle
+elementpath==5.0.1
+    # via xmlschema
 flask==3.1.1
     # via -r requirements.in
 frozenlist==1.6.0
@@ -54,7 +60,7 @@ itsdangerous==2.2.0
 jinja2==3.1.6
     # via flask
 jmespath==1.0.1
-    # via pysma
+    # via pysma-plus
 markupsafe==3.0.2
     # via
     #   flask
@@ -85,8 +91,10 @@ pycparser==2.22
 pyjwt==2.10.1
     # via myskoda
 pymodbus==3.9.2
-    # via -r requirements.in
-pysma==0.7.5
+    # via
+    #   -r requirements.in
+    #   pysma-plus
+pysma-plus==0.3.21.4
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via -r requirements.in
@@ -99,10 +107,16 @@ RPi.GPIO==0.7.1; ('arm' in platform_machine or 'aarch64' == platform_machine) an
 six==1.17.0
     # via python-dateutil
 typing-extensions==4.13.2
-    # via mashumaro
+    # via
+    #   dataclasses-struct
+    #   mashumaro
+untangle==1.2.1
+    # via pysma-plus
 urllib3==2.4.0
     # via requests
 werkzeug==3.1.3
     # via flask
+xmlschema==4.0.1
+    # via pysma-plus
 yarl==1.20.0
     # via aiohttp
