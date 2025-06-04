@@ -132,7 +132,7 @@ Example k8s manifest for deploying pv-control:
 pv-control contains a number of mock implementations for wallbox and inverter/power meter to allow testing and local development.
 
 Basic setup:
-- Python 3.13 (use pyenv and create a virtual env pv-control-3.13)
+- [uv](https://github.com/astral-sh/uv) - Python package and project manager
 - a recent version of node and npm (see Angular requirements)
 
 How to run locally:
@@ -142,20 +142,18 @@ npm install
 ng build
 
 # in pv-control
-pyenv activate pv-control-3.13
-pip install -r requirements.txt
-python -m pvcontrol
+uv sync
+uv run -m pvcontrol
 
 # http://localhost:8080
 ```
 
 How to run Python tests:
 ```
-pip install -r requirements-dev.txt
-ruff check
-ruff formatter --check
-pyright
-python -m unittest discover -s ./tests
+uv ruff check
+uv ruff formatter --check
+uv pyright
+uv run -m unittest discover -s ./tests
 ```
 
 How to run UI tests:
@@ -165,16 +163,11 @@ ng lint
 npm run test
 ```
 
-For reproducible builds, requirements.txt shall pin all packages using [pip-compile](https://github.com/jazzband/pip-tools).
-Update Python deps:
+Local docker build:
 ```
-# pyenv activate pv-control-3.13
-python -m pip install --upgrade pip
-pip install -r requirements-dev.txt -U
-pip-compile --upgrade --resolver backtracking --allow-unsafe requirements.in
-
-# edit requirements.txt and add/edit platform specific dependencies: RPi.GPIO
-pip install -r requirements.txt -U
+docker build -t stephanme/pv-control .
+docker run -e DISABLE_GPIO=1 -p 8080:8080 stephanme/pv-control
+docker run -it -e DISABLE_GPIO=1 stephanme/pv-control bash
 ```
 
 ## CI and Release

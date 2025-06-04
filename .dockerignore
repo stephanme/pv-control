@@ -1,7 +1,10 @@
 *
 
 !LICENSE
+!README.md
 !version
-!requirements.txt
+!pyproject.toml
+!.python-version
+!uv.lock
 !pvcontrol/*.py
 !ui/dist/ui

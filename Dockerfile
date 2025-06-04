@@ -1,18 +1,40 @@
 # syntax=docker/dockerfile:1
-FROM python:3.13-bullseye AS builder
-# install/compile wheels
-WORKDIR /usr/src/app
-COPY requirements.txt ./
-RUN pip wheel --no-cache-dir --prefer-binary --wheel-dir /usr/wheels -r requirements.txt
+FROM python:3.13-bookworm AS builder
 
+# install uv, can't use image because arm7 is not provided
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
 
-FROM python:3.13-slim-bullseye
-WORKDIR /usr/src/app
+ENV \
+    PATH="/root/.local/bin/:$PATH" \
+    UV_LINK_MODE=copy \
+    UV_SYSTEM_PYTHON=1 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LOCKED=1
 
-RUN --mount=type=cache,target=/usr/wheels,from=builder,source=/usr/wheels pip install --no-cache /usr/wheels/*
+WORKDIR /app
 
+# Install dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
+
+# copy app and sync project
 # see .dockerignore
 COPY . ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
 
+
+
+FROM python:3.13-slim-bookworm
+WORKDIR /app
+
+# Copy the environment, but not the source code
+COPY --from=builder --chown=app:app /app/ /app/
+
+ENV PATH="/app/.venv/bin:$PATH"
 CMD [ "python", "-m", "pvcontrol" ]
 EXPOSE 8080
