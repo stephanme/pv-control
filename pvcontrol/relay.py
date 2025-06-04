@@ -1,4 +1,5 @@
 import enum
+import os
 import platform
 import sys
 import logging
@@ -12,8 +13,11 @@ logger = logging.getLogger(__name__)
 # GPIO is only awailable on raspi
 # pyright: reportPossiblyUnboundVariable=false, reportMissingModuleSource=false
 logger.info(f"Running on {platform.machine()} / {sys.platform}")
-if "x86" in platform.machine() or "darwin" == sys.platform or "win32" == sys.platform:
+gpio_disabled = os.environ.get("DISABLE_GPIO") is not None
+if gpio_disabled or "x86" in platform.machine() or "darwin" == sys.platform or "win32" == sys.platform:
     logger.warning("GPIO not available")
+    if gpio_disabled:
+        logger.warning("DISABLE_GPIO environment variable set")
     # uncomment for local dev if needed
     # from fake_rpi.RPi import GPIO
 else:

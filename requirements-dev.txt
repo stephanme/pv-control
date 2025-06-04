@@ -1,4 +1,0 @@
-pip-tools
-fake-rpi; 'x86' in platform_machine or 'darwin' == sys_platform or "win32" == sys_platform
-pyright
-ruff
