@@ -82,17 +82,14 @@ Pre-requisites:
 The following procedure installs pvcontrol behind an nginx on port 80.
 
 ```
-# preparation of python venv
-uv venv pv-control-3.13 --python 3.13
-source ~/pv-control-3.13/bin/activate
-python -m ensurepip --upgrade
+# preparation
 sudo apt install libffi-dev
 
 # pvcontrol
-sudo mkdir -p /usr/local/bin/pvcontrol
-sudo tar -xzf pv-control.tar.gz -C /usr/local/bin/pvcontrol
-cd /usr/bin/pvcontrol
-pip install -r requirements.txt
+mkdir -p ~/pvcontrol
+tar -xzf pv-control.tar.gz -C ~/pvcontrol
+uv sync --project pvcontrol --locked --no-dev
+sudo mv ./pvcontrol /usr/local/bin/pvcontrol
 
 sudo cp /usr/local/bin/pvcontrol/pvcontrol.service /etc/systemd/system
 # adapt configuration in /etc/systemd/system/pvcontrol.service
