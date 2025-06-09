@@ -580,23 +580,23 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiodns", specifier = ">=3.4.0" },
-    { name = "aiohttp", specifier = ">=3.12.7" },
-    { name = "authlib", specifier = ">=1.6.0" },
-    { name = "flask", specifier = ">=3.1.1" },
-    { name = "myskoda", specifier = ">=2.0.1" },
-    { name = "prometheus-client", specifier = ">=0.22.1" },
-    { name = "pymodbus", specifier = ">=3.9.2" },
-    { name = "pysma-plus", specifier = ">=0.3.21.4" },
-    { name = "python-dateutil", specifier = ">=2.9.0.post0" },
-    { name = "requests", specifier = ">=2.32.3" },
-    { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = ">=0.7.1" },
+    { name = "aiodns", specifier = "==3.4.0" },
+    { name = "aiohttp", specifier = "==3.12.7" },
+    { name = "authlib", specifier = "==1.6.0" },
+    { name = "flask", specifier = "==3.1.1" },
+    { name = "myskoda", specifier = "==2.0.1" },
+    { name = "prometheus-client", specifier = "==0.22.1" },
+    { name = "pymodbus", specifier = "==3.9.2" },
+    { name = "pysma-plus", specifier = "==0.3.21.4" },
+    { name = "python-dateutil", specifier = "==2.9.0.post0" },
+    { name = "requests", specifier = "==2.32.3" },
+    { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = "==0.7.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pyright", specifier = ">=1.1.401" },
-    { name = "ruff", specifier = ">=0.11.12" },
+    { name = "pyright", specifier = "==1.1.401" },
+    { name = "ruff", specifier = "==0.11.12" },
 ]
 
 [[package]]
