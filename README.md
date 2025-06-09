@@ -147,9 +147,9 @@ uv run -m pvcontrol
 
 How to run Python tests:
 ```
-uv ruff check
-uv ruff formatter --check
-uv pyright
+uv run ruff check
+uv run ruff formatter --check
+uv run pyright
 uv run -m unittest discover -s ./tests
 ```
 
