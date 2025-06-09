@@ -16,7 +16,7 @@ dependencies = [
     "pymodbus==3.9.2",
     "pysma-plus==0.3.21.4",
     "python-dateutil==2.9.0.post0",
-    "requests==2.32.3",
+    "requests==2.32.4",
     "rpi-gpio==0.7.1 ; ('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)",
 ]
 
