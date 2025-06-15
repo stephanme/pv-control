@@ -17,6 +17,8 @@ from pvcontrol.utils import aiohttp_trace_config
 
 logger = logging.getLogger(__name__)
 
+type MeterConfigTypes = KostalMeterConfig | SimulatedMeterConfig | SolarWattMeterConfig | SmaTripowerMeterConfig
+
 
 @dataclass
 class MeterData(BaseData):

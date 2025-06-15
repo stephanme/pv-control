@@ -11,6 +11,8 @@ from myskoda.models.health import Health
 
 logger = logging.getLogger(__name__)
 
+type CarConfigTypes = CarConfig | SkodaCarConfig
+
 
 @dataclass
 class CarData(BaseData):

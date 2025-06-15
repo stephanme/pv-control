@@ -11,6 +11,8 @@ from pvcontrol.utils import aiohttp_trace_config
 
 logger = logging.getLogger(__name__)
 
+type WallboxConfigTypes = WallboxConfig | GoeWallboxConfig
+
 
 @dataclass
 class WallboxConfig(BaseConfig):
