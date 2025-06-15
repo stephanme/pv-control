@@ -143,12 +143,15 @@ uv sync
 uv run -m pvcontrol
 
 # http://localhost:8080
+
+# alternative with automatic reload
+uv run uvicorn pvcontrol.app:app --port 8080 --reload --reload-dir ./pvcontrol
 ```
 
 How to run Python tests:
 ```
 uv run ruff check
-uv run ruff formatter --check
+uv run ruff format --check
 uv run pyright
 uv run -m unittest discover -s ./tests
 ```

@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Debug Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "purpose": [
+                "debug-test"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "pvcontrol simulation",
             "type": "debugpy",
             "request": "launch",
@@ -27,7 +38,7 @@
                 "NoCar",
                 "--config",
                 "{\"meter\":{\"host\":\"scb.fritz.box\",\"port\":1502,\"unit_id\":71},\"wallbox\":{\"url\":\"http://go-echarger.fritz.box\"},\"relay\":{\"enable_phase_switching\":false,\"installed_on_host\":\"pi1\",\"phase_relay_type\":\"NO\"},\"controller\":{\"enable_auto_phase_switching\":false,\"pv_allow_charging_delay\":300},\"car\":{}}"
-            ]            
+            ]
         }
     ]
 }
