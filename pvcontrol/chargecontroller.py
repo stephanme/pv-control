@@ -15,18 +15,16 @@ logger = logging.getLogger(__name__)
 @enum.unique
 class ChargeMode(str, enum.Enum):
     """
-    Charge mode
+    Charge Controller operation mode:
 
-    OFF, MAX and MANUAL
-    Charge controller just switches into this mode but otherwise doesn't interfere.
-    Desired mode is adapted if e.g. the current is changed by go-e app or on the box or if charging finished.
-
-    PV_ONLY
-    Charge controller tries to use only PV for charging. Grid current is avoided even if this means
-    switch of charging.
-
-    PV_ALL
-    Charge controller tries to use all available PV for charging. Grid current is used to fill up so that all PV can be used.
+    - **OFF**: Indicates that charging is switched off and charge controller is passive.
+      When set, charge controller switches charging off and then doesn't interfere/control anymore.
+    - **MAX**: Indicates that charging runs on max power (1x or 3x max current) and charge controller is passive.
+      When set, charge controller switches charging on to max power and then doesn't interfere/control anymore.
+    - **MANUAL**: Indicates that charging is switched on and charge controller is passive. Charging power is controlled externally, e.g. by wallbox app.
+      When set, charge controller stops controlling charging power, last wallbox power setting is kept.
+    - **PV_ONLY**: Charge controller tries to use only PV for charging. Grid power is avoided even if this means switching off charging.
+    - **PV_ALL**: Charge controller tries to use all available PV for charging. Grid power is used to fill up so that all PV can be used.
     """
 
     OFF = "OFF"
@@ -46,6 +44,13 @@ class PhaseMode(str, enum.Enum):
 
 @dataclass
 class ChargeControllerData(BaseData):
+    """
+    Charge controller data:
+    - mode: current charge mode, converges to desired_mode
+    - desired_mode: desired charge mode as set by user
+    - phase_mode: current phase mode
+    """
+
     mode: ChargeMode = ChargeMode.OFF
     desired_mode: ChargeMode = ChargeMode.OFF
     phase_mode: PhaseMode = PhaseMode.AUTO

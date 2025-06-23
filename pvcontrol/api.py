@@ -1,7 +1,7 @@
 from typing import Annotated
 import logging
 from fastapi import APIRouter, Body, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pvcontrol import dependencies
 from pvcontrol.car import CarConfigTypes, CarData
@@ -25,6 +25,10 @@ class ServiceResponse[C: BaseConfig, D: BaseData](BaseModel):
 
 
 class PvcontrolResponse(BaseModel):
+    """
+    Overall PV Control state data.
+    """
+
     version: str = "unknown"
     controller: ChargeControllerData
     meter: MeterData
@@ -35,6 +39,9 @@ class PvcontrolResponse(BaseModel):
 
 @router.get("")
 async def get_root() -> PvcontrolResponse:
+    """
+    Return a summary of the current state of the PV control system. Used by UI.
+    """
     return PvcontrolResponse(
         version=dependencies.version,
         controller=dependencies.controller.get_data(),
@@ -53,6 +60,13 @@ async def get_controller() -> ServiceResponse[ChargeControllerConfig, ChargeCont
 # curl -X PUT http://localhost:8080/api/pvcontrol/controller/desired_mode -H 'Content-Type: application/json' --data '"PV_ONLY"'
 @router.put("/controller/desired_mode", status_code=204)
 async def put_controller_desired_mode(mode: Annotated[ChargeMode, Body()]) -> None:
+    """
+    Set the desired charge mode for the controller.
+
+    - **OFF**, **MAX**: charge controller switches to selected mode without further controlling charging power.
+    - **PV_ONLY**, **PV_ALL**: charge controller starts controlling charging power according to selected mode.
+    - **MANUAL**: charge controller stops controlling charging power, last wallbox power setting is kept.
+    """
     dependencies.controller.set_desired_mode(mode)
 
 
