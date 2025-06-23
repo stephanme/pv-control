@@ -1,7 +1,7 @@
 from typing import Annotated
 import logging
 from fastapi import APIRouter, Body, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from pvcontrol import dependencies
 from pvcontrol.car import CarConfigTypes, CarData
