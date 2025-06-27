@@ -12,8 +12,8 @@
       <mat-card id="card-pv">
         <mat-card-header>
           <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="pvIconColor()">wb_sunny</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="meterError()">{{pvPower()/1000|number:'1.1-1'}}
-              kW</span></mat-card-title>
+            <span class="flex-grow text-right" [class.col-grey]="meterError()">{{pvPower()/1000|number:'1.1-1'}} kW</span>
+          </mat-card-title>
         </mat-card-header>
       </mat-card>
     </div>
@@ -21,8 +21,8 @@
       <mat-card id="card-grid">
         <mat-card-header>
           <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="gridIconColor()">power</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="meterError()">{{gridPower()/1000|number:'1.1-1'}}
-              kW</span></mat-card-title>
+            <span class="flex-grow text-right" [class.col-grey]="meterError()">{{gridPower()/1000|number:'1.1-1'}} kW</span>
+          </mat-card-title>
         </mat-card-header>
       </mat-card>
     </div>
@@ -30,8 +30,7 @@
       <mat-card id="card-home">
         <mat-card-header>
           <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="homeIconColor()">home</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="meterError()">{{homePower()/1000|number:'1.1-1'}}
-              kW</span>
+            <span class="flex-grow text-right" [class.col-grey]="meterError()">{{homePower()/1000|number:'1.1-1'}} kW</span>
           </mat-card-title>
         </mat-card-header>
       </mat-card>
@@ -39,10 +38,8 @@
     <div>
       <mat-card id="card-battery">
         <mat-card-header>
-          <mat-card-title class="flex-row"><mat-icon [inline]="true"
-              [class]="batteryIconColor()">{{batteryIcon()}}</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="carError()">{{batteryPower()/1000|number:'1.1-1'}}
-              kW</span>
+          <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="batteryIconColor()">{{batteryIcon()}}</mat-icon>
+            <span class="flex-grow text-right" [class.col-grey]="meterError()">{{batteryPower()/1000|number:'1.1-1'}} kW</span>
           </mat-card-title>
         </mat-card-header>
       </mat-card>
@@ -54,8 +51,8 @@
           <mat-card-title class="flex-row">
             <mat-icon class="flex-grow" [inline]="true" [class]="wallboxIconColor()">ev_station</mat-icon>
             @if (wallboxCharging()) {
-            <span id="car-max-current" class="flex-none text-center"
-              [class.col-grey]="wallboxError()">{{wallboxPhasesOut()}}x {{wallboxMaxCurrent()}} A</span>
+            <span id="car-max-current" class="flex-none text-center" [class.col-grey]="wallboxError()">{{wallboxPhasesOut()}}x
+              {{wallboxMaxCurrent()}} A</span>
             <span id="car-charge-power" class="flex-grow text-right"
               [class.col-grey]="wallboxError()">{{wallboxPower()/1000|number:'1.1-1'}} kW</span>
             } @else {
@@ -105,8 +102,7 @@
       <mat-card id="card-temp">
         <mat-card-header>
           <mat-card-title class="flex-row"><mat-icon [inline]="true" [class]="wallboxIconColor()">thermometer</mat-icon>
-            <span class="flex-grow text-right" [class.col-grey]="wallboxError()">{{wallboxTemperature()|number:'1.0-0'}}
-              °C</span>
+            <span class="flex-grow text-right" [class.col-grey]="wallboxError()">{{wallboxTemperature()|number:'1.0-0'}} °C</span>
           </mat-card-title>
         </mat-card-header>
       </mat-card>
