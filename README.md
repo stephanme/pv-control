@@ -53,7 +53,6 @@ optional arguments:
   --hostname HOSTNAME   server hostname, can be used to enable/disable phase relay on k8s
   --host HOST           server host (default: 0.0.0.0)
   --port PORT           server port (default: 8080)
-  --basehref BASEHREF   URL prefix to match ng base-href param (no leading /)
 ```
 
 METER, WALLBOX and CAR refer to implementation classes for the energy meter, the wallbox and the car:

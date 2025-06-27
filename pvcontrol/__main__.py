@@ -22,7 +22,6 @@ parser.add_argument("-c", "--config", default="{}")
 parser.add_argument("--hostname", default="", help="server hostname, can be used to enable/disable phase relay on k8s")
 parser.add_argument("--host", default="0.0.0.0", help="server host (default: 0.0.0.0)")
 parser.add_argument("--port", type=int, default=8080, help="server port (default: 8080)")
-parser.add_argument("--basehref", default="", help="URL prefix to match ng base-href param (no leading /)")
 args = parser.parse_args()
 
 logger.info(f"Starting pvcontrol, version={dependencies.version}")
@@ -43,5 +42,4 @@ app.config = config
 log_config = uvicorn.config.LOGGING_CONFIG
 log_config["formatters"]["default"]["fmt"] = LOG_FORMAT
 log_config["formatters"]["access"]["fmt"] = LOG_FORMAT
-# root_path: prefix urls to match 'base href' config of ng build, needed for stand-alone operation only
-uvicorn.run("pvcontrol.app:app", host=args.host, port=args.port, root_path=args.basehref, log_config=log_config)
+uvicorn.run("pvcontrol.app:app", host=args.host, port=args.port, log_config=log_config)

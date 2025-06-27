@@ -4,7 +4,7 @@ Description=PV Control
 [Service]
 User=pi
 WorkingDirectory=/usr/local/bin/pvcontrol
-ExecStart=/usr/local/bin/pvcontrol/.venv/bin/python -m pvcontrol --host 127.0.0.1 --basehref /pvcontrol
+ExecStart=/usr/local/bin/pvcontrol/.venv/bin/python -m pvcontrol --host 127.0.0.1
 Restart=always
 
 [Install]
