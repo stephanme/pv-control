@@ -311,14 +311,13 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
                 return self.get_data()
 
     def _sensors_2_meter_data(self) -> MeterData:
-        overall_power = self._sensors[pysmaplus.definitions_webconnect.grid_power.key].value
-        power_from_grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_absorbed.key].value
-        power_to_grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_supplied.key].value
-
         pv = self._sensors[pysmaplus.definitions_webconnect.pv_power.key].value
 
         # + from grid, - to grid
+        power_from_grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_absorbed.key].value
+        power_to_grid = self._sensors[pysmaplus.definitions_webconnect.metering_power_supplied.key].value
         grid = power_from_grid - power_to_grid
+
         # battery, + from battery, - to battery
         battery = (
             self._sensors[pysmaplus.definitions_webconnect.battery_power_discharge_total.key].value
@@ -326,7 +325,12 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
         )
         soc = self._sensors[pysmaplus.definitions_webconnect.battery_soc_total.key].value
 
-        consumption = overall_power - power_to_grid + battery
+        # home consumption
+        overall_power = self._sensors[pysmaplus.definitions_webconnect.grid_power.key].value  # includes pv and battery
+        consumption = overall_power - power_to_grid
+        # don't count battery charging as consumption, only battery discharging
+        if battery < 0:
+            consumption += battery
 
         # battery charging is ignored, battery discharging is considered as pv consumption
         # battery charging losses are treated as less pv energy
