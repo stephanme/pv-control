@@ -472,7 +472,14 @@ class ChargeControllerPVTest(unittest.IsolatedAsyncioTestCase):
     async def run_controller_test(self, data):
         for idx, d in enumerate(data):
             with self.subTest(idx=idx, test=d["test"]):
-                self.meter.set_data(d["pv"], d["home"], d.get("energy_consumption_grid", 0), d.get("energy_consumption_pv", 0))
+                self.meter.set_data(
+                    d["pv"],
+                    d["home"],
+                    d.get("battery", 0),
+                    d.get("soc", 0),
+                    d.get("energy_consumption_grid", 0),
+                    d.get("energy_consumption_pv", 0),
+                )
                 if "car" in d:
                     self.wallbox.set_car_status(d["car"])
                 await self.controller.run()

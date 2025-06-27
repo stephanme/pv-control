@@ -26,7 +26,9 @@ describe('PvControlServiceService', () => {
         error: 0,
         power_pv: 5000,
         power_consumption: 3000,
-        power_grid: 2000
+        power_grid: -500,
+        power_battery: -1500,
+        soc_battery: 80,
       },
       wallbox: {
         error: 0,

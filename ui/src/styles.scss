@@ -5,15 +5,12 @@
 
 html {
   color-scheme: light dark;
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-      theme-type: color-scheme,
-    ),
-    typography: Roboto,
-    density: 0
-  ));
+  @include mat.theme((color: (primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+        theme-type: color-scheme,
+      ),
+      typography: Roboto,
+      density: 0));
 }
 
 .col-primary {
@@ -114,7 +111,7 @@ body {
 
 // self-hosted material symbols
 // for development: add to index.html:
-//   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0..1,0&display=block&icon_names=autorenew,battery_3_bar,battery_charging_50,battery_full,battery_unknown,electric_car,ev_station,home,hourglass_bottom,power,power_off,thermometer,wb_sunny" />
+//     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0..1,0&display=block&icon_names=autorenew,battery_0_bar,battery_1_bar,battery_2_bar,battery_3_bar,battery_4_bar,battery_5_bar,battery_6_bar,battery_charging_20,battery_charging_30,battery_charging_50,battery_charging_60,battery_charging_80,battery_charging_90,battery_charging_full,battery_full,battery_unknown,electric_car,ev_station,home,hourglass_bottom,power,power_off,thermometer,wb_sunny" />
 // Note: icon_names param doesn't work with FILL=1, only with FILL=0..1
 // for production: download the font and save as matsymbols.woff2 in src/media folder
 
@@ -140,7 +137,8 @@ body {
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
-  font-variation-settings: 'FILL' 1 /* use filled icons by default */
+  font-variation-settings: 'FILL' 1
+    /* use filled icons by default */
 }
 
 /* others */

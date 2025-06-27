@@ -54,7 +54,7 @@ describe('AppComponent', () => {
       ],
       providers: [
         provideExperimentalZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([statusInterceptor])), 
+        provideHttpClient(withInterceptors([statusInterceptor])),
         provideHttpClientTesting(),
       ]
     }).compileComponents();
@@ -69,7 +69,9 @@ describe('AppComponent', () => {
         error: 0,
         power_pv: 5000,
         power_consumption: 3000,
-        power_grid: -2000
+        power_grid: -1500,
+        power_battery: -500,
+        soc_battery: 50,
       },
       wallbox: {
         error: 0,
@@ -122,9 +124,11 @@ describe('AppComponent', () => {
     expect(await phaseModeAuto.isChecked()).toBeTrue();
 
     expect(fixture.debugElement.query(By.css('#card-pv span')).nativeElement.textContent).toContain('5.0 kW');
-    expect(fixture.debugElement.query(By.css('#card-grid span')).nativeElement.textContent).toContain('-2.0 kW');
+    expect(fixture.debugElement.query(By.css('#card-grid span')).nativeElement.textContent).toContain('-1.5 kW');
     expect(fixture.debugElement.query(By.css('#card-grid mat-icon')).nativeElement.className).toContain('col-green');
     expect(fixture.debugElement.query(By.css('#card-home span')).nativeElement.textContent).toContain('1.0 kW');
+    expect(fixture.debugElement.query(By.css('#card-battery span')).nativeElement.textContent).toContain('-0.5 kW');
+    expect(fixture.debugElement.query(By.css('#card-battery mat-icon')).nativeElement.textContent).toContain('battery_charging_60');
     expect(fixture.debugElement.query(By.css('#card-car span')).nativeElement.textContent).toContain('50 %');
     expect(fixture.debugElement.query(By.css('#card-temp span')).nativeElement.textContent).toContain('10 °C');
 
@@ -195,6 +199,8 @@ describe('AppComponent', () => {
     expect(fixture.debugElement.query(By.css('#card-grid span')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-home mat-icon')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-home span')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-battery span')).nativeElement.className).toContain('col-grey');
+    expect(fixture.debugElement.query(By.css('#card-battery mat-icon')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-car mat-icon')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-car span')).nativeElement.className).toContain('col-grey');
     expect(fixture.debugElement.query(By.css('#card-chargemode mat-icon')).nativeElement.className).toContain('col-grey');
@@ -258,12 +264,14 @@ describe('AppComponent', () => {
 });
 
 describe('AppComponent', () => {
-  const pvControlData = {
+  const pvControlData: PvControl = {
     meter: {
       error: 0,
       power_pv: 5000,
       power_consumption: 3000,
-      power_grid: -2000
+      power_grid: -1000,
+      power_battery: -1000,
+      soc_battery: 50,
     },
     wallbox: {
       error: 0,
@@ -305,5 +313,32 @@ describe('AppComponent', () => {
     expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_3_bar');
     pvControlData.wallbox.allow_charging = true;
     expect(AppComponent.wallboxChargingIcon(pvControlData)).toBe('battery_full');
+  });
+
+  it('should support batteryIcon()', () => {
+    pvControlData.meter.power_battery = -1000;
+    pvControlData.meter.soc_battery = 0;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_full');
+    pvControlData.meter.soc_battery = 50;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_60');
+    pvControlData.meter.soc_battery = 99;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_90');
+    pvControlData.meter.soc_battery = 100;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_90');
+
+    pvControlData.meter.power_battery = 1000;
+    pvControlData.meter.soc_battery = 0;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_0_bar');
+    pvControlData.meter.soc_battery = 50;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_4_bar');
+    pvControlData.meter.soc_battery = 90;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_6_bar');
+    pvControlData.meter.soc_battery = 99;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_full');
+    pvControlData.meter.soc_battery = 100;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_full');
+
+    pvControlData.meter.power_battery = 0;
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_full');
   });
 });

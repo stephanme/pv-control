@@ -10,6 +10,8 @@ export interface Meter extends BaseService {
   power_pv: number;
   power_consumption: number;
   power_grid: number;
+  power_battery: number;
+  soc_battery: number;
 }
 
 export interface Wallbox extends BaseService {

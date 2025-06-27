@@ -23,18 +23,19 @@ type MeterConfigTypes = KostalMeterConfig | SimulatedMeterConfig | SolarWattMete
 @dataclass
 class MeterData(BaseData):
     power_pv: float = 0  # power delivered by PV [W]
-    power_consumption: float = 0  # power consumption [W] (including car charing)
+    power_consumption: float = (
+        0  # power consumption [W] (including car charing, excluding home battery charging, including home battery discharging)
+    )
     power_grid: float = 0  # power from/to grid [W], + from grid, - to grid
-    # power_consumption = power_pv + power_grid
+    power_battery: float = 0  # power from/to battery [W], + from battery, - to battery
+    soc_battery: float = 0  # state of charge of battery [%]
+    # power_consumption = power_pv + power_grid + power_battery
     energy_consumption: float = 0  # [Wh], energy data is needed by chargecontroller (energy charged from pv vs grid)
     energy_consumption_grid: float = 0  # [Wh]
     energy_consumption_pv: float = 0  # [Wh]
 
 
-C = typing.TypeVar("C", bound=BaseConfig)  # type of configuration
-
-
-class Meter(BaseService[C, MeterData]):
+class Meter[C: BaseConfig](BaseService[C, MeterData]):
     """Base class / interface for meters"""
 
     _metrics_pvc_meter_power = prometheus_client.Gauge("pvcontrol_meter_power_watts", "Power from pv or grid", ["source"])
@@ -64,11 +65,13 @@ class Meter(BaseService[C, MeterData]):
 
 @dataclass
 class SimulatedMeterConfig(BaseConfig):
-    pv_max: float = 7000  # [W]
-    pv_period: float = 60 * 60  # [s]
+    pv_max: float = 3000  # [W]
+    pv_period: float = 10 * 60  # [s]
     consumption_baseline: float = 500  # [W]
     consumption_max: float = 500  # [W] periodic consumption on top of baseline
     consumption_period: float = 5 * 60  # [s]
+    battery_max: float = 1000  # [W]
+    battery_capacity: float = 1000 * 10  # Ws
 
 
 class SimulatedMeter(Meter[SimulatedMeterConfig]):
@@ -77,6 +80,7 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
         self._wallbox = wallbox
         self._energy_grid = 0.0
         self._energy_pv = 0.0
+        self._soc = 0.0
 
     # config
     def get_config(self) -> SimulatedMeterConfig:
@@ -92,10 +96,21 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
             + math.floor(config.consumption_max * math.fabs(math.sin(2 * math.pi * t / (config.consumption_period))))
             + power_car
         )
-        grid = consumption - pv
+        excess_power = consumption - pv  # neg = to grid/battery, pos = from grid/battery
+        battery = min(config.battery_max, excess_power) if excess_power > 0 else max(-config.battery_max, excess_power)
+        self._soc += -battery / config.battery_capacity * 100  # [0..100%]
+        if self._soc < 0:
+            self._soc = 0
+            battery = 0
+        elif self._soc > 100:
+            self._soc = 100
+            battery = 0
+        grid = excess_power - battery
         self._energy_grid += grid / 120  # assumption: 30s cycle time
         self._energy_pv += pv / 120
-        return MeterData(0, pv, consumption, grid, self._energy_grid + self._energy_pv, self._energy_grid, self._energy_pv)
+        return MeterData(
+            0, pv, consumption, grid, battery, self._soc, self._energy_grid + self._energy_pv, self._energy_grid, self._energy_pv
+        )
 
 
 class TestMeter(Meter[BaseConfig]):
@@ -107,21 +122,34 @@ class TestMeter(Meter[BaseConfig]):
     async def _read_data(self) -> MeterData:
         power_car = self._wallbox.get_data().power
         pv = self._pv
+        battery = self._battery
         consumption = self._home + power_car
-        grid = consumption - pv
+        grid = consumption - pv - battery
         return MeterData(
             0,
             pv,
             consumption,
             grid,
+            battery,
+            self._soc,
             self._energy_consumption_grid + self._energy_consumption_pv,
             self._energy_consumption_grid,
             self._energy_consumption_pv,
         )
 
-    def set_data(self, pv: float, home: float, energy_consumption_grid: float = 0, energy_consumption_pv: float = 0) -> None:
+    def set_data(
+        self,
+        pv: float,
+        home: float,
+        battery: float = 0,
+        soc: float = 0,
+        energy_consumption_grid: float = 0,
+        energy_consumption_pv: float = 0,
+    ) -> None:
         self._pv = pv
         self._home = home
+        self._battery = battery
+        self._soc = soc
         self._energy_consumption_grid = energy_consumption_grid
         self._energy_consumption_pv = energy_consumption_pv
 
@@ -147,6 +175,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
             # kpc_home_power_consumption_watts (grid=108, pv=116) -> consumption
             # kpc_ac_power_total_watts #172 -> pv
             # kpc_powermeter_total_watts #252 -> grid
+            # TODO: read battery data
             regs_grid = await self._modbusClient.read_holding_registers(252, count=2, slave=self._unit)
             if regs_grid.isError():
                 raise Exception(f"Error reading grid data: {regs_grid}")
@@ -171,7 +200,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
             pv = typing.cast(float, AsyncModbusTcpClient.convert_from_registers(regs_pv.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32))
             self.reset_error_counter()
             return MeterData(
-                0, pv, consumption_grid + consumption_pv, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv
+                0, pv, consumption_grid + consumption_pv, grid, 0, 0, energy_consumption, energy_consumption_grid, energy_consumption_pv
             )
         except Exception as e:
             logger.error(e)
@@ -224,7 +253,7 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
         energy_consumption = location_data["WorkConsumed"]["value"]
         energy_consumption_grid = location_data["WorkConsumedFromGrid"]["value"]
         energy_consumption_pv = location_data["WorkConsumedFromProducers"]["value"]
-        return MeterData(0, pv, consumption, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv)
+        return MeterData(0, pv, consumption, grid, 0, 0, energy_consumption, energy_consumption_grid, energy_consumption_pv)
 
     async def close(self):
         await self._session.close()
@@ -250,6 +279,11 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
                 pysmaplus.definitions_webconnect.pv_power,
                 pysmaplus.definitions_webconnect.metering_power_absorbed,
                 pysmaplus.definitions_webconnect.metering_power_supplied,
+                pysmaplus.definitions_webconnect.battery_power_charge_total,
+                pysmaplus.definitions_webconnect.battery_power_discharge_total,
+                pysmaplus.definitions_webconnect.battery_soc_total,
+                pysmaplus.definitions_webconnect.battery_charge_total,
+                pysmaplus.definitions_webconnect.battery_discharge_total,
                 pysmaplus.definitions_webconnect.total_yield,
                 pysmaplus.definitions_webconnect.metering_total_yield,
                 pysmaplus.definitions_webconnect.metering_total_absorbed,
@@ -285,16 +319,25 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
 
         # + from grid, - to grid
         grid = power_from_grid - power_to_grid
+        # battery, + from battery, - to battery
+        battery = (
+            self._sensors[pysmaplus.definitions_webconnect.battery_power_discharge_total.key].value
+            - self._sensors[pysmaplus.definitions_webconnect.battery_power_charge_total.key].value
+        )
+        soc = self._sensors[pysmaplus.definitions_webconnect.battery_soc_total.key].value
 
-        consumption = overall_power - power_to_grid
+        consumption = overall_power - power_to_grid + battery
 
-        # battery charging is considered as home consumption
+        # battery charging is ignored, battery discharging is considered as pv consumption
+        # battery charging losses are treated as less pv energy
         energy_to_grid = self._sensors[pysmaplus.definitions_webconnect.metering_total_yield.key].value * 1000
         energy_pv = self._sensors[pysmaplus.definitions_webconnect.total_yield.key].value * 1000
         energy_consumption_grid = self._sensors[pysmaplus.definitions_webconnect.metering_total_absorbed.key].value * 1000
-        energy_consumption_pv = energy_pv - energy_to_grid
+        energy_battery_discharge = self._sensors[pysmaplus.definitions_webconnect.battery_discharge_total.key].value * 1000
+        energy_battery_charge = self._sensors[pysmaplus.definitions_webconnect.battery_charge_total.key].value * 1000
+        energy_consumption_pv = energy_pv - energy_to_grid - energy_battery_charge + energy_battery_discharge
         energy_consumption = energy_consumption_grid + energy_consumption_pv
-        return MeterData(0, pv, consumption, grid, energy_consumption, energy_consumption_grid, energy_consumption_pv)
+        return MeterData(0, pv, consumption, grid, battery, soc, energy_consumption, energy_consumption_grid, energy_consumption_pv)
 
     async def close(self):
         await self._smaDevice.close_session()

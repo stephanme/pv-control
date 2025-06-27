@@ -15,26 +15,26 @@ import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control
 import { DecimalPipe, DOCUMENT } from '@angular/common';
 
 @Component({
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrl: './app.component.scss',
-    imports: [
-        // from CommonModule
-        DecimalPipe,
-        // material components
-        MatCard,
-        MatCardContent,
-        MatCardHeader,
-        MatCardTitle,
-        MatIcon,
-        MatIconButton,
-        MatButtonToggle,
-        MatButtonToggleGroup,
-        MatToolbar,
-        // other modules not yet available standalone
-        ReactiveFormsModule,
-    ]
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss',
+  imports: [
+    // from CommonModule
+    DecimalPipe,
+    // material components
+    MatCard,
+    MatCardContent,
+    MatCardHeader,
+    MatCardTitle,
+    MatIcon,
+    MatIconButton,
+    MatButtonToggle,
+    MatButtonToggleGroup,
+    MatToolbar,
+    // other modules not yet available standalone
+    ReactiveFormsModule,
+  ]
 })
 export class AppComponent implements OnInit, OnDestroy {
   ChargeMode = ChargeMode;
@@ -46,7 +46,6 @@ export class AppComponent implements OnInit, OnDestroy {
   refreshTimer$ = timer(200, AppComponent.REFRESH_DELAY);
   refreshTimerSubscription: Subscription | null = null;
 
-  
   // pv card
   meterError = signal(false);
   pvIconColor = computed(() => this.meterError() ? 'col-grey' : 'col-yellow');
@@ -67,6 +66,11 @@ export class AppComponent implements OnInit, OnDestroy {
   homePower = computed(() => this.powerConsumption() - this.wallboxPower());
   homeIconColor = computed(() => this.meterError() ? 'col-grey' : 'col-primary');
 
+  // battery card
+  batteryPower = signal(0);
+  batteryIcon = signal('battery_unknown');
+  batteryIconColor = computed(() => this.meterError() ? 'col-grey' : 'col-primary');
+
   // car card
   carError = signal(false);
   carIconColor = computed(() => this.carError() ? 'col-grey' : 'col-primary');
@@ -81,13 +85,13 @@ export class AppComponent implements OnInit, OnDestroy {
   wallboxMaxCurrent = signal(0);
   wallboxPower = signal(0);
   wallboxChargingIcon = signal('power_off');
-  wallboxChargingIconColor = computed(() => this.wallboxError() ? 'col-grey-two-tone-icon' : 'col-default-two-tone-icon');
+  wallboxChargingIconColor = computed(() => this.wallboxError() ? 'col-grey' : 'col-primary');
   // charge mode
   chargeMode = signal(ChargeMode.OFF);
   chargeModeControl = this.fb.control(ChargeMode.OFF);
   // phase mode
   wallboxPhasesIn = signal(1);
-  phaseModeControl = this.fb.control({value: PhaseMode.DISABLED, disabled: true});
+  phaseModeControl = this.fb.control({ value: PhaseMode.DISABLED, disabled: true });
 
   // temp card
   wallboxTemperature = signal(0);
@@ -95,16 +99,16 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder, private snackBar: MatSnackBar,
     private httpStatusService: HttpStatusService, private pvControlService: PvControlService,
-    @Inject(DOCUMENT) private document: Document) { 
-      effect(() => {
-        const err = this.httpStatusService.httpError();
-        if (err) {
-          this.snackBar.open(err.errmsg, 'Dismiss', {
-            duration: 10000
-          });  
-        }
-      });  
-    }
+    @Inject(DOCUMENT) private document: Document) {
+    effect(() => {
+      const err = this.httpStatusService.httpError();
+      if (err) {
+        this.snackBar.open(err.errmsg, 'Dismiss', {
+          duration: 10000
+        });
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.startAutoRefresh();
@@ -133,7 +137,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   stopAutoRefresh() {
     this.refreshTimerSubscription?.unsubscribe();
-    this.refreshTimerSubscription = null;    
+    this.refreshTimerSubscription = null;
   }
 
   refresh(): void {
@@ -143,6 +147,8 @@ export class AppComponent implements OnInit, OnDestroy {
         this.pvPower.set(pv.meter.power_pv);
         this.gridPower.set(pv.meter.power_grid);
         this.powerConsumption.set(pv.meter.power_consumption);
+        this.batteryPower.set(pv.meter.power_battery);
+        this.batteryIcon.set(AppComponent.batteryIcon(pv));
 
         this.wallboxError.set(pv.wallbox.error > 3);
         this.wallboxPower.set(pv.wallbox.power);
@@ -207,6 +213,21 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       default: // unknown
         return 'battery_unknown';
+    }
+  }
+
+  static battery_discharging_icons = ["battery_0_bar", "battery_1_bar", "battery_2_bar", "battery_3_bar", "battery_4_bar", "battery_5_bar", "battery_6_bar", "battery_full"];
+  static battery_charging_icons = ["battery_charging_full", "battery_charging_20", "battery_charging_30", "battery_charging_50", "battery_charging_60", "battery_charging_80", "battery_charging_90", "battery_charging_90"];
+  static batteryIcon(pv: PvControl): string {
+    if (pv.meter.error > 3) {
+      return 'battery_unknown';
+    }
+    // 0..6 bars and full
+    const bars = Math.round(pv.meter.soc_battery / (100.0 / 7));
+    if (pv.meter.power_battery < 0) {
+      return AppComponent.battery_charging_icons[bars];
+    } else {
+      return AppComponent.battery_discharging_icons[bars];
     }
   }
 }
