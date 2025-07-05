@@ -19,7 +19,7 @@ PV-Control implements the following charge modes/strategies:
 - Max - Charge with full power, i.e. 11 kW (3x 16A).
 - Manual - Wallbox is manually controlled e.g. by the go-e app.
 
-'PV only' and 'PV all' use different strategies when working around the limitations of the wallbox and electric car, i.e. the minimal charging current of 6A and the charging current steps of 1A.
+'PV only' and 'PV all' use different strategies when working around the limitations of the wallbox and electric car, i.e. the minimal charging current of 6A and the charging current steps of 1A. Additionally, PV-Control allows to prioritize between car charging and home battery charging. The home battery is not used for charging the car in the 'PV' modi.
 
 Automatic phase switching between 1 and 3 phases for the PV modes is implemented but not yet tested in practice because my 7 kW peak solar power system gives little opportunity of 3 phase charging. Currently, the 'Auto' mode selects 1-phase charging for 'PV only' and 'PV all' and 3-phase charging for 'Max'.
 

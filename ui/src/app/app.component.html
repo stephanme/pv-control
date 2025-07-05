@@ -86,6 +86,17 @@
               [class.active]="wallboxPhasesIn()===3">3 Phases</mat-button-toggle>
           </mat-button-toggle-group>
         </mat-card-content>
+        <mat-card-content>
+          <mat-button-toggle-group class="flex-row" id="priorityToogle" [formControl]="priorityControl" (change)="onPriorityChange($event)"
+            aria-label="Priority">
+            <mat-button-toggle id="priorityAUTO" class="flex-grow" [value]="Priority.AUTO"
+              [class.active]="priority()===Priority.HOME_BATTERY">Prio: Auto</mat-button-toggle>
+            <mat-button-toggle id="priorityHOME_BATTERY" class="flex-grow" [value]="Priority.HOME_BATTERY"
+              [class.active]="priority()===Priority.HOME_BATTERY">Home</mat-button-toggle>
+            <mat-button-toggle id="priorityCAR" class="flex-grow" [value]="Priority.CAR"
+              [class.active]="priority()===Priority.CAR">Car</mat-button-toggle>
+          </mat-button-toggle-group>
+        </mat-card-content>
       </mat-card>
     </div>
 

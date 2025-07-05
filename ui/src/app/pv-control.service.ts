@@ -39,10 +39,17 @@ export enum PhaseMode {
   CHARGE_3P = 'CHARGE_3P',
 }
 
+export enum Priority {
+  AUTO = 'AUTO',
+  HOME_BATTERY = 'HOME_BATTERY',
+  CAR = 'CAR',
+}
+
 export interface ChargerController extends BaseService {
   mode: ChargeMode;
   desired_mode: ChargeMode;
   phase_mode: PhaseMode;
+  priority: Priority;
 }
 
 export interface Car extends BaseService {
@@ -81,5 +88,10 @@ export class PvControlService {
   public putPvControlPhaseMode(mode: PhaseMode): Observable<void> {
     // Note: explicit json conversion otherwise it is sent as plain text -> 400
     return this.http.put<void>('./api/pvcontrol/controller/phase_mode', JSON.stringify(mode), httpOptions);
+  }
+
+  public putPvControlPriority(prio: Priority): Observable<void> {
+    // Note: explicit json conversion otherwise it is sent as plain text -> 400
+    return this.http.put<void>('./api/pvcontrol/controller/priority', JSON.stringify(prio), httpOptions);
   }
 }

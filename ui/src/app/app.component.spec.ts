@@ -18,7 +18,7 @@ import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing'
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 
 import { AppComponent } from './app.component';
-import { ChargeMode, PhaseMode, PvControl } from './pv-control.service';
+import { ChargeMode, PhaseMode, Priority, PvControl } from './pv-control.service';
 import { statusInterceptor } from './http-status.service';
 import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 
@@ -34,6 +34,8 @@ describe('AppComponent', () => {
   let chargeModeMax: MatButtonToggleHarness;
   let phaseModeAuto: MatButtonToggleHarness;
   let phaseModeCharge1P: MatButtonToggleHarness;
+  let priorityAuto: MatButtonToggleHarness;
+  let priorityCar: MatButtonToggleHarness;
   let refreshButton: MatButtonHarness;
 
   beforeEach(async () => {
@@ -88,6 +90,7 @@ describe('AppComponent', () => {
         mode: ChargeMode.OFF,
         desired_mode: ChargeMode.OFF,
         phase_mode: PhaseMode.AUTO,
+        priority: Priority.AUTO,
       },
       car: {
         error: 0,
@@ -107,6 +110,8 @@ describe('AppComponent', () => {
     chargeModePvOnly = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#chargeModePV_ONLY' }));
     phaseModeAuto = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeAUTO' }));
     phaseModeCharge1P = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeCHARGE_1P' }));
+    priorityAuto = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityAUTO' }));
+    priorityCar = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityCAR' }));
     refreshButton = await loader.getHarness(MatButtonHarness.with({ selector: '#refresh' }));
   });
 
@@ -122,6 +127,8 @@ describe('AppComponent', () => {
     expect(await chargeModeOff.isChecked()).toBeTrue();
     expect(component.phaseModeControl.value).toBe(PhaseMode.AUTO);
     expect(await phaseModeAuto.isChecked()).toBeTrue();
+    expect(component.priorityControl.value).toBe(Priority.AUTO);
+    expect(await priorityAuto.isChecked()).toBeTrue();
 
     expect(fixture.debugElement.query(By.css('#card-pv span')).nativeElement.textContent).toContain('5.0 kW');
     expect(fixture.debugElement.query(By.css('#card-grid span')).nativeElement.textContent).toContain('-1.5 kW');
@@ -159,6 +166,7 @@ describe('AppComponent', () => {
     pvControlData.controller.mode = ChargeMode.PV_ONLY;
     pvControlData.controller.desired_mode = ChargeMode.PV_ONLY;
     pvControlData.controller.phase_mode = PhaseMode.CHARGE_1P;
+    pvControlData.controller.priority = Priority.CAR;
     await refreshButton.click();
 
     expect(refreshIcon.className).toContain('spin');
@@ -167,8 +175,10 @@ describe('AppComponent', () => {
     expect(component.chargeModeControl.value).toBe(ChargeMode.PV_ONLY);
     expect(component.phaseModeControl.enabled).toBeTrue();
     expect(component.phaseModeControl.value).toBe(PhaseMode.CHARGE_1P);
+    expect(component.priorityControl.value).toBe(Priority.CAR);
     expect(await chargeModePvOnly.isChecked()).toBeTrue();
     expect(await phaseModeCharge1P.isChecked()).toBeTrue();
+    expect(await priorityCar.isChecked()).toBeTrue();
     expect(refreshIcon.className).not.toContain('spin');
   });
 
@@ -261,6 +271,20 @@ describe('AppComponent', () => {
     expect(await phaseModeAuto.isChecked()).toBeFalse();
     expect(await phaseModeAuto.isDisabled()).toBeTrue();
   });
+
+  it('should allow to switch to charging priority CAR', async () => {
+    httpMock.expectOne('./api/pvcontrol').flush(pvControlData);
+
+    await priorityCar.check();
+
+    const req = httpMock.expectOne('./api/pvcontrol/controller/priority');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toBe('"CAR"');
+    req.flush(null);
+
+    expect(await priorityCar.isChecked()).toBeTrue();
+    expect(await priorityAuto.isChecked()).toBeFalse();
+  });
 });
 
 describe('AppComponent', () => {
@@ -288,6 +312,7 @@ describe('AppComponent', () => {
       mode: ChargeMode.OFF,
       desired_mode: ChargeMode.OFF,
       phase_mode: PhaseMode.AUTO,
+      priority: Priority.AUTO,
     },
     car: {
       error: 0,
@@ -318,13 +343,13 @@ describe('AppComponent', () => {
   it('should support batteryIcon()', () => {
     pvControlData.meter.power_battery = -1000;
     pvControlData.meter.soc_battery = 0;
-    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_full');
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_20');
     pvControlData.meter.soc_battery = 50;
     expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_60');
     pvControlData.meter.soc_battery = 99;
-    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_90');
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_full');
     pvControlData.meter.soc_battery = 100;
-    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_90');
+    expect(AppComponent.batteryIcon(pvControlData)).toBe('battery_charging_full');
 
     pvControlData.meter.power_battery = 1000;
     pvControlData.meter.soc_battery = 0;

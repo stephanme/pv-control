@@ -60,6 +60,22 @@ class PvcontrolApiTest(unittest.TestCase):
             self.assertEqual(422, response.status_code)
             self.assertEqual(dependencies.controller.get_data().phase_mode, "CHARGE_1P")
 
+    def test_put_controller_priority(self):
+        with TestClient(self.app) as client:
+            response = client.put("/api/pvcontrol/controller/priority", json="AUTO")
+            self.assertEqual(204, response.status_code)
+            self.assertEqual(dependencies.controller.get_data().priority, "AUTO")
+            response = client.put("/api/pvcontrol/controller/priority", json="CAR")
+            self.assertEqual(204, response.status_code)
+            self.assertEqual(dependencies.controller.get_data().priority, "CAR")
+            response = client.put("/api/pvcontrol/controller/priority", json="HOME_BATTERY")
+            self.assertEqual(204, response.status_code)
+            self.assertEqual(dependencies.controller.get_data().priority, "HOME_BATTERY")
+
+            response = client.put("/api/pvcontrol/controller/priority", json="invalid")
+            self.assertEqual(422, response.status_code)
+            self.assertEqual(dependencies.controller.get_data().priority, "HOME_BATTERY")
+
     def test_get_meter(self):
         with TestClient(self.app) as client:
             response = client.get("/api/pvcontrol/meter")

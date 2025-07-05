@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 
-import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control.service';
+import { ChargeMode, PhaseMode, Priority, PvControl, PvControlService } from './pv-control.service';
 
 describe('PvControlServiceService', () => {
   let httpMock: HttpTestingController;
@@ -44,6 +44,7 @@ describe('PvControlServiceService', () => {
         mode: ChargeMode.OFF,
         desired_mode: ChargeMode.PV_ONLY,
         phase_mode: PhaseMode.AUTO,
+        priority: Priority.AUTO,
       },
       car: {
         error: 0,
@@ -79,6 +80,15 @@ describe('PvControlServiceService', () => {
     const req = httpMock.expectOne('./api/pvcontrol/controller/phase_mode');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toBe('"CHARGE_1P"');
+    req.flush(null);
+  });
+
+  it('should putPvControlPriority()', () => {
+    service.putPvControlPriority(Priority.CAR).subscribe();
+
+    const req = httpMock.expectOne('./api/pvcontrol/controller/priority');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toBe('"CAR"');
     req.flush(null);
   });
 });

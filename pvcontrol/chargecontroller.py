@@ -42,6 +42,13 @@ class PhaseMode(str, enum.Enum):
     CHARGE_3P = "CHARGE_3P"
 
 
+@enum.unique
+class Priority(str, enum.Enum):
+    AUTO = "AUTO"  # balance between home battery and car
+    HOME_BATTERY = "HOME_BATTERY"  # load home battery before car
+    CAR = "CAR"  # load car before home battery
+
+
 @dataclass
 class ChargeControllerData(BaseData):
     """
@@ -49,11 +56,13 @@ class ChargeControllerData(BaseData):
     - mode: current charge mode, converges to desired_mode
     - desired_mode: desired charge mode as set by user
     - phase_mode: current phase mode
+    - priority: current priority for charging, used to decide whether to charge home battery or car first
     """
 
     mode: ChargeMode = ChargeMode.OFF
     desired_mode: ChargeMode = ChargeMode.OFF
     phase_mode: PhaseMode = PhaseMode.AUTO
+    priority: Priority = Priority.AUTO
 
 
 @dataclass
@@ -129,6 +138,9 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         if not self._enable_phase_switching:
             mode = PhaseMode.DISABLED
         self.get_data().phase_mode = mode
+
+    def set_priority(self, priority: Priority) -> None:
+        self.get_data().priority = priority
 
     @_metrics_pvc_controller_processing.time()
     async def run(self) -> None:
@@ -299,8 +311,21 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             phases = wb.phases_out
             if phases == 0:
                 phases = wb.phases_in
-            available_power = -m.power_grid + wb.power
             config = self.get_config()
+            priority = self.get_data().priority
+
+            if priority == Priority.CAR:
+                # Priority.CAR neither charge nor discharge home battery
+                available_power = -m.power_grid + wb.power - m.power_battery
+            else:  # Priority.HOME_BATTERY or AUTO:
+                available_power = -m.power_grid + wb.power
+                if m.power_battery > 0:
+                    # don't discharge home battery
+                    available_power -= m.power_battery
+                else:
+                    # TODO: reduce a little to allow home battery to increase charging power
+                    pass
+            # TODO: implement a more clever AUTO mode, e.g. charge home battery until 50% and then prefer car
 
             if mode == ChargeMode.PV_ONLY:
                 if not wb.allow_charging and available_power < self._pv_only_on:

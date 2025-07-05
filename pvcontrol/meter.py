@@ -34,6 +34,15 @@ class MeterData(BaseData):
     energy_consumption_grid: float = 0  # [Wh]
     energy_consumption_pv: float = 0  # [Wh]
 
+    # based on math.isclose() to avoid rounding issues
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, MeterData):
+            return False
+        for field in self.__dataclass_fields__:
+            if not math.isclose(getattr(self, field), getattr(value, field), abs_tol=0.01):
+                return False
+        return True
+
 
 class Meter[C: BaseConfig](BaseService[C, MeterData]):
     """Base class / interface for meters"""
@@ -71,15 +80,15 @@ class SimulatedMeterConfig(BaseConfig):
     consumption_max: float = 500  # [W] periodic consumption on top of baseline
     consumption_period: float = 5 * 60  # [s]
     battery_max: float = 1000  # [W]
-    battery_capacity: float = 1000 * 10  # Ws
+    battery_capacity: float = 833  # Wh, 1kw charging ~ 1% SOC in 30s
 
 
 class SimulatedMeter(Meter[SimulatedMeterConfig]):
     def __init__(self, config: SimulatedMeterConfig, wallbox: Wallbox):
         super().__init__(config)
         self._wallbox = wallbox
-        self._energy_grid = 0.0
-        self._energy_pv = 0.0
+        self._energy_consumption_grid = 0.0
+        self._energy_consumption_pv = 0.0
         self._soc = 0.0
 
     # config
@@ -98,7 +107,7 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
         )
         excess_power = consumption - pv  # neg = to grid/battery, pos = from grid/battery
         battery = min(config.battery_max, excess_power) if excess_power > 0 else max(-config.battery_max, excess_power)
-        self._soc += -battery / config.battery_capacity * 100  # [0..100%]
+        self._soc += -battery / 120 / config.battery_capacity * 100  # [0..100%]
         if self._soc < 0:
             self._soc = 0
             battery = 0
@@ -106,25 +115,55 @@ class SimulatedMeter(Meter[SimulatedMeterConfig]):
             self._soc = 100
             battery = 0
         grid = excess_power - battery
-        self._energy_grid += grid / 120  # assumption: 30s cycle time
-        self._energy_pv += pv / 120
+
+        # energy consumption in Wh, assuming a 30s cycle time
+        delta_grid = grid if grid > 0 else 0
+        delta_pv = consumption - delta_grid
+        self._energy_consumption_grid += delta_grid / 120
+        self._energy_consumption_pv += delta_pv / 120
+
         return MeterData(
-            0, pv, consumption, grid, battery, self._soc, self._energy_grid + self._energy_pv, self._energy_grid, self._energy_pv
+            0,
+            pv,
+            consumption,
+            grid,
+            battery,
+            self._soc,
+            self._energy_consumption_grid + self._energy_consumption_pv,
+            self._energy_consumption_grid,
+            self._energy_consumption_pv,
         )
 
 
-class TestMeter(Meter[BaseConfig]):
-    def __init__(self, wallbox: Wallbox):
-        super().__init__(BaseConfig())
+@dataclass
+class TestMeterConfig(BaseConfig):
+    battery_max: float = 0  # [W]
+    battery_capacity: float = 0  # [Wh]
+
+
+class TestMeter(Meter[TestMeterConfig]):
+    def __init__(self, config: TestMeterConfig, wallbox: Wallbox):
+        super().__init__(config)
         self._wallbox = wallbox
         self.set_data(0, 0)
+        self._soc = 0.0
+        self._energy_consumption_grid = 0.0
+        self._energy_consumption_pv = 0.0
 
     async def _read_data(self) -> MeterData:
+        config = self.get_config()
         power_car = self._wallbox.get_data().power
         pv = self._pv
-        battery = self._battery
         consumption = self._home + power_car
-        grid = consumption - pv - battery
+
+        excess_power = consumption - pv  # neg = to grid/battery, pos = from grid/battery
+        battery = min(config.battery_max, excess_power) if excess_power > 0 else max(-config.battery_max, excess_power)
+        if self._soc <= 0 and battery > 0:
+            battery = 0
+        if self._soc >= 100 and battery < 0:
+            battery = 0
+        grid = excess_power - battery
+
         return MeterData(
             0,
             pv,
@@ -141,17 +180,31 @@ class TestMeter(Meter[BaseConfig]):
         self,
         pv: float,
         home: float,
-        battery: float = 0,
-        soc: float = 0,
-        energy_consumption_grid: float = 0,
-        energy_consumption_pv: float = 0,
+        soc: float = -1,  # -1 means don't change, otherwise set to this value
     ) -> None:
         self._pv = pv
         self._home = home
-        self._battery = battery
-        self._soc = soc
-        self._energy_consumption_grid = energy_consumption_grid
-        self._energy_consumption_pv = energy_consumption_pv
+        if soc >= 0:
+            self._soc = soc
+
+    # Simulate time tick of 30s and increase energy consumption and battery SOC
+    async def tick(self) -> None:
+        config = self.get_config()
+        data = await self.read_data()
+
+        if config.battery_capacity > 0:
+            delta_battery = data.power_battery / 120  # [Wh] assuming a 30s cycle time
+            self._soc += -delta_battery / config.battery_capacity * 100  # [0..100%]
+        if self._soc < 0:
+            self._soc = 0
+        elif self._soc > 100:
+            self._soc = 100
+
+        # energy consumption in Wh, assuming a 30s cycle time
+        delta_grid = data.power_grid if data.power_grid > 0 else 0
+        delta_pv = data.power_consumption - delta_grid
+        self._energy_consumption_grid += delta_grid / 120
+        self._energy_consumption_pv += delta_pv / 120
 
 
 @dataclass

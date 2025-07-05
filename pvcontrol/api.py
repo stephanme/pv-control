@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from pvcontrol import dependencies
 from pvcontrol.car import CarConfigTypes, CarData
-from pvcontrol.chargecontroller import ChargeControllerConfig, ChargeControllerData, ChargeMode, PhaseMode
+from pvcontrol.chargecontroller import ChargeControllerConfig, ChargeControllerData, ChargeMode, PhaseMode, Priority
 from pvcontrol.meter import MeterConfigTypes, MeterData
 from pvcontrol.relay import PhaseRelayConfig, PhaseRelayData
 from pvcontrol.service import BaseConfig, BaseData, BaseService
@@ -74,6 +74,12 @@ async def put_controller_desired_mode(mode: Annotated[ChargeMode, Body()]) -> No
 @router.put("/controller/phase_mode", status_code=204)
 async def put_controller_phase_mode(mode: Annotated[PhaseMode, Body()]) -> None:
     dependencies.controller.set_phase_mode(mode)
+
+
+# curl -X PUT http://localhost:8080/api/pvcontrol/controller/priority -H 'Content-Type: application/json' --data '"CAR"'
+@router.put("/controller/priority", status_code=204)
+async def put_controller_priority(prio: Annotated[Priority, Body()]) -> None:
+    dependencies.controller.set_priority(prio)
 
 
 @router.get("/meter")

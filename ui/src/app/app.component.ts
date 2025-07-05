@@ -11,7 +11,7 @@ import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { HttpStatusService } from './http-status.service';
-import { ChargeMode, PhaseMode, PvControl, PvControlService } from './pv-control.service';
+import { ChargeMode, PhaseMode, Priority, PvControl, PvControlService } from './pv-control.service';
 import { DecimalPipe, DOCUMENT } from '@angular/common';
 
 @Component({
@@ -39,6 +39,7 @@ import { DecimalPipe, DOCUMENT } from '@angular/common';
 export class AppComponent implements OnInit, OnDestroy {
   ChargeMode = ChargeMode;
   PhaseMode = PhaseMode;
+  Priority = Priority;
 
   busy = this.httpStatusService.busy;
   // refresh every 30s, initial delay 200ms to make refresh visible and avoid network issues
@@ -92,6 +93,9 @@ export class AppComponent implements OnInit, OnDestroy {
   // phase mode
   wallboxPhasesIn = signal(1);
   phaseModeControl = this.fb.control({ value: PhaseMode.DISABLED, disabled: true });
+  // priority
+  priority = signal(Priority.AUTO);
+  priorityControl = this.fb.control(Priority.AUTO);
 
   // temp card
   wallboxTemperature = signal(0);
@@ -175,6 +179,9 @@ export class AppComponent implements OnInit, OnDestroy {
         } else {
           this.phaseModeControl.enable()
         }
+
+        this.priority.set(pv.controller.priority);
+        this.priorityControl.setValue(pv.controller.priority);
       },
       error: () => { }
     });
@@ -191,6 +198,14 @@ export class AppComponent implements OnInit, OnDestroy {
   onPhaseModeChange(event: MatButtonToggleChange): void {
     const mode = event.value;
     this.pvControlService.putPvControlPhaseMode(mode).subscribe({
+      next: () => { },
+      error: () => { }
+    });
+  }
+
+  onPriorityChange(event: MatButtonToggleChange): void {
+    const prio = event.value;
+    this.pvControlService.putPvControlPriority(prio).subscribe({
       next: () => { },
       error: () => { }
     });
@@ -217,7 +232,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   static battery_discharging_icons = ["battery_0_bar", "battery_1_bar", "battery_2_bar", "battery_3_bar", "battery_4_bar", "battery_5_bar", "battery_6_bar", "battery_full"];
-  static battery_charging_icons = ["battery_charging_full", "battery_charging_20", "battery_charging_30", "battery_charging_50", "battery_charging_60", "battery_charging_80", "battery_charging_90", "battery_charging_90"];
+  static battery_charging_icons = ["battery_charging_20", "battery_charging_20", "battery_charging_30", "battery_charging_50", "battery_charging_60", "battery_charging_80", "battery_charging_90", "battery_charging_full"];
   static batteryIcon(pv: PvControl): string {
     if (pv.meter.error > 3) {
       return 'battery_unknown';
