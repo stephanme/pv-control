@@ -35,7 +35,6 @@ describe('AppComponent', () => {
   let phaseModeAuto: MatButtonToggleHarness;
   let phaseModeCharge1P: MatButtonToggleHarness;
   let priorityAuto: MatButtonToggleHarness;
-  let priorityHomeBattery: MatButtonToggleHarness;
   let priorityCar: MatButtonToggleHarness;
   let refreshButton: MatButtonHarness;
 
@@ -113,7 +112,6 @@ describe('AppComponent', () => {
     phaseModeAuto = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeAUTO' }));
     phaseModeCharge1P = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeCHARGE_1P' }));
     priorityAuto = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityAUTO' }));
-    priorityHomeBattery = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityHOME_BATTERY' }));
     priorityCar = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityCAR' }));
     refreshButton = await loader.getHarness(MatButtonHarness.with({ selector: '#refresh' }));
   });
