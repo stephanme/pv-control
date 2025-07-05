@@ -54,13 +54,15 @@ class ChargeControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ChargeMode.OFF, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
+        self.assertEqual(Priority.AUTO, c.desired_priority)
         self.assertEqual(Priority.AUTO, c.priority)
         await self.wallbox.set_phases_in(3)
         await self.controller.run()
         self.assertEqual(ChargeMode.MANUAL, c.desired_mode)
         self.assertEqual(ChargeMode.OFF, c.mode)
         self.assertEqual(PhaseMode.AUTO, c.phase_mode)
-        self.assertEqual(Priority.AUTO, c.priority)
+        self.assertEqual(Priority.AUTO, c.desired_priority)
+        self.assertEqual(Priority.HOME_BATTERY, c.priority)
 
     def test_desired_phases_OFF(self):
         ctl = self.controller
@@ -152,9 +154,28 @@ class ChargeControllerTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(3, ctl._desired_phases(5000, 1))
             self.assertEqual(3, ctl._desired_phases(5000, 3))
 
+    def test_priority_AUTO(self):
+        ctl = self.controller
+        ctl.set_desired_priority(Priority.AUTO)
+        self.assertEqual(Priority.HOME_BATTERY, ctl._control_priority(MeterData(soc_battery=49)))
+        self.assertEqual(Priority.AUTO, ctl.get_data().desired_priority)
+        self.assertEqual(Priority.HOME_BATTERY, ctl.get_data().priority)
+        self.assertEqual(Priority.CAR, ctl._control_priority(MeterData(soc_battery=50)))
+        self.assertEqual(Priority.AUTO, ctl.get_data().desired_priority)
+        self.assertEqual(Priority.CAR, ctl.get_data().priority)
+
+    def test_priority_HOME_BATTERY(self):
+        ctl = self.controller
+        ctl.set_desired_priority(Priority.HOME_BATTERY)
+        self.assertEqual(Priority.HOME_BATTERY, ctl._control_priority(MeterData()))
+        self.assertEqual(Priority.HOME_BATTERY, ctl.get_data().desired_priority)
+        self.assertEqual(Priority.HOME_BATTERY, ctl.get_data().priority)
+
     def test_priority_CAR(self):
         ctl = self.controller
-        ctl.set_priority(Priority.CAR)
+        ctl.set_desired_priority(Priority.CAR)
+        self.assertEqual(Priority.CAR, ctl._control_priority(MeterData()))
+        self.assertEqual(Priority.CAR, ctl.get_data().desired_priority)
         self.assertEqual(Priority.CAR, ctl.get_data().priority)
 
     def test_meter_charged_energy(self):
@@ -1262,7 +1283,7 @@ class ChargeControllerPVTest(unittest.IsolatedAsyncioTestCase):
     async def test_charge_control_pv_only_1p_prio_car(self):
         self.controller.set_desired_mode(ChargeMode.PV_ONLY)
         self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
-        self.controller.set_priority(Priority.CAR)
+        self.controller.set_desired_priority(Priority.CAR)
         self.meter.get_config().battery_capacity = 833  # 1kw ~ 1% in 30s
         self.meter.get_config().battery_max = 1000
         # meter simulates battery before charge controller -> expected_m.soc_battery increases when pv increases, wb consumption doesn't count for soc
@@ -1332,7 +1353,7 @@ class ChargeControllerPVTest(unittest.IsolatedAsyncioTestCase):
     async def test_charge_control_pv_only_1p_prio_home_battery(self):
         self.controller.set_desired_mode(ChargeMode.PV_ONLY)
         self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
-        self.controller.set_priority(Priority.HOME_BATTERY)
+        self.controller.set_desired_priority(Priority.HOME_BATTERY)
         self.meter.get_config().battery_capacity = 833  # 1kw ~ 1% in 30s
         self.meter.get_config().battery_max = 1000
         # meter simulates battery before charge controller -> expected_m.soc_battery increases when pv increases, wb consumption doesn't count for soc
@@ -1382,6 +1403,73 @@ class ChargeControllerPVTest(unittest.IsolatedAsyncioTestCase):
                 "home": 0,
                 "soc": 100,
                 "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=-3000 + 2990, power_battery=0, soc_battery=100),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
+            },
+        ]
+        await self.run_controller_test(data)
+
+    async def test_charge_control_pv_only_1p_prio_auto(self):
+        self.controller.set_desired_mode(ChargeMode.PV_ONLY)
+        self.controller.set_phase_mode(PhaseMode.CHARGE_1P)
+        self.controller.set_desired_priority(Priority.AUTO)
+        self.meter.get_config().battery_capacity = 833  # 1kw ~ 1% in 30s
+        self.meter.get_config().battery_max = 1000
+        # meter simulates battery before charge controller -> expected_m.soc_battery increases when pv increases, wb consumption doesn't count for soc
+        # Priority.AUTO = prefer home battery until soc=50, then prefer car
+        data = [
+            {
+                "test": "Enable Mode, no PV",
+                "pv": 0,
+                "home": 0,
+                "expected_m": MeterData(power_pv=0, power_consumption=0, power_grid=0, power_battery=0),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+            },
+            {
+                "test": "1kW PV, -1kW Batt, off",
+                "pv": 1000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=1000, power_consumption=0, power_grid=0, power_battery=-1000, soc_battery=1),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+            },
+            {
+                "test": "2kW PV, -1kW Batt, off",
+                "pv": 2000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=2000, power_consumption=0, power_grid=-1000, power_battery=-1000, soc_battery=2),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+            },
+            {
+                "test": "2.4kW PV, -1kW Batt, off",
+                "pv": 2400,
+                "home": 0,
+                "expected_m": MeterData(power_pv=2400, power_consumption=0, power_grid=-1400, power_battery=-1000, soc_battery=3),
+                "expected_wb": WallboxData(phases_in=1, phases_out=0, allow_charging=False, max_current=6),
+            },
+            {
+                "test": "3kW PV, -1kW Batt, 1x8A",
+                "pv": 3000,
+                "home": 0,
+                "car": CarStatus.Charging,
+                "expected_m": MeterData(
+                    power_pv=3000, power_consumption=1840, power_grid=-3000 + 1000 + 1840, power_battery=-1000, soc_battery=4
+                ),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=8, power=1840),
+            },
+            {
+                "test": "3kW PV, -1kW Batt, 1x8A *",
+                "pv": 3000,
+                "home": 0,
+                "soc": 48,
+                "expected_m": MeterData(
+                    power_pv=3000, power_consumption=1840, power_grid=-3000 + 1000 + 1840, power_battery=-1000, soc_battery=49
+                ),
+                "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=8, power=1840),
+            },
+            {
+                "test": "3kW PV, 0kW Batt, 1x13A",  # HOME_BATTERY -> CAR
+                "pv": 3000,
+                "home": 0,
+                "expected_m": MeterData(power_pv=3000, power_consumption=2990, power_grid=0, power_battery=-3000 + 2990, soc_battery=50),
                 "expected_wb": WallboxData(phases_in=1, phases_out=1, allow_charging=True, max_current=13, power=2990),
             },
         ]

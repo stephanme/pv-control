@@ -56,13 +56,15 @@ class ChargeControllerData(BaseData):
     - mode: current charge mode, converges to desired_mode
     - desired_mode: desired charge mode as set by user
     - phase_mode: current phase mode
-    - priority: current priority for charging, used to decide whether to charge home battery or car first
+    - priority: currently used priority for charging (HOME_BATTERY, CAR)
+    - desired_priority: priority as set by user (AUTO, HOME, CAR), used to decide whether to charge home battery or car first
     """
 
     mode: ChargeMode = ChargeMode.OFF
     desired_mode: ChargeMode = ChargeMode.OFF
     phase_mode: PhaseMode = PhaseMode.AUTO
     priority: Priority = Priority.AUTO
+    desired_priority: Priority = Priority.AUTO
 
 
 @dataclass
@@ -75,6 +77,7 @@ class ChargeControllerConfig(BaseConfig):
     power_hysteresis: float = 200  # [W] hysteresis for switching on/off and between 1 and 3 phases
     pv_all_min_power: float = 500  # [W] min available power for charging in mode PV_ALL
     pv_allow_charging_delay: int = 120  # [s] min stable allow_charging time before switching on/off (PV modes only)
+    prio_auto_soc_threshold: float = 50  # [%] threshold for switching between CAR and HOME_BATTERY prio in AUTO mode
 
 
 # metrics - used as annotation -> can't move into class
@@ -139,8 +142,8 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             mode = PhaseMode.DISABLED
         self.get_data().phase_mode = mode
 
-    def set_priority(self, priority: Priority) -> None:
-        self.get_data().priority = priority
+    def set_desired_priority(self, priority: Priority) -> None:
+        self.get_data().desired_priority = priority
 
     @_metrics_pvc_controller_processing.time()
     async def run(self) -> None:
@@ -152,6 +155,7 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
         self._meter_charged_energy(m, wb)
         self._control_charge_mode(wb)
+        self._control_priority(m)
         # skip one cycle whe switching phases
         if not await self._converge_phases(m, wb):
             await self._control_charging(m, wb)
@@ -229,6 +233,15 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         ):
             self.set_desired_mode(self.get_config().enable_charging_when_connecting_car)
 
+    def _control_priority(self, m: MeterData) -> Priority:
+        config = self.get_config()
+        priority = self.get_data().desired_priority
+        # priority AUTO: charge home battery until 50% and then prefer car
+        if priority == Priority.AUTO:
+            priority = Priority.HOME_BATTERY if m.soc_battery < config.prio_auto_soc_threshold else Priority.CAR
+        self.get_data().priority = priority
+        return priority
+
     # TODO: prevent too fast switching, use energy to grid and time instead of power
     async def _converge_phases(self, m: MeterData, wb: WallboxData) -> bool:
         if wb.error == 0 and wb.wb_error in [WbError.PHASE, WbError.PHASE_RELAY_ERR]:
@@ -251,7 +264,6 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
         return False
 
     def _desired_phases(self, available_power: float, current_phases: int):
-        # TODO 2 phase charging
         mode = self.get_data().desired_mode
         phase_mode = self.get_data().phase_mode
 
@@ -312,12 +324,12 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
             if phases == 0:
                 phases = wb.phases_in
             config = self.get_config()
-            priority = self.get_data().priority
 
+            priority = self.get_data().priority
             if priority == Priority.CAR:
                 # Priority.CAR neither charge nor discharge home battery
                 available_power = -m.power_grid + wb.power - m.power_battery
-            else:  # Priority.HOME_BATTERY or AUTO:
+            else:  # Priority.HOME_BATTERY
                 available_power = -m.power_grid + wb.power
                 if m.power_battery > 0:
                     # don't discharge home battery
@@ -325,7 +337,6 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
                 else:
                     # TODO: reduce a little to allow home battery to increase charging power
                     pass
-            # TODO: implement a more clever AUTO mode, e.g. charge home battery until 50% and then prefer car
 
             if mode == ChargeMode.PV_ONLY:
                 if not wb.allow_charging and available_power < self._pv_only_on:

@@ -181,7 +181,7 @@ export class AppComponent implements OnInit, OnDestroy {
         }
 
         this.priority.set(pv.controller.priority);
-        this.priorityControl.setValue(pv.controller.priority);
+        this.priorityControl.setValue(pv.controller.desired_priority);
       },
       error: () => { }
     });

@@ -76,10 +76,10 @@ async def put_controller_phase_mode(mode: Annotated[PhaseMode, Body()]) -> None:
     dependencies.controller.set_phase_mode(mode)
 
 
-# curl -X PUT http://localhost:8080/api/pvcontrol/controller/priority -H 'Content-Type: application/json' --data '"CAR"'
-@router.put("/controller/priority", status_code=204)
-async def put_controller_priority(prio: Annotated[Priority, Body()]) -> None:
-    dependencies.controller.set_priority(prio)
+# curl -X PUT http://localhost:8080/api/pvcontrol/controller/desired_priority -H 'Content-Type: application/json' --data '"CAR"'
+@router.put("/controller/desired_priority", status_code=204)
+async def put_controller_desired_priority(prio: Annotated[Priority, Body()]) -> None:
+    dependencies.controller.set_desired_priority(prio)
 
 
 @router.get("/meter")

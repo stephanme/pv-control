@@ -35,6 +35,7 @@ describe('AppComponent', () => {
   let phaseModeAuto: MatButtonToggleHarness;
   let phaseModeCharge1P: MatButtonToggleHarness;
   let priorityAuto: MatButtonToggleHarness;
+  let priorityHomeBattery: MatButtonToggleHarness;
   let priorityCar: MatButtonToggleHarness;
   let refreshButton: MatButtonHarness;
 
@@ -90,7 +91,8 @@ describe('AppComponent', () => {
         mode: ChargeMode.OFF,
         desired_mode: ChargeMode.OFF,
         phase_mode: PhaseMode.AUTO,
-        priority: Priority.AUTO,
+        priority: Priority.HOME_BATTERY,
+        desired_priority: Priority.AUTO,
       },
       car: {
         error: 0,
@@ -111,6 +113,7 @@ describe('AppComponent', () => {
     phaseModeAuto = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeAUTO' }));
     phaseModeCharge1P = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#phaseModeCHARGE_1P' }));
     priorityAuto = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityAUTO' }));
+    priorityHomeBattery = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityHOME_BATTERY' }));
     priorityCar = await loader.getHarness(MatButtonToggleHarness.with({ selector: '#priorityCAR' }));
     refreshButton = await loader.getHarness(MatButtonHarness.with({ selector: '#refresh' }));
   });
@@ -167,6 +170,7 @@ describe('AppComponent', () => {
     pvControlData.controller.desired_mode = ChargeMode.PV_ONLY;
     pvControlData.controller.phase_mode = PhaseMode.CHARGE_1P;
     pvControlData.controller.priority = Priority.CAR;
+    pvControlData.controller.desired_priority = Priority.CAR;
     await refreshButton.click();
 
     expect(refreshIcon.className).toContain('spin');
@@ -312,7 +316,8 @@ describe('AppComponent', () => {
       mode: ChargeMode.OFF,
       desired_mode: ChargeMode.OFF,
       phase_mode: PhaseMode.AUTO,
-      priority: Priority.AUTO,
+      priority: Priority.HOME_BATTERY,
+      desired_priority: Priority.AUTO,
     },
     car: {
       error: 0,

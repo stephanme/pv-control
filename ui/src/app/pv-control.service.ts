@@ -50,6 +50,7 @@ export interface ChargerController extends BaseService {
   desired_mode: ChargeMode;
   phase_mode: PhaseMode;
   priority: Priority;
+  desired_priority: Priority;
 }
 
 export interface Car extends BaseService {

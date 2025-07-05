@@ -62,19 +62,19 @@ class PvcontrolApiTest(unittest.TestCase):
 
     def test_put_controller_priority(self):
         with TestClient(self.app) as client:
-            response = client.put("/api/pvcontrol/controller/priority", json="AUTO")
+            response = client.put("/api/pvcontrol/controller/desired_priority", json="AUTO")
             self.assertEqual(204, response.status_code)
-            self.assertEqual(dependencies.controller.get_data().priority, "AUTO")
-            response = client.put("/api/pvcontrol/controller/priority", json="CAR")
+            self.assertEqual(dependencies.controller.get_data().desired_priority, "AUTO")
+            response = client.put("/api/pvcontrol/controller/desired_priority", json="CAR")
             self.assertEqual(204, response.status_code)
-            self.assertEqual(dependencies.controller.get_data().priority, "CAR")
-            response = client.put("/api/pvcontrol/controller/priority", json="HOME_BATTERY")
+            self.assertEqual(dependencies.controller.get_data().desired_priority, "CAR")
+            response = client.put("/api/pvcontrol/controller/desired_priority", json="HOME_BATTERY")
             self.assertEqual(204, response.status_code)
-            self.assertEqual(dependencies.controller.get_data().priority, "HOME_BATTERY")
+            self.assertEqual(dependencies.controller.get_data().desired_priority, "HOME_BATTERY")
 
-            response = client.put("/api/pvcontrol/controller/priority", json="invalid")
+            response = client.put("/api/pvcontrol/controller/desired_priority", json="invalid")
             self.assertEqual(422, response.status_code)
-            self.assertEqual(dependencies.controller.get_data().priority, "HOME_BATTERY")
+            self.assertEqual(dependencies.controller.get_data().desired_priority, "HOME_BATTERY")
 
     def test_get_meter(self):
         with TestClient(self.app) as client:

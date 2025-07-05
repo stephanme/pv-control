@@ -45,6 +45,7 @@ describe('PvControlServiceService', () => {
         desired_mode: ChargeMode.PV_ONLY,
         phase_mode: PhaseMode.AUTO,
         priority: Priority.AUTO,
+        desired_priority: Priority.HOME_BATTERY,
       },
       car: {
         error: 0,
