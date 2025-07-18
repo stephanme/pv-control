@@ -94,7 +94,7 @@ class PhaseRelayFactory:
         if enabled:
             if type == "RaspiPhaseRelay":
                 # import only when configured and enabled = running on pi1 (RPi.GPIO module is not available on other platforms)
-                from raspi_relay import RaspiPhaseRelay
+                from pvcontrol.raspi_relay import RaspiPhaseRelay
 
                 return RaspiPhaseRelay(config)
             elif type == "SimulatedPhaseRelay":
