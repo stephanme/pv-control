@@ -169,8 +169,8 @@ npm run test
 Local docker build:
 ```
 docker build -t stephanme/pv-control .
-docker run -e DISABLE_GPIO=1 -p 8080:8080 stephanme/pv-control
-docker run -it -e DISABLE_GPIO=1 stephanme/pv-control bash
+docker run -p 8080:8080 stephanme/pv-control
+docker run -it stephanme/pv-control bash
 ```
 
 ## CI and Release

@@ -1,7 +1,4 @@
 import enum
-import os
-import platform
-import sys
 import logging
 import prometheus_client
 from dataclasses import dataclass
@@ -9,51 +6,6 @@ from dataclasses import dataclass
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 
 logger = logging.getLogger(__name__)
-
-# GPIO is only awailable on raspi
-# pyright: reportPossiblyUnboundVariable=false, reportMissingModuleSource=false
-logger.info(f"Running on {platform.machine()} / {sys.platform}")
-gpio_disabled = os.environ.get("DISABLE_GPIO") is not None
-if gpio_disabled or "x86" in platform.machine() or "darwin" == sys.platform or "win32" == sys.platform:
-    logger.warning("GPIO not available")
-    if gpio_disabled:
-        logger.warning("DISABLE_GPIO environment variable set")
-    # uncomment for local dev if needed
-    # from fake_rpi.RPi import GPIO
-else:
-    # raspi, arm7 or aarch64
-    import RPi.GPIO as GPIO
-
-    GPIO.setwarnings(True)
-    GPIO.setmode(GPIO.BCM)
-
-
-# https://www.waveshare.com/wiki/RPi_Relay_Board
-# Relay OFF = false = GPIO.HIGH
-# Relay ON = true = GPIO.LOW
-class GPIORelay:
-    CHANNEL_1 = 26
-    CHANNEL_2 = 20
-    CHANNEL_3 = 21
-
-    def __init__(self, channel: int):
-        self._channel = channel
-        ch_function = GPIO.gpio_function(channel)
-        logger.info(f"Before channel {channel} setup: function={ch_function}")
-        if ch_function == GPIO.OUT:
-            # keep state if channel is already OUT (= app restart)
-            GPIO.setup(channel, GPIO.OUT)
-        else:
-            # init to GPIO.HIGH = OFF to avoid switching on reboot
-            GPIO.setup(channel, GPIO.OUT, initial=GPIO.HIGH)
-        logger.info(f"After channel {channel} setup : relay={GPIO.input(channel)}")
-
-    def read(self) -> bool:
-        return GPIO.input(self._channel) == GPIO.LOW
-
-    def write(self, v: bool):
-        logger.info(f"write channel {self._channel}={v}")
-        GPIO.output(self._channel, GPIO.LOW if v else GPIO.HIGH)
 
 
 class RelayType(str, enum.Enum):
@@ -131,34 +83,19 @@ class SimulatedPhaseRelay(PhaseRelay):
         self._update_relay_state(ch)
 
 
-class RaspiPhaseRelay(PhaseRelay):
-    def __init__(self, config: PhaseRelayConfig):
-        super().__init__(config)
-        self._set_data(PhaseRelayData(enabled=True))
-        self._gpio_relay = GPIORelay(GPIORelay.CHANNEL_1)  # TODO: configurable
-        self.get_phases()
-
-    def get_phases(self):
-        ch = self._gpio_relay.read()
-        self._update_relay_state(ch)
-        return self.get_data().phases
-
-    def set_phases(self, phases: int):
-        ch = self._phases_to_relay(phases)
-        self._gpio_relay.write(ch)
-        self._update_relay_state(ch)
-
-
 class PhaseRelayFactory:
     # hostname - optional parameter to enable/disable phase switching depending on where pvcontrol runs (k8s hostname)
     @classmethod
     def newPhaseRelay(cls, type: str, hostname: str, **kwargs) -> PhaseRelay:
         config = PhaseRelayConfig(**kwargs)
         enabled = PhaseRelayFactory.is_relay_enabled(config, hostname)
-        logger.info(f"PhaseRelay enabled={enabled}")
+        logger.info(f"PhaseRelay type={type}, enabled={enabled}")
 
         if enabled:
             if type == "RaspiPhaseRelay":
+                # import only when configured and enabled = running on pi1 (RPi.GPIO module is not available on other platforms)
+                from raspi_relay import RaspiPhaseRelay
+
                 return RaspiPhaseRelay(config)
             elif type == "SimulatedPhaseRelay":
                 return SimulatedPhaseRelay(config)

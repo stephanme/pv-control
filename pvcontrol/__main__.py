@@ -3,6 +3,8 @@ import argparse
 import json
 import uvicorn
 import uvicorn.config
+import platform
+import sys
 
 from pvcontrol import LOG_FORMAT
 from pvcontrol import app, dependencies
@@ -31,6 +33,7 @@ logger.info(f"Relay:   {args.relay}")
 logger.info(f"Car:     {args.car}")
 logger.info(f"config:  {args.config}")
 logger.info(f"hostname:{args.hostname}")
+logger.info(f"Running on {platform.machine()} / {sys.platform}")
 config = json.loads(args.config)
 for c in ["wallbox", "meter", "car", "controller", "relay"]:
     if c not in config:
