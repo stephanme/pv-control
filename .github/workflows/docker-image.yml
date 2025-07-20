@@ -86,11 +86,21 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build and push docker images
+    - name: Build docker image for linux/arm/v7
       uses: docker/build-push-action@v6
       with:
         context: .
-        platforms: linux/amd64,linux/arm/v7,linux/arm64
+        platforms: linux/arm/v7
+        push: false
+        tags: ${{ steps.docker_meta.outputs.tags }}
+        labels: ${{ steps.docker_meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    - name: Build and push docker images for linux/amd64 and linux/arm64
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta.outputs.tags }}
         labels: ${{ steps.docker_meta.outputs.labels }}
