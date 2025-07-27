@@ -229,13 +229,13 @@ class KostalMeter(Meter[KostalMeterConfig]):
             # kpc_ac_power_total_watts #172 -> pv
             # kpc_powermeter_total_watts #252 -> grid
             # TODO: read battery data
-            regs_grid = await self._modbusClient.read_holding_registers(252, count=2, slave=self._unit)
+            regs_grid = await self._modbusClient.read_holding_registers(252, count=2, device_id=self._unit)
             if regs_grid.isError():
                 raise Exception(f"Error reading grid data: {regs_grid}")
-            regs_consumption = await self._modbusClient.read_holding_registers(108, count=12, slave=self._unit)
+            regs_consumption = await self._modbusClient.read_holding_registers(108, count=12, device_id=self._unit)
             if regs_consumption.isError():
                 raise Exception(f"Error reading consumption data: {regs_grid}")
-            regs_pv = await self._modbusClient.read_holding_registers(172, count=2, slave=self._unit)
+            regs_pv = await self._modbusClient.read_holding_registers(172, count=2, device_id=self._unit)
             if regs_pv.isError():
                 raise Exception(f"Error reading pv data: {regs_grid}")
 
