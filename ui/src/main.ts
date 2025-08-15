@@ -1,5 +1,5 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideZonelessChangeDetection, inject, provideAppInitializer } from '@angular/core';
+import { provideZonelessChangeDetection, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
@@ -10,6 +10,7 @@ import { MatIconRegistry } from '@angular/material/icon';
 bootstrapApplication(AppComponent, {
   providers: [
     provideZonelessChangeDetection(),
+    provideBrowserGlobalErrorListeners(),
     provideHttpClient(withInterceptors([statusInterceptor])),
     provideAnimationsAsync(),
     provideAppInitializer(() => {
