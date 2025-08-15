@@ -1,7 +1,7 @@
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 import { HttpStatusService, statusInterceptor } from './http-status.service';
 
@@ -14,8 +14,8 @@ describe('HttpStatusService', () => {
     TestBed.configureTestingModule({
       imports: [],
       providers: [
-        provideExperimentalZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([statusInterceptor])), 
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([statusInterceptor])),
         provideHttpClientTesting(),
       ]
     });

@@ -1,5 +1,5 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 export interface BaseService {
@@ -74,8 +74,8 @@ const httpOptions = {
   providedIn: 'root'
 })
 export class PvControlService {
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) { }
 
   public getPvControl(): Observable<PvControl> {
     return this.http.get<PvControl>('./api/pvcontrol');

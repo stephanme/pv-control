@@ -1,4 +1,4 @@
-import { Component, HostListener, Inject, OnDestroy, OnInit, signal, effect, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, signal, effect, computed, ChangeDetectionStrategy, DOCUMENT, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { Subscription, timer } from 'rxjs';
 
@@ -12,7 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { HttpStatusService } from './http-status.service';
 import { ChargeMode, PhaseMode, Priority, PvControl, PvControlService } from './pv-control.service';
-import { DecimalPipe, DOCUMENT } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +37,12 @@ import { DecimalPipe, DOCUMENT } from '@angular/common';
   ]
 })
 export class AppComponent implements OnInit, OnDestroy {
+  private fb = inject(FormBuilder);
+  private snackBar = inject(MatSnackBar);
+  private httpStatusService = inject(HttpStatusService);
+  private pvControlService = inject(PvControlService);
+  private document = inject<Document>(DOCUMENT);
+
   ChargeMode = ChargeMode;
   PhaseMode = PhaseMode;
   Priority = Priority;
@@ -100,10 +106,7 @@ export class AppComponent implements OnInit, OnDestroy {
   // temp card
   wallboxTemperature = signal(0);
 
-  constructor(
-    private fb: FormBuilder, private snackBar: MatSnackBar,
-    private httpStatusService: HttpStatusService, private pvControlService: PvControlService,
-    @Inject(DOCUMENT) private document: Document) {
+  constructor() {
     effect(() => {
       const err = this.httpStatusService.httpError();
       if (err) {

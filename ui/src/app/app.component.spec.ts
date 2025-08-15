@@ -20,7 +20,7 @@ import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 import { AppComponent } from './app.component';
 import { ChargeMode, PhaseMode, Priority, PvControl } from './pv-control.service';
 import { statusInterceptor } from './http-status.service';
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 
 describe('AppComponent', () => {
@@ -55,7 +55,7 @@ describe('AppComponent', () => {
         AppComponent
       ],
       providers: [
-        provideExperimentalZonelessChangeDetection(),
+        provideZonelessChangeDetection(),
         provideHttpClient(withInterceptors([statusInterceptor])),
         provideHttpClientTesting(),
       ]
