@@ -84,10 +84,10 @@ describe('PvControlServiceService', () => {
     req.flush(null);
   });
 
-  it('should putPvControlPriority()', () => {
-    service.putPvControlPriority(Priority.CAR).subscribe();
+  it('should putPvControlDesiredPriority()', () => {
+    service.putPvControlDesiredPriority(Priority.CAR).subscribe();
 
-    const req = httpMock.expectOne('./api/pvcontrol/controller/priority');
+    const req = httpMock.expectOne('./api/pvcontrol/controller/desired_priority');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toBe('"CAR"');
     req.flush(null);

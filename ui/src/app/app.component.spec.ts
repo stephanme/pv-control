@@ -279,7 +279,7 @@ describe('AppComponent', () => {
 
     await priorityCar.check();
 
-    const req = httpMock.expectOne('./api/pvcontrol/controller/priority');
+    const req = httpMock.expectOne('./api/pvcontrol/controller/desired_priority');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toBe('"CAR"');
     req.flush(null);

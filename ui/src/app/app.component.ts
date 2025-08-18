@@ -208,7 +208,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   onPriorityChange(event: MatButtonToggleChange): void {
     const prio = event.value;
-    this.pvControlService.putPvControlPriority(prio).subscribe({
+    this.pvControlService.putPvControlDesiredPriority(prio).subscribe({
       next: () => { },
       error: () => { }
     });

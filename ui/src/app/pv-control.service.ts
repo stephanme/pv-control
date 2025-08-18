@@ -91,8 +91,8 @@ export class PvControlService {
     return this.http.put<void>('./api/pvcontrol/controller/phase_mode', JSON.stringify(mode), httpOptions);
   }
 
-  public putPvControlPriority(prio: Priority): Observable<void> {
+  public putPvControlDesiredPriority(prio: Priority): Observable<void> {
     // Note: explicit json conversion otherwise it is sent as plain text -> 400
-    return this.http.put<void>('./api/pvcontrol/controller/priority', JSON.stringify(prio), httpOptions);
+    return this.http.put<void>('./api/pvcontrol/controller/desired_priority', JSON.stringify(prio), httpOptions);
   }
 }
