@@ -30,7 +30,7 @@
     "@angular-eslint/schematics": "20.1.1",
     "@angular-eslint/template-parser": "20.1.1",
     "@angular/build": "^20.1.6",
-    "@angular/cli": "20.1.6",
+    "@angular/cli": "20.2.0",
     "@angular/compiler-cli": "20.1.7",
     "@types/jasmine": "5.1.9",
     "@types/node": "^20.19.11",
