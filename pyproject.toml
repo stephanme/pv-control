@@ -39,6 +39,6 @@ preview = true
 [dependency-groups]
 dev = [
     "pyright==1.1.405",
-    "ruff==0.12.11",
+    "ruff==0.12.12",
     "httpx==0.28.1",
 ]
