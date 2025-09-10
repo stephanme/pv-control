@@ -526,7 +526,7 @@ requires-dist = [
     { name = "fastapi", specifier = "==0.116.1" },
     { name = "myskoda", specifier = "==2.3.3" },
     { name = "prometheus-client", specifier = "==0.22.1" },
-    { name = "pymodbus", specifier = "==3.11.1" },
+    { name = "pymodbus", specifier = "==3.11.2" },
     { name = "pysma-plus", specifier = "==0.3.22.2" },
     { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = "==0.7.1" },
     { name = "uvicorn", specifier = "==0.35.0" },
@@ -626,11 +626,11 @@ wheels = [
 
 [[package]]
 name = "pymodbus"
-version = "3.11.1"
+version = "3.11.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/78/1e/376404269feedd72fd440bb948da4e0f41f311bfa9dcf4586c7bc314c803/pymodbus-3.11.1.tar.gz", hash = "sha256:e738178d0ac5063f095d61be37422ac4105faab19fbacea9eb5a574e8e2b3122", size = 163261, upload-time = "2025-08-10T15:41:26.479Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/28/34f667085cb162ac68be849e4ea1ced4c54d97b7d8099c11b27ec1cf2fa1/pymodbus-3.11.2.tar.gz", hash = "sha256:132712baf79cae339aac694739b14551bab69b2a078570cb1350b1db0cccdba7", size = 162372, upload-time = "2025-09-10T10:02:53.089Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/2a/2920794f5342d130365a910acaebe5028006a452d70b793a66d861b3431c/pymodbus-3.11.1-py3-none-any.whl", hash = "sha256:3119a925e7723a0e729d0dd07388d2abb1b7ee7dd99be48078e88bfe7a3d024d", size = 166384, upload-time = "2025-08-10T15:41:24.429Z" },
+    { url = "https://files.pythonhosted.org/packages/36/90/bc7d13710d45ffce70452e5c2e43f7b4d5b23d7424271268d1b363ac5461/pymodbus-3.11.2-py3-none-any.whl", hash = "sha256:0b446173059a881dae46753cebaab3ad72b39f7e3417a60ead394d09d0f6c8fe", size = 164237, upload-time = "2025-09-10T10:02:50.93Z" },
 ]
 
 [[package]]
