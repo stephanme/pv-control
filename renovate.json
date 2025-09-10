@@ -8,6 +8,7 @@
   },
   "packageRules": [
     {
+      "description": "No Python version update",
       "matchDatasources": [
         "docker"
       ],
@@ -15,6 +16,31 @@
       "matchPackageNames": [
         "/python/"
       ]
+    },
+    {
+      "description": "Group Angular updates",
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "@angular**"
+      ],
+      "groupName": "angular"
+    },
+    {
+      "description": "Group UI dev dependency updates",
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "**",
+        "!@angular**",
+        "!typescript"
+      ],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "groupName": "UI dev dependencies"
     }
   ]
 }
