@@ -23,7 +23,7 @@
         "npm"
       ],
       "matchPackageNames": [
-        "@angular**"
+        "/@angular.*/"
       ],
       "groupName": "angular"
     },
@@ -34,13 +34,23 @@
       ],
       "matchPackageNames": [
         "**",
-        "!@angular**",
+        "!/@angular.*/",
         "!typescript"
       ],
       "matchDepTypes": [
         "devDependencies"
       ],
       "groupName": "UI dev dependencies"
+    },
+    {
+      "description": "Ignore @types/node updates to v22",
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "@types/node"
+      ],
+      "allowedVersions": "<21"
     }
   ]
 }
