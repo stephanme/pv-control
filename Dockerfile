@@ -2,12 +2,8 @@
 FROM python:3.13.7-bookworm AS builder
 
 #renovate: datasource=github-releases depName=astral-sh/uv
-ARG UV_VERSION=v0.4.18
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && curl -fsSL https://astral.sh/uv/install.sh | sh -s -- --version $UV_VERSION \
-    && apt-get purge -y curl \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+ARG UV_VERSION=0.8.17
+RUN curl -fsSL https://astral.sh/uv/${UV_VERSION}install.sh | sh
 
 ENV \
     PATH="/root/.local/bin/:$PATH" \
