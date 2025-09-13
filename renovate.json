@@ -8,16 +8,6 @@
   },
   "packageRules": [
     {
-      "description": "No Python version update",
-      "matchDatasources": [
-        "docker"
-      ],
-      "enabled": false,
-      "matchPackageNames": [
-        "/python/"
-      ]
-    },
-    {
       "description": "Group Angular updates",
       "matchDatasources": [
         "npm"
@@ -51,6 +41,19 @@
         "@types/node"
       ],
       "allowedVersions": "<21"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update version ARGs in Dockerfile",
+      "managerFilePatterns": [
+        "/^Dockerfile$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\sARG.*_VERSION=\"?(?<currentValue>.*)\"?\\s"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
   ]
 }

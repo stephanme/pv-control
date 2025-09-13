@@ -90,17 +90,7 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build docker image for linux/arm/v7
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        platforms: linux/arm/v7
-        push: false
-        tags: ${{ steps.docker_meta.outputs.tags }}
-        labels: ${{ steps.docker_meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    - name: Build and push docker images for linux/amd64 and linux/arm64
+    - name: Build and push multi-arch docker image (amd64 + arm64)
       uses: docker/build-push-action@v6
       with:
         context: .
@@ -108,5 +98,19 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta.outputs.tags }}
         labels: ${{ steps.docker_meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        build-args: |
+          VCS_REF=${{ github.sha }}
+        cache-from: type=gha,scope=pv-control
+        cache-to: type=gha,mode=max,scope=pv-control
+    - name: Build linux/arm/v7 (no push)
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        platforms: linux/arm/v7
+        push: false
+        tags: ${{ steps.docker_meta.outputs.tags }}
+        labels: ${{ steps.docker_meta.outputs.labels }}
+        build-args: |
+          VCS_REF=${{ github.sha }}
+        cache-from: type=gha,scope=pv-control
+        cache-to: type=gha,mode=max,scope=pv-control

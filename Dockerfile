@@ -1,9 +1,13 @@
 # syntax=docker/dockerfile:1
-FROM python:3.13-bookworm AS builder
+FROM python:3.13.7-bookworm AS builder
 
-# install uv, can't use image because arm7 is not provided
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-RUN sh /uv-installer.sh && rm /uv-installer.sh
+#renovate: datasource=github-releases depName=astral-sh/uv
+ARG UV_VERSION=v0.4.18
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL https://astral.sh/uv/install.sh | sh -s -- --version $UV_VERSION \
+    && apt-get purge -y curl \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV \
     PATH="/root/.local/bin/:$PATH" \
@@ -29,7 +33,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 
-FROM python:3.13-slim-bookworm
+FROM python:3.13.7-slim-bookworm
+ARG VCS_REF
+LABEL org.opencontainers.image.revision=$VCS_REF
 WORKDIR /app
 
 # Copy the environment, but not the source code
