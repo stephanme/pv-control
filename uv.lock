@@ -379,7 +379,7 @@ wheels = [
 
 [[package]]
 name = "myskoda"
-version = "2.4.0"
+version = "2.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -389,9 +389,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/0a/3f891ef932f9f42fba6685f8699ddf8fb8b36bb6267cc6bd9ac7e7e89bb7/myskoda-2.4.0.tar.gz", hash = "sha256:56daf0b80c38daf389a259fe870183ce2d33eae215933130f176e8d43886b478", size = 301745, upload-time = "2025-09-13T19:37:15.266Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b2/33/cf75921b390198a24a958e96c97b79d8eb2951a5834fd849760d22cc1e44/myskoda-2.4.1.tar.gz", hash = "sha256:56740c053874604a896382ebfcc0bc35561e7d1dffabf653e760f69561d65ff8", size = 301752, upload-time = "2025-09-19T14:27:53.524Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a6/3e/7454fa6f07ec129196f3b6f76f88c6a7ffd07169b7a5dc401fd488c0877e/myskoda-2.4.0-py3-none-any.whl", hash = "sha256:b05919a521e9a139e2118ddff9cf2285688c6829232011c5c464ed35bf015e4c", size = 69133, upload-time = "2025-09-13T19:37:13.705Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/d7/36e03625f6e91c8031fdfd7c6163309ba23090c2525f90358df5d855a341/myskoda-2.4.1-py3-none-any.whl", hash = "sha256:1d1decca8031f68864b8c59f9024a8349dc41fa9e163f8c9555548ca19ffb63d", size = 69139, upload-time = "2025-09-19T14:27:52.124Z" },
 ]
 
 [[package]]
@@ -524,7 +524,7 @@ requires-dist = [
     { name = "aiodns", specifier = "==3.5.0" },
     { name = "aiohttp", specifier = "==3.12.15" },
     { name = "fastapi", specifier = "==0.116.2" },
-    { name = "myskoda", specifier = "==2.4.0" },
+    { name = "myskoda", specifier = "==2.4.1" },
     { name = "prometheus-client", specifier = "==0.23.1" },
     { name = "pymodbus", specifier = "==3.11.2" },
     { name = "pysma-plus", specifier = "==0.3.22.3" },
