@@ -527,7 +527,7 @@ requires-dist = [
     { name = "myskoda", specifier = "==2.4.1" },
     { name = "prometheus-client", specifier = "==0.23.1" },
     { name = "pymodbus", specifier = "==3.11.2" },
-    { name = "pysma-plus", specifier = "==0.3.22.3" },
+    { name = "pysma-plus", specifier = "==0.3.22.4" },
     { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = "==0.7.1" },
     { name = "uvicorn", specifier = "==0.37.0" },
 ]
@@ -648,7 +648,7 @@ wheels = [
 
 [[package]]
 name = "pysma-plus"
-version = "0.3.22.3"
+version = "0.3.22.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -659,9 +659,9 @@ dependencies = [
     { name = "untangle" },
     { name = "xmlschema" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/17/3bceae648539815d2615d4a4536bd2f9a6163cac4e6d54cb7891c3896963/pysma_plus-0.3.22.3.tar.gz", hash = "sha256:09ebe111d3d3df14d841d956a4b53b32b38c7cf14f4f713a394d15b7b7223598", size = 107453, upload-time = "2025-09-17T08:02:00.874Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/f7/88c7e32c6c9975dc29dcf3f240a76fc9723c86703187d105063139d922d3/pysma_plus-0.3.22.4.tar.gz", hash = "sha256:61bfcb90a8dee9e6f59da6b6821a5573a741b410d4ca3b9b2468788fdfca5146", size = 107456, upload-time = "2025-09-23T19:15:46.5Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/19/63a527f2c8207533a9fdc4e8e065ff0e16e7283eddb1c7e72a4f1afdc51c/pysma_plus-0.3.22.3-py3-none-any.whl", hash = "sha256:6c4d413438653ee36f965d4a5725546aba15c13e36cf6bb72786b90834d69934", size = 80277, upload-time = "2025-09-17T08:01:59.352Z" },
+    { url = "https://files.pythonhosted.org/packages/51/a8/c156c562bb822368a2fde5fdc47aa088da7ae27d209b93cff8f385dac09b/pysma_plus-0.3.22.4-py3-none-any.whl", hash = "sha256:523c5cb123b3061f28b7776446ef3c2ea20290a7f2db3ed62e803c9d83653fac", size = 80277, upload-time = "2025-09-23T19:15:44.312Z" },
 ]
 
 [[package]]
