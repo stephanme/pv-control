@@ -78,7 +78,7 @@ reduced functionality.
 Pre-requisites:
 - Raspberry Pi 2 with Raspberry Pi OS Lite (Debian 12), or newer model
 - [Raspberry Pi Expansion Board, Power Relay](https://www.waveshare.com/rpi-relay-board.htm)
-- Python 3.13, pip
+- Python 3.14
   - installation using [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - download `pv-control.tar.gz` package (release artifacts or from github actions)
 
