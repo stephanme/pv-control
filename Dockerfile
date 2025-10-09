@@ -2,7 +2,7 @@
 FROM python:3.13.7-bookworm AS builder
 
 #renovate: datasource=github-releases depName=astral-sh/uv
-ARG UV_VERSION=0.9.0
+ARG UV_VERSION=0.9.1
 RUN curl -fsSL https://astral.sh/uv/${UV_VERSION}/install.sh | sh
 
 ENV \
