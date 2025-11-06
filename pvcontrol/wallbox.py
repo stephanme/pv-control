@@ -2,9 +2,9 @@ import asyncio
 import logging
 from dataclasses import dataclass
 import enum
-import typing
+from typing import Any, override
 import aiohttp
-import prometheus_client
+from prometheus_client import Gauge
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.relay import PhaseRelay
 from pvcontrol.utils import aiohttp_trace_config
@@ -54,25 +54,19 @@ class WallboxData(BaseData):
     # unlocked_by - RFID card id
 
 
-C = typing.TypeVar("C", bound=WallboxConfig)  # type of configuration
-
-
-class Wallbox(BaseService[C, WallboxData]):
+class Wallbox[C: WallboxConfig](BaseService[C, WallboxData]):
     """Base class / interface for wallboxes"""
 
-    _metrics_pvc_wallbox_car_status = prometheus_client.Gauge("pvcontrol_wallbox_car_status", "Wallbox car status")
-    _metrics_pvc_wallbox_power = prometheus_client.Gauge("pvcontrol_wallbox_power_watts", "Wallbox total power")
-    _metrics_pvc_wallbox_phases_in = prometheus_client.Gauge("pvcontrol_wallbox_phases_in", "Number of phases before wallbox (0..3)")
-    _metrics_pvc_wallbox_phases_out = prometheus_client.Gauge(
-        "pvcontrol_wallbox_phases_out", "Number of phases for charging after wallbox (0..3)"
-    )
-    _metrics_pvc_wallbox_max_current = prometheus_client.Gauge("pvcontrol_wallbox_max_current_amperes", "Max current per phase")
-    _metrics_pvc_wallbox_allow_charging = prometheus_client.Gauge("pvcontrol_wallbox_allow_charging", "Wallbox allows charging")
-    _metrics_pvc_wallbox_temperature = prometheus_client.Gauge("pvcontrol_wallbox_temperature_celsius", "Wallbox temperature")
+    _metrics_pvc_wallbox_car_status: Gauge = Gauge("pvcontrol_wallbox_car_status", "Wallbox car status")
+    _metrics_pvc_wallbox_power: Gauge = Gauge("pvcontrol_wallbox_power_watts", "Wallbox total power")
+    _metrics_pvc_wallbox_phases_in: Gauge = Gauge("pvcontrol_wallbox_phases_in", "Number of phases before wallbox (0..3)")
+    _metrics_pvc_wallbox_phases_out: Gauge = Gauge("pvcontrol_wallbox_phases_out", "Number of phases for charging after wallbox (0..3)")
+    _metrics_pvc_wallbox_max_current: Gauge = Gauge("pvcontrol_wallbox_max_current_amperes", "Max current per phase")
+    _metrics_pvc_wallbox_allow_charging: Gauge = Gauge("pvcontrol_wallbox_allow_charging", "Wallbox allows charging")
+    _metrics_pvc_wallbox_temperature: Gauge = Gauge("pvcontrol_wallbox_temperature_celsius", "Wallbox temperature")
 
     def __init__(self, config: C):
-        super().__init__(config)
-        self._set_data(WallboxData())
+        super().__init__(config, WallboxData())
 
     async def read_data(self) -> WallboxData:
         """Read wallbox data and report metrics. The data is cached."""
@@ -84,6 +78,7 @@ class Wallbox(BaseService[C, WallboxData]):
         """Override in sub classes"""
         return self.get_data()
 
+    @override
     def _set_data(self, data: WallboxData):
         super()._set_data(data)
         Wallbox._metrics_pvc_wallbox_car_status.set(data.car_status)
@@ -96,13 +91,13 @@ class Wallbox(BaseService[C, WallboxData]):
 
     # set wallbox registers
 
-    async def set_phases_in(self, phases: int):
+    async def set_phases_in(self, _phases: int):
         pass
 
-    async def set_max_current(self, max_current: int):
+    async def set_max_current(self, _max_current: int):
         pass
 
-    async def allow_charging(self, f: bool):
+    async def allow_charging(self, _f: bool):
         pass
 
     async def trigger_reset(self):
@@ -117,8 +112,9 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
 
     def __init__(self, config: WallboxConfig):
         super().__init__(config)
-        self.trigger_reset_cnt = 0
+        self.trigger_reset_cnt: int = 0
 
+    @override
     async def _read_data(self) -> WallboxData:
         old = self.get_data()
         wb = WallboxData(**old.__dict__)
@@ -142,15 +138,19 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
     def set_car_status(self, status: CarStatus):
         self.get_data().car_status = status
 
+    @override
     async def set_phases_in(self, phases: int):
         self.get_data().phases_in = phases
 
+    @override
     async def set_max_current(self, max_current: int):
         self.get_data().max_current = max_current
 
+    @override
     async def allow_charging(self, f: bool):
         self.get_data().allow_charging = f
 
+    @override
     async def trigger_reset(self):
         self.trigger_reset_cnt += 1
 
@@ -165,14 +165,16 @@ class SimulatedWallbox(Wallbox[WallboxConfig]):
 class SimulatedWallboxWithRelay(SimulatedWallbox):
     def __init__(self, config: WallboxConfig, relay: PhaseRelay):
         super().__init__(config)
-        self._relay = relay
-        self.trigger_reset_cnt = 0
+        self._relay: PhaseRelay = relay
+        self.trigger_reset_cnt: int = 0
 
+    @override
     async def _read_data(self) -> WallboxData:
         wb = await super()._read_data()
         wb.phases_in = self._relay.get_phases()
         return wb
 
+    @override
     async def set_phases_in(self, phases: int):
         self._relay.set_phases(phases)
 
@@ -187,12 +189,13 @@ class GoeWallboxConfig(WallboxConfig):
 class GoeWallbox(Wallbox[GoeWallboxConfig]):
     def __init__(self, config: GoeWallboxConfig, relay: PhaseRelay):
         super().__init__(config)
-        self._relay = relay
-        self._status_url = f"{config.url}/status"
-        self._mqtt_url = f"{config.url}/mqtt"
-        self._timeout = aiohttp.ClientTimeout(total=config.timeout)
-        self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
+        self._relay: PhaseRelay = relay
+        self._status_url: str = f"{config.url}/status"
+        self._mqtt_url: str = f"{config.url}/mqtt"
+        self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=config.timeout)
+        self._session: aiohttp.ClientSession = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
 
+    @override
     async def set_phases_in(self, phases: int):
         errcnt = self.get_error_counter()
         phases_out = self.get_data().phases_out
@@ -205,6 +208,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         else:
             logger.warning(f"Rejected set_phases_in({phases}): phases_out={phases_out}, error_counter={errcnt}")
 
+    @override
     async def set_max_current(self, max_current: int):
         if max_current != self.get_data().max_current:
             try:
@@ -216,6 +220,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             except Exception as e:
                 logger.error(e)
 
+    @override
     async def allow_charging(self, f: bool):
         if f != self.get_data().allow_charging:
             try:
@@ -227,6 +232,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             except Exception as e:
                 logger.error(e)
 
+    @override
     async def trigger_reset(self):
         try:
             logger.debug("trigger reset")
@@ -237,6 +243,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         except Exception as e:
             logger.error(e)
 
+    @override
     async def _read_data(self) -> WallboxData:
         try:
             async with self._session.get(self._status_url, timeout=self._timeout) as res:
@@ -250,7 +257,7 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
             # always return last known data - there is no safe state that would somehow help
             return self.get_data()
 
-    def _json_2_wallbox_data(self, json: typing.Dict) -> WallboxData:
+    def _json_2_wallbox_data(self, json: dict[str, Any]) -> WallboxData:
         wb_error = WbError(int(json["err"]))
         car_status = CarStatus(int(json["car"]))
         max_current = int(json["amp"])
@@ -289,13 +296,14 @@ class GoeWallbox(Wallbox[GoeWallboxConfig]):
         )
         return wb
 
+    @override
     async def close(self):
         await self._session.close()
 
 
 class WallboxFactory:
     @classmethod
-    def newWallbox(cls, type: str, relay: PhaseRelay, **kwargs) -> Wallbox:
+    def newWallbox(cls, type: str, relay: PhaseRelay, **kwargs: Any) -> Wallbox[Any]:
         if type == "SimulatedWallbox":
             return SimulatedWallbox(WallboxConfig(**kwargs))
         elif type == "SimulatedWallboxWithRelay":

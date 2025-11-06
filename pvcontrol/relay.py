@@ -1,6 +1,7 @@
 import enum
 import logging
-import prometheus_client
+from typing import Any, override
+from prometheus_client import Gauge
 from dataclasses import dataclass
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
@@ -28,13 +29,11 @@ class PhaseRelayData(BaseData):
 
 
 class PhaseRelay(BaseService[PhaseRelayConfig, PhaseRelayData]):
-    _metrics_pvc_phase_relay = prometheus_client.Gauge("pvcontrol_phase_relay", "Phase switch relay status (off/on)")
-    _metrics_pvc_phase_relay_phases = prometheus_client.Gauge(
-        "pvcontrol_phase_relay_phases", "Number of phases according to relay (0=disabled)"
-    )
+    _metrics_pvc_phase_relay: Gauge = Gauge("pvcontrol_phase_relay", "Phase switch relay status (off/on)")
+    _metrics_pvc_phase_relay_phases: Gauge = Gauge("pvcontrol_phase_relay_phases", "Number of phases according to relay (0=disabled)")
 
-    def __init__(self, config: PhaseRelayConfig):
-        super().__init__(config)
+    def __init__(self, config: PhaseRelayConfig, data: PhaseRelayData):
+        super().__init__(config, data)
 
     def is_enabled(self) -> bool:
         return self.get_data().enabled
@@ -42,7 +41,7 @@ class PhaseRelay(BaseService[PhaseRelayConfig, PhaseRelayData]):
     def get_phases(self):
         return self.get_data().phases
 
-    def set_phases(self, phases: int):
+    def set_phases(self, _phases: int):
         pass
 
     def _update_relay_state(self, ch: bool):
@@ -67,17 +66,16 @@ class PhaseRelay(BaseService[PhaseRelayConfig, PhaseRelayData]):
 
 class DisabledPhaseRelay(PhaseRelay):
     def __init__(self, config: PhaseRelayConfig):
-        super().__init__(config)
-        self._set_data(PhaseRelayData(enabled=False))
+        super().__init__(config, PhaseRelayData(enabled=False))
         self._update_relay_state(False)
 
 
 class SimulatedPhaseRelay(PhaseRelay):
     def __init__(self, config: PhaseRelayConfig):
-        super().__init__(config)
-        self._set_data(PhaseRelayData(enabled=True))
+        super().__init__(config, PhaseRelayData(enabled=True))
         self._update_relay_state(False)
 
+    @override
     def set_phases(self, phases: int):
         ch = self._phases_to_relay(phases)
         self._update_relay_state(ch)
@@ -86,7 +84,7 @@ class SimulatedPhaseRelay(PhaseRelay):
 class PhaseRelayFactory:
     # hostname - optional parameter to enable/disable phase switching depending on where pvcontrol runs (k8s hostname)
     @classmethod
-    def newPhaseRelay(cls, type: str, hostname: str, **kwargs) -> PhaseRelay:
+    def newPhaseRelay(cls, type: str, hostname: str, **kwargs: Any) -> PhaseRelay:
         config = PhaseRelayConfig(**kwargs)
         enabled = PhaseRelayFactory.is_relay_enabled(config, hostname)
         logger.info(f"PhaseRelay type={type}, enabled={enabled}")

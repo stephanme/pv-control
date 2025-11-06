@@ -1,6 +1,7 @@
 # for development run uvicorn with this module:
 # uv run uvicorn pvcontrol.app:app --port 8080 --reload --reload-dir ./pvcontrol
 
+from typing import Any, final, override
 from argparse import Namespace
 from contextlib import asynccontextmanager
 import logging
@@ -9,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.routing import Mount
 import prometheus_client
 from starlette.responses import Response
-from starlette.staticfiles import StaticFiles
+from starlette.staticfiles import StaticFiles, PathLike
 
 from pvcontrol import api, dependencies
 
@@ -17,14 +18,16 @@ logger = logging.getLogger(__name__)
 
 
 # Static files for the Angular app, with cache control for immutable resources
+@final
 class AngularAppStaticFiles(StaticFiles):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         self.cachecontrol = "public, max-age=31536000, s-maxage=31536000, immutable"
         super().__init__(*args, **kwargs)
 
-    def file_response(self, full_path: str, *args, **kwargs) -> Response:
+    @override
+    def file_response(self, full_path: PathLike, *args: Any, **kwargs: dict[str, Any]) -> Response:
         resp: Response = super().file_response(full_path, *args, **kwargs)
-        if AngularAppStaticFiles.is_immutable_resource(full_path):
+        if AngularAppStaticFiles.is_immutable_resource(full_path.__str__()):
             resp.headers.setdefault("Cache-Control", self.cachecontrol)
         return resp
 
@@ -48,11 +51,11 @@ args = Namespace(
     car="SimulatedCar",
     hostname="",
 )
-config = {"wallbox": {}, "meter": {}, "car": {}, "controller": {}, "relay": {}}
+config: dict[str, Any] = {"wallbox": {}, "meter": {}, "car": {}, "controller": {}, "relay": {}}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     logger.info("Starting pvcontrol API server")
     await dependencies.init(args, config)
     yield
@@ -63,7 +66,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title="PV Control", version=dependencies.version)
 app.include_router(api.router)
 # workaround to get /metrics working (not just /metrics/), https://github.com/prometheus/client_python/issues/1016
-metrics_route = Mount("/metrics", prometheus_client.make_asgi_app())
+metrics_route = Mount("/metrics", prometheus_client.make_asgi_app())  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
 metrics_route.path_regex = re.compile("^/metrics(?P<path>.*)$")
 app.routes.append(metrics_route)
 # static angular resources, must be mounted last

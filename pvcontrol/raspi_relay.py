@@ -1,7 +1,10 @@
+# pyright: reportImportCycles=false
+# this module is imported by PhaseRelayFactory to avoid import cycles
 import logging
+from typing import final, override
 
 # GPIO is only awailable on raspi
-import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO  # pyright: ignore[reportMissingModuleSource]
 
 from pvcontrol.relay import PhaseRelay, PhaseRelayConfig, PhaseRelayData
 
@@ -15,6 +18,7 @@ GPIO.setmode(GPIO.BCM)
 # https://www.waveshare.com/wiki/RPi_Relay_Board
 # Relay OFF = false = GPIO.HIGH
 # Relay ON = true = GPIO.LOW
+@final
 class GPIORelay:
     CHANNEL_1 = 26
     CHANNEL_2 = 20
@@ -42,16 +46,17 @@ class GPIORelay:
 
 class RaspiPhaseRelay(PhaseRelay):
     def __init__(self, config: PhaseRelayConfig):
-        super().__init__(config)
-        self._set_data(PhaseRelayData(enabled=True))
-        self._gpio_relay = GPIORelay(GPIORelay.CHANNEL_1)  # TODO: configurable
+        super().__init__(config, PhaseRelayData(enabled=True))
+        self._gpio_relay: GPIORelay = GPIORelay(GPIORelay.CHANNEL_1)  # TODO: configurable
         self.get_phases()
 
+    @override
     def get_phases(self):
         ch = self._gpio_relay.read()
         self._update_relay_state(ch)
         return self.get_data().phases
 
+    @override
     def set_phases(self, phases: int):
         ch = self._phases_to_relay(phases)
         self._gpio_relay.write(ch)
