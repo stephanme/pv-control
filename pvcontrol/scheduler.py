@@ -2,11 +2,13 @@ import asyncio
 from contextlib import suppress
 import datetime
 import threading
-from typing import Any, Awaitable, Callable
+from typing import Any, Callable, final
+from collections.abc import Awaitable
 
 
+@final
 class Scheduler:
-    def __init__(self, interval: float, function: Callable):
+    def __init__(self, interval: float, function: Callable[[], None]):
         self._last_started_at = None
         self._started = False
         self._timer_thread = None
@@ -25,8 +27,8 @@ class Scheduler:
             return
 
         self._started = True
-        self.__timer_thread = threading.Timer(interval=0, function=self.run)
-        self.__timer_thread.start()
+        self._timer_thread = threading.Timer(interval=0, function=self.run)
+        self._timer_thread.start()
 
     def stop(self) -> None:
         self._started = False
@@ -39,6 +41,7 @@ class Scheduler:
         return self._started
 
 
+@final
 class AsyncScheduler:
     def __init__(self, interval: float, coro: Callable[[], Awaitable[Any]]):
         self._interval = interval

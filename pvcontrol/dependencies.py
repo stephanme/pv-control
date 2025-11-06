@@ -1,5 +1,6 @@
+from argparse import Namespace
 import logging
-from typing import cast
+from typing import Any
 
 from pvcontrol.meter import Meter, MeterFactory
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerFactory
@@ -19,17 +20,16 @@ except Exception:
     pass
 
 # Initialize the components in async funtion as some need a running event loop
-# see https://github.com/microsoft/pyright/discussions/2033 how to make pyright happy
-relay: PhaseRelay = cast(PhaseRelay, None)
-wallbox: Wallbox = cast(Wallbox, None)
-meter: Meter = cast(Meter, None)
-controller: ChargeController = cast(ChargeController, None)
-car: Car = cast(Car, None)
-controller_scheduler: AsyncScheduler = cast(AsyncScheduler, None)
-car_scheduler: AsyncScheduler = cast(AsyncScheduler, None)
+relay: PhaseRelay = None  # pyright: ignore[reportAssignmentType]
+wallbox: Wallbox[Any] = None  # pyright: ignore[reportAssignmentType]
+meter: Meter[Any] = None  # pyright: ignore[reportAssignmentType]
+controller: ChargeController = None  # pyright: ignore[reportAssignmentType]
+car: Car[Any] = None  # pyright: ignore[reportAssignmentType]
+controller_scheduler: AsyncScheduler = None  # pyright: ignore[reportAssignmentType]
+car_scheduler: AsyncScheduler = None  # pyright: ignore[reportAssignmentType]
 
 
-async def init(args, config: dict) -> None:
+async def init(args: Namespace, config: dict[str, Any]) -> None:
     logger.info("Initializing depencencies.")
     global controller_scheduler, car_scheduler, relay, wallbox, meter, car, controller
     relay = PhaseRelayFactory.newPhaseRelay(args.relay, args.hostname, **config["relay"])

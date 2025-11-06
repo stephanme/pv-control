@@ -155,7 +155,7 @@ How to run Python tests:
 ```
 uv run ruff check
 uv run ruff format --check
-uv run pyright
+uv run basedpyright
 uv run -m unittest discover -s ./tests
 ```
 
@@ -165,6 +165,8 @@ How to run UI tests:
 ng lint
 npm run test
 ```
+
+There is also a Makefile. Default target is `install lint test` (runs Python and UI checks).
 
 Local docker build:
 ```

@@ -3,13 +3,13 @@ from dataclasses import dataclass
 import logging
 import math
 import time
-import typing
+from typing import Any, cast, override
 import aiohttp
+from pymodbus.client import AsyncModbusTcpClient
 import pysmaplus
 import pysmaplus.definitions_webconnect
 import pysmaplus.sensor
-import prometheus_client
-from pymodbus.client import AsyncModbusTcpClient
+from prometheus_client import Gauge
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.wallbox import Wallbox
@@ -35,6 +35,7 @@ class MeterData(BaseData):
     energy_consumption_pv: float = 0  # [Wh]
 
     # based on math.isclose() to avoid rounding issues
+    @override
     def __eq__(self, value: object) -> bool:
         if not isinstance(value, MeterData):
             return False
@@ -47,14 +48,13 @@ class MeterData(BaseData):
 class Meter[C: BaseConfig](BaseService[C, MeterData]):
     """Base class / interface for meters"""
 
-    _metrics_pvc_meter_power = prometheus_client.Gauge("pvcontrol_meter_power_watts", "Power from pv or grid", ["source"])
-    _metrics_pvc_meter_power_consumption_total = prometheus_client.Gauge(
+    _metrics_pvc_meter_power: Gauge = Gauge("pvcontrol_meter_power_watts", "Power from pv or grid", ["source"])
+    _metrics_pvc_meter_power_consumption_total: Gauge = Gauge(
         "pvcontrol_meter_power_consumption_total_watts", "Total home power consumption"
     )
 
     def __init__(self, config: C):
-        super().__init__(config)
-        self._set_data(MeterData())
+        super().__init__(config, MeterData())
 
     async def read_data(self) -> MeterData:
         """Read meter data and report metrics. The data is cached."""
@@ -84,17 +84,19 @@ class SimulatedMeterConfig(BaseConfig):
 
 
 class SimulatedMeter(Meter[SimulatedMeterConfig]):
-    def __init__(self, config: SimulatedMeterConfig, wallbox: Wallbox):
+    def __init__(self, config: SimulatedMeterConfig, wallbox: Wallbox[Any]):
         super().__init__(config)
-        self._wallbox = wallbox
-        self._energy_consumption_grid = 0.0
-        self._energy_consumption_pv = 0.0
-        self._soc = 0.0
+        self._wallbox: Wallbox[Any] = wallbox
+        self._energy_consumption_grid: float = 0.0
+        self._energy_consumption_pv: float = 0.0
+        self._soc: float = 0.0
 
     # config
+    @override
     def get_config(self) -> SimulatedMeterConfig:
-        return typing.cast(SimulatedMeterConfig, super().get_config())
+        return super().get_config()
 
+    @override
     async def _read_data(self) -> MeterData:
         t = time.time()
         power_car = self._wallbox.get_data().power
@@ -142,14 +144,15 @@ class TestMeterConfig(BaseConfig):
 
 
 class TestMeter(Meter[TestMeterConfig]):
-    def __init__(self, config: TestMeterConfig, wallbox: Wallbox):
+    def __init__(self, config: TestMeterConfig, wallbox: Wallbox[Any]):
         super().__init__(config)
-        self._wallbox = wallbox
+        self._wallbox: Wallbox[Any] = wallbox
         self.set_data(0, 0)
-        self._soc = 0.0
-        self._energy_consumption_grid = 0.0
-        self._energy_consumption_pv = 0.0
+        self._soc: float = 0.0
+        self._energy_consumption_grid: float = 0.0
+        self._energy_consumption_pv: float = 0.0
 
+    @override
     async def _read_data(self) -> MeterData:
         config = self.get_config()
         power_car = self._wallbox.get_data().power
@@ -182,8 +185,8 @@ class TestMeter(Meter[TestMeterConfig]):
         home: float,
         soc: float = -1,  # -1 means don't change, otherwise set to this value
     ) -> None:
-        self._pv = pv
-        self._home = home
+        self._pv: float = pv
+        self._home: float = home
         if soc >= 0:
             self._soc = soc
 
@@ -217,9 +220,10 @@ class KostalMeterConfig(BaseConfig):
 class KostalMeter(Meter[KostalMeterConfig]):
     def __init__(self, config: KostalMeterConfig):
         super().__init__(config)
-        self._modbusClient = AsyncModbusTcpClient(config.host, port=config.port)
-        self._unit = config.unit_id
+        self._modbusClient: AsyncModbusTcpClient = AsyncModbusTcpClient(config.host, port=config.port)
+        self._unit: int = config.unit_id
 
+    @override
     async def _read_data(self) -> MeterData:
         try:
             if not self._modbusClient.connected:
@@ -239,10 +243,8 @@ class KostalMeter(Meter[KostalMeterConfig]):
             if regs_pv.isError():
                 raise Exception(f"Error reading pv data: {regs_grid}")
 
-            grid = typing.cast(
-                float, AsyncModbusTcpClient.convert_from_registers(regs_grid.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32)
-            )
-            consumption = typing.cast(
+            grid = cast(float, AsyncModbusTcpClient.convert_from_registers(regs_grid.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32))
+            consumption = cast(
                 list[float], AsyncModbusTcpClient.convert_from_registers(regs_consumption.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32)
             )
             consumption_grid = consumption[0]
@@ -250,7 +252,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
             energy_consumption_pv = consumption[3]
             consumption_pv = consumption[4]
             energy_consumption = consumption[5]
-            pv = typing.cast(float, AsyncModbusTcpClient.convert_from_registers(regs_pv.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32))
+            pv = cast(float, AsyncModbusTcpClient.convert_from_registers(regs_pv.registers, AsyncModbusTcpClient.DATATYPE.FLOAT32))
             self.reset_error_counter()
             return MeterData(
                 0, pv, consumption_grid + consumption_pv, grid, 0, 0, energy_consumption, energy_consumption_grid, energy_consumption_pv
@@ -263,6 +265,7 @@ class KostalMeter(Meter[KostalMeterConfig]):
             else:
                 return self.get_data()
 
+    @override
     async def close(self):
         self._modbusClient.close()
 
@@ -277,11 +280,12 @@ class SolarWattMeterConfig(BaseConfig):
 class SolarWattMeter(Meter[SolarWattMeterConfig]):
     def __init__(self, config: SolarWattMeterConfig):
         super().__init__(config)
-        self._power_flow_url = f"{config.url}/rest/kiwigrid/wizard/devices"
-        self._location_guid = config.location_guid
-        self._timeout = aiohttp.ClientTimeout(total=config.timeout)
-        self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
+        self._power_flow_url: str = f"{config.url}/rest/kiwigrid/wizard/devices"
+        self._location_guid: str = config.location_guid
+        self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=config.timeout)
+        self._session: aiohttp.ClientSession = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config])
 
+    @override
     async def _read_data(self) -> MeterData:
         try:
             async with self._session.get(self._power_flow_url, timeout=self._timeout) as res:
@@ -297,7 +301,7 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
             else:
                 return self.get_data()
 
-    def _json_2_meter_data(self, json: typing.Dict) -> MeterData:
+    def _json_2_meter_data(self, json: dict[str, Any]) -> MeterData:
         location_data = next(i for i in json["result"]["items"] if i["guid"] == self._location_guid)["tagValues"]
         pv = location_data["PowerProduced"]["value"]
         consumption = location_data["PowerConsumed"]["value"]
@@ -308,6 +312,7 @@ class SolarWattMeter(Meter[SolarWattMeterConfig]):
         energy_consumption_pv = location_data["WorkConsumedFromProducers"]["value"]
         return MeterData(0, pv, consumption, grid, 0, 0, energy_consumption, energy_consumption_grid, energy_consumption_pv)
 
+    @override
     async def close(self):
         await self._session.close()
 
@@ -323,10 +328,12 @@ class SmaTripowerMeterConfig(BaseConfig):
 class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
     def __init__(self, config: SmaTripowerMeterConfig):
         super().__init__(config)
-        self._session = aiohttp.ClientSession(trace_configs=[aiohttp_trace_config], connector=aiohttp.TCPConnector(ssl=config.verify_ssl))
-        self._smaDevice = pysmaplus.SMAwebconnect(self._session, config.url, password=config.password)
-        self._deviceId = config.device_id
-        self._sensors = pysmaplus.sensor.Sensors(
+        self._session: aiohttp.ClientSession = aiohttp.ClientSession(
+            trace_configs=[aiohttp_trace_config], connector=aiohttp.TCPConnector(ssl=config.verify_ssl)
+        )
+        self._smaDevice: pysmaplus.SMAwebconnect = pysmaplus.SMAwebconnect(self._session, config.url, password=config.password)
+        self._deviceId: str = config.device_id
+        self._sensors: pysmaplus.sensor.Sensors = pysmaplus.sensor.Sensors(
             [
                 pysmaplus.definitions_webconnect.grid_power,
                 pysmaplus.definitions_webconnect.pv_power,
@@ -345,9 +352,10 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
         for sensor in self._sensors:
             sensor.enabled = True  # enable all sensors
 
+    @override
     async def _read_data(self) -> MeterData:
         try:
-            if self._smaDevice._sid is None:
+            if self._smaDevice._sid is None:  # pyright: ignore[reportPrivateUsage]
                 await self._smaDevice.new_session()
             await self._smaDevice.read(self._sensors, self._deviceId)
             meter_data = self._sensors_2_meter_data()
@@ -394,6 +402,7 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
         energy_consumption = energy_consumption_grid + energy_consumption_pv
         return MeterData(0, pv, consumption, grid, battery, soc, energy_consumption, energy_consumption_grid, energy_consumption_pv)
 
+    @override
     async def close(self):
         await self._smaDevice.close_session()
         await self._session.close()
@@ -401,7 +410,7 @@ class SmaTripowerMeter(Meter[SmaTripowerMeterConfig]):
 
 class MeterFactory:
     @classmethod
-    def newMeter(cls, type: str, wb: Wallbox, **kwargs) -> Meter:
+    def newMeter(cls, type: str, wb: Wallbox[Any], **kwargs: Any) -> Meter[Any]:
         if type == "KostalMeter":
             return KostalMeter(KostalMeterConfig(**kwargs))
         if type == "SolarWattMeter":

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 import logging
-import typing
-import prometheus_client
+from typing import Any, override
+from prometheus_client import Gauge, Counter
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 from aiohttp import ClientSession
 from myskoda import MySkoda
@@ -28,21 +28,17 @@ class CarConfig(BaseConfig):
     energy_one_percent_soc: int = 580  # [Wh]
 
 
-C = typing.TypeVar("C", bound=CarConfig)  # type of configuration
-
-
-class Car(BaseService[C, CarData]):
+class Car[C: CarConfig](BaseService[C, CarData]):
     """Base class / interface for cars"""
 
-    _metrics_pvc_car_soc = prometheus_client.Gauge("pvcontrol_car_soc_ratio", "State of Charge")
-    _metrics_pvc_car_range = prometheus_client.Gauge("pvcontrol_car_cruising_range_meters", "Remaining cruising range")
-    _metrics_pvc_car_mileage = prometheus_client.Gauge("pvcontrol_car_mileage_meters", "Mileage")
-    _metrics_pvc_car_energy_consumption = prometheus_client.Counter("pvcontrol_car_energy_consumption_wh", "Energy Consumption")
+    _metrics_pvc_car_soc: Gauge = Gauge("pvcontrol_car_soc_ratio", "State of Charge")
+    _metrics_pvc_car_range: Gauge = Gauge("pvcontrol_car_cruising_range_meters", "Remaining cruising range")
+    _metrics_pvc_car_mileage: Gauge = Gauge("pvcontrol_car_mileage_meters", "Mileage")
+    _metrics_pvc_car_energy_consumption: Counter = Counter("pvcontrol_car_energy_consumption_wh", "Energy Consumption")
 
     def __init__(self, config: C):
-        super().__init__(config)
-        self._set_data(CarData())
-        self._last_soc = 0
+        super().__init__(config, CarData())
+        self._last_soc: float = 0
 
     async def read_data(self) -> CarData:
         """Read meter data and report metrics. The data is cached."""
@@ -79,6 +75,7 @@ class NoCar(Car[CarConfig]):
         self.inc_error_counter()
         self.inc_error_counter()
 
+    @override
     async def _read_data(self) -> CarData:
         return CarData(data_captured_at=datetime.now())
 
@@ -96,9 +93,10 @@ class SkodaCarConfig(CarConfig):
 class SkodaCar(Car[SkodaCarConfig]):
     def __init__(self, config: SkodaCarConfig):
         super().__init__(config)
-        self._session = None
+        self._session: ClientSession | None = None
         self._myskoda: MySkoda | None = None
 
+    @override
     async def _read_data(self) -> CarData:
         if self.get_config().disabled:
             self.inc_error_counter()
@@ -161,7 +159,7 @@ class SkodaCar(Car[SkodaCarConfig]):
 
 class CarFactory:
     @classmethod
-    def newCar(cls, type: str, **kwargs) -> Car:
+    def newCar(cls, type: str, **kwargs: Any) -> Car[Any]:
         if type == "SimulatedCar":
             return SimulatedCar(CarConfig(**kwargs))
         if type == "NoCar":

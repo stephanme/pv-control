@@ -2,6 +2,8 @@ import enum
 import math
 from dataclasses import dataclass
 import logging
+from prometheus_client import Enum, Counter
+from typing import Any
 import prometheus_client
 
 from pvcontrol.relay import PhaseRelay
@@ -88,47 +90,46 @@ _metrics_pvc_controller_processing = prometheus_client.Summary(
 
 class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]):
     # metrics
-    _metrics_pvc_controller_mode = prometheus_client.Enum(
+    _metrics_pvc_controller_mode: Enum = Enum(
         "pvcontrol_controller_mode", "Charge controller mode", states=list(ChargeMode.__members__.values())
     )
-    _metrics_pvc_controller_total_charged_energy = prometheus_client.Counter(
+    _metrics_pvc_controller_total_charged_energy: Counter = Counter(
         "pvcontrol_controller_total_charged_energy_wh_total", "Total energy charged into car"
     )
-    _metrics_pvc_controller_charged_energy = prometheus_client.Counter(
+    _metrics_pvc_controller_charged_energy: Counter = Counter(
         "pvcontrol_controller_charged_energy_wh_total", "Energy charged into car by source", ["source"]
     )
 
     # hostname - optional parameter to enable/disable phase switching depending on where pvcontrol runs (k8s hostname)
-    def __init__(self, config: ChargeControllerConfig, meter: Meter, wallbox: Wallbox, relay: PhaseRelay):
-        super().__init__(config)
-        self._meter = meter
-        self._wallbox = wallbox
-        self._relay = relay
-        self._set_data(ChargeControllerData())
-        self._charge_mode_pv_to_off_delay = 5 * 60  # configurable?
-        self._pv_allow_charging_value = False
-        self._pv_allow_charging_delay = 0
-        self._last_charged_energy = None  # reset on every charging cycle, None = needs initialization on first cycle
-        self._last_charged_energy_5m = 0.0  # charged energy in last 5m (cycle when meter energy data is updated)
-        self._last_energy_consumption = 0.0  # total counter value, must be initialized first with data from meter
-        self._last_energy_consumption_grid = 0.0  # total counter value, must be initialized first with data from meter
+    def __init__(self, config: ChargeControllerConfig, meter: Meter[Any], wallbox: Wallbox[Any], relay: PhaseRelay):
+        super().__init__(config, ChargeControllerData())
+        self._meter: Meter[Any] = meter
+        self._wallbox: Wallbox[Any] = wallbox
+        self._relay: PhaseRelay = relay
+        self._charge_mode_pv_to_off_delay: int = 5 * 60  # configurable?
+        self._pv_allow_charging_value: bool = False
+        self._pv_allow_charging_delay: int = 0
+        self._last_charged_energy: float | None = None  # reset on every charging cycle, None = needs initialization on first cycle
+        self._last_charged_energy_5m: float = 0.0  # charged energy in last 5m (cycle when meter energy data is updated)
+        self._last_energy_consumption: float = 0.0  # total counter value, must be initialized first with data from meter
+        self._last_energy_consumption_grid: float = 0.0  # total counter value, must be initialized first with data from meter
         # config
-        self._enable_phase_switching = self._relay.is_enabled()
+        self._enable_phase_switching: bool = self._relay.is_enabled()
         if not self._enable_phase_switching:
             self.set_phase_mode(PhaseMode.DISABLED)
-        self._min_supported_current = wallbox.get_config().min_supported_current
-        self._max_supported_current = wallbox.get_config().max_supported_current
+        self._min_supported_current: int = wallbox.get_config().min_supported_current
+        self._max_supported_current: int = wallbox.get_config().max_supported_current
         min_power_1phase = self._min_supported_current * config.line_voltage
         max_power_1phase = self._max_supported_current * config.line_voltage
         min_power_3phases = 3 * self._min_supported_current * config.line_voltage
-        self._pv_only_on = min_power_1phase + config.power_hysteresis
-        self._pv_only_off = min_power_1phase
-        self._pv_only_1_3_phase_threshold = min_power_3phases + config.power_hysteresis
-        self._pv_only_3_1_phase_threshold = min_power_3phases
-        self._pv_all_on = config.pv_all_min_power
-        self._pv_all_off = max(config.pv_all_min_power - config.power_hysteresis, 100)
-        self._pv_all_1_3_phase_threshold = max_power_1phase
-        self._pv_all_3_1_phase_threshold = max_power_1phase - config.power_hysteresis
+        self._pv_only_on: float = min_power_1phase + config.power_hysteresis
+        self._pv_only_off: float = min_power_1phase
+        self._pv_only_1_3_phase_threshold: float = min_power_3phases + config.power_hysteresis
+        self._pv_only_3_1_phase_threshold: float = min_power_3phases
+        self._pv_all_on: float = config.pv_all_min_power
+        self._pv_all_off: float = max(config.pv_all_min_power - config.power_hysteresis, 100)
+        self._pv_all_1_3_phase_threshold: float = max_power_1phase
+        self._pv_all_3_1_phase_threshold: float = max_power_1phase - config.power_hysteresis
         # init metrics with labels
         ChargeController._metrics_pvc_controller_charged_energy.labels("grid")
         ChargeController._metrics_pvc_controller_charged_energy.labels("pv")
@@ -385,5 +386,5 @@ class ChargeController(BaseService[ChargeControllerConfig, ChargeControllerData]
 
 class ChargeControllerFactory:
     @classmethod
-    def newController(cls, meter: Meter, wb: Wallbox, relay: PhaseRelay, **kwargs) -> ChargeController:
+    def newController(cls, meter: Meter[Any], wb: Wallbox[Any], relay: PhaseRelay, **kwargs: Any) -> ChargeController:
         return ChargeController(ChargeControllerConfig(**kwargs), meter, wb, relay)

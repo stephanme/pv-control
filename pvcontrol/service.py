@@ -1,6 +1,6 @@
+from typing import Any
 from dataclasses import dataclass
-import typing
-import prometheus_client
+from prometheus_client import Gauge
 
 
 @dataclass
@@ -13,17 +13,14 @@ class BaseData:
     error: int = 0  # error counter, 0=OK
 
 
-C = typing.TypeVar("C", bound=BaseConfig)  # type of configuration
-D = typing.TypeVar("D", bound=BaseData)  # type of data
+class BaseService[C: BaseConfig, D: BaseData]:
+    _metrics_pvc_error: Gauge = Gauge("pvcontrol_error", "Error counter per service. 0 = ok.", ["service"])
 
-
-class BaseService(typing.Generic[C, D]):
-    _metrics_pvc_error = prometheus_client.Gauge("pvcontrol_error", "Error counter per service. 0 = ok.", ["service"])
-
-    def __init__(self, config: C):
-        self._service_label = type(self).__name__  # assumes singleton services
+    def __init__(self, config: C, data: D):
+        self._service_label: str = type(self).__name__  # assumes singleton services
         BaseService._metrics_pvc_error.labels(self._service_label).set(0)
-        self._config = config
+        self._config: C = config
+        self._data: D = data
 
     def get_config(self) -> C:
         """Get configuration."""
@@ -38,7 +35,10 @@ class BaseService(typing.Generic[C, D]):
         self._data = data
 
     def get_error_counter(self) -> int:
-        return int(BaseService._metrics_pvc_error.labels(self._service_label)._value.get())  # hacky
+        v: float | Any = BaseService._metrics_pvc_error.labels(self._service_label)._value.get()  # pyright: ignore[reportPrivateUsage, reportUnknownVariableType]
+        if isinstance(v, (int, float)):
+            return int(v)
+        return 0
 
     def inc_error_counter(self) -> int:
         BaseService._metrics_pvc_error.labels(self._service_label).inc()
