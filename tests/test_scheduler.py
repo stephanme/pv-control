@@ -1,7 +1,8 @@
 import asyncio
-from typing import final, override
-import unittest
 import time
+import unittest
+from typing import final, override
+
 from pvcontrol.scheduler import AsyncScheduler, Scheduler
 
 # pyright: reportUninitializedInstanceVariable=false

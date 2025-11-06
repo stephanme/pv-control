@@ -1,10 +1,11 @@
-from typing import Any, final, override
-import unittest
 import json
+import unittest
+from typing import Any, final, override
+
+from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode, PhaseMode, Priority
+from pvcontrol.meter import MeterData, TestMeter, TestMeterConfig
 from pvcontrol.relay import DisabledPhaseRelay, PhaseRelayConfig, SimulatedPhaseRelay
 from pvcontrol.wallbox import CarStatus, SimulatedWallbox, WallboxConfig, WallboxData, WbError
-from pvcontrol.meter import TestMeter, MeterData, TestMeterConfig
-from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode, PhaseMode, Priority
 
 # pyright: reportUninitializedInstanceVariable=false
 # pyright: reportPrivateUsage=false

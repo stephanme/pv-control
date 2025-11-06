@@ -1,16 +1,17 @@
-from typing import Any, final, override
-import unittest
-import logging
 import datetime
 import json
+import logging
 import os
+import unittest
+from typing import Any, final, override
+
 from pvcontrol.car import (
     Car,
     CarConfig,
     CarData,
+    SimulatedCar,
     SkodaCar,
     SkodaCarConfig,
-    SimulatedCar,
 )
 
 # pyright: reportUninitializedInstanceVariable=false
@@ -24,7 +25,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(n
 car_config_file = f"{os.path.dirname(__file__)}/car_test_config.json"
 car_config: Any = {}
 if os.path.isfile(car_config_file):
-    with open(car_config_file, "r") as f:
+    with open(car_config_file) as f:
         car_config = json.load(f)
 
 

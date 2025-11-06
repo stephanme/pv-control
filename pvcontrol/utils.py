@@ -1,5 +1,6 @@
 import logging
 from types import SimpleNamespace
+
 import aiohttp
 
 aiohttp_logger = logging.getLogger("aiohttp.trace")

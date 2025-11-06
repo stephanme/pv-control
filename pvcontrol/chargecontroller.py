@@ -1,14 +1,15 @@
 import enum
+import logging
 import math
 from dataclasses import dataclass
-import logging
-from prometheus_client import Enum, Counter
 from typing import Any
-import prometheus_client
 
+import prometheus_client
+from prometheus_client import Counter, Enum
+
+from pvcontrol.meter import Meter, MeterData
 from pvcontrol.relay import PhaseRelay
 from pvcontrol.service import BaseConfig, BaseData, BaseService
-from pvcontrol.meter import Meter, MeterData
 from pvcontrol.wallbox import CarStatus, Wallbox, WallboxData, WbError
 
 logger = logging.getLogger(__name__)

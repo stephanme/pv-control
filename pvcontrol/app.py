@@ -1,16 +1,17 @@
 # for development run uvicorn with this module:
 # uv run uvicorn pvcontrol.app:app --port 8080 --reload --reload-dir ./pvcontrol
 
-from typing import Any, final, override
-from argparse import Namespace
-from contextlib import asynccontextmanager
 import logging
 import re
+from argparse import Namespace
+from contextlib import asynccontextmanager
+from typing import Any, final, override
+
+import prometheus_client
 from fastapi import FastAPI
 from fastapi.routing import Mount
-import prometheus_client
 from starlette.responses import Response
-from starlette.staticfiles import StaticFiles, PathLike
+from starlette.staticfiles import PathLike, StaticFiles
 
 from pvcontrol import api, dependencies
 
