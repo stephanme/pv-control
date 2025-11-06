@@ -1,15 +1,22 @@
+from typing import final, override
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import json
 from pvcontrol.relay import PhaseRelayConfig, SimulatedPhaseRelay
 from pvcontrol.wallbox import CarStatus, GoeWallbox, GoeWallboxConfig, WallboxData, WbError
 
+# pyright: reportUninitializedInstanceVariable=false
+# pyright: reportPrivateUsage=false
 
+
+@final
 class GoeWallboxTest(unittest.IsolatedAsyncioTestCase):
+    @override
     async def asyncSetUp(self) -> None:
         self.relay = SimulatedPhaseRelay(PhaseRelayConfig())
         self.wallbox = GoeWallbox(GoeWallboxConfig(switch_phases_reset_delay=0), self.relay)
 
+    @override
     async def asyncTearDown(self):
         await self.wallbox.close()
 
@@ -54,7 +61,7 @@ class GoeWallboxTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(WallboxData(0, WbError.OK, CarStatus.Charging, 6, True, 1, 1, 850, 889372 / 360, 10001000, 12.0), wb)
 
     @patch.object(GoeWallbox, "trigger_reset")
-    async def test_set_phases_in(self, mock_trigger_reset):
+    async def test_set_phases_in(self, mock_trigger_reset: Mock):
         await self.wallbox.set_phases_in(1)
         self.assertEqual(1, self.relay.get_phases())
         mock_trigger_reset.assert_called_with()
@@ -67,7 +74,7 @@ class GoeWallboxTest(unittest.IsolatedAsyncioTestCase):
 
     @patch.object(SimulatedPhaseRelay, "set_phases")
     @patch.object(GoeWallbox, "trigger_reset")
-    async def test_set_phases_in_error(self, mock_relay_set_phases, mock_trigger_reset):
+    async def test_set_phases_in_error(self, mock_relay_set_phases: Mock, mock_trigger_reset: Mock):
         self.wallbox.inc_error_counter()
         await self.wallbox.set_phases_in(1)
         mock_relay_set_phases.assert_not_called()
@@ -75,7 +82,7 @@ class GoeWallboxTest(unittest.IsolatedAsyncioTestCase):
 
     @patch.object(SimulatedPhaseRelay, "set_phases")
     @patch.object(GoeWallbox, "trigger_reset")
-    async def test_set_phases_in_charging(self, mock_relay_set_phases, mock_trigger_reset):
+    async def test_set_phases_in_charging(self, mock_relay_set_phases: Mock, mock_trigger_reset: Mock):
         self.wallbox.get_data().phases_out = 3
         await self.wallbox.set_phases_in(1)
         mock_relay_set_phases.assert_not_called()

@@ -1,8 +1,11 @@
+from typing import final, override
 import unittest
 
 from fastapi.testclient import TestClient
 
 from pvcontrol.app import AngularAppStaticFiles, app
+
+# pyright: reportUninitializedInstanceVariable=false
 
 
 class AngularAppStaticFilesTest(unittest.TestCase):
@@ -17,7 +20,9 @@ class AngularAppStaticFilesTest(unittest.TestCase):
         self.assertTrue(AngularAppStaticFiles.is_immutable_resource("media/matsymbols-U55GHSFU.woff2"))
 
 
+@final
 class PvcontrolAppTest(unittest.TestCase):
+    @override
     def setUp(self):
         self.app = app
         self.client = TestClient(app)

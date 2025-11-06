@@ -1,9 +1,15 @@
+from typing import final, override
 import unittest
 
 from pvcontrol.relay import DisabledPhaseRelay, PhaseRelayConfig, PhaseRelayData, PhaseRelayFactory, RelayType, SimulatedPhaseRelay
 
+# pyright: reportUninitializedInstanceVariable=false
+# pyright: reportPrivateUsage=false
 
+
+@final
 class PhaseRelayTest(unittest.TestCase):
+    @override
     def setUp(self) -> None:
         self.relay = SimulatedPhaseRelay(PhaseRelayConfig())
 
