@@ -1,12 +1,14 @@
 import asyncio
+import enum
 import logging
 from dataclasses import dataclass
-import enum
 from typing import Any, override
+
 import aiohttp
 from prometheus_client import Gauge
-from pvcontrol.service import BaseConfig, BaseData, BaseService
+
 from pvcontrol.relay import PhaseRelay
+from pvcontrol.service import BaseConfig, BaseData, BaseService
 from pvcontrol.utils import aiohttp_trace_config
 
 logger = logging.getLogger(__name__)

@@ -1,19 +1,20 @@
-from contextlib import suppress
-from dataclasses import dataclass
 import logging
 import math
 import time
+from contextlib import suppress
+from dataclasses import dataclass
 from typing import Any, cast, override
+
 import aiohttp
-from pymodbus.client import AsyncModbusTcpClient
 import pysmaplus
 import pysmaplus.definitions_webconnect
 import pysmaplus.sensor
 from prometheus_client import Gauge
+from pymodbus.client import AsyncModbusTcpClient
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
-from pvcontrol.wallbox import Wallbox
 from pvcontrol.utils import aiohttp_trace_config
+from pvcontrol.wallbox import Wallbox
 
 logger = logging.getLogger(__name__)
 

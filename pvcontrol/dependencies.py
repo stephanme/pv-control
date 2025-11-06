@@ -1,20 +1,20 @@
-from argparse import Namespace
 import logging
+from argparse import Namespace
 from typing import Any
 
-from pvcontrol.meter import Meter, MeterFactory
-from pvcontrol.chargecontroller import ChargeController, ChargeControllerFactory
-from pvcontrol.wallbox import Wallbox, WallboxFactory
-from pvcontrol.relay import PhaseRelay, PhaseRelayFactory
 from pvcontrol.car import Car, CarFactory
+from pvcontrol.chargecontroller import ChargeController, ChargeControllerFactory
+from pvcontrol.meter import Meter, MeterFactory
+from pvcontrol.relay import PhaseRelay, PhaseRelayFactory
 from pvcontrol.scheduler import AsyncScheduler
+from pvcontrol.wallbox import Wallbox, WallboxFactory
 
 logger = logging.getLogger(__name__)
 
 # version file is generated during build
 version = "unknown"
 try:
-    with open("version", "r") as f:
+    with open("version") as f:
         version = f.read()
 except Exception:
     pass

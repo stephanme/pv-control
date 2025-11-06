@@ -1,5 +1,5 @@
-from typing import final, override
 import unittest
+from typing import final, override
 
 from pvcontrol.relay import DisabledPhaseRelay, PhaseRelayConfig, PhaseRelayData, PhaseRelayFactory, RelayType, SimulatedPhaseRelay
 

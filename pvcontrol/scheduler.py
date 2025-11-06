@@ -1,9 +1,9 @@
 import asyncio
-from contextlib import suppress
 import datetime
 import threading
-from typing import Any, Callable, final
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
+from contextlib import suppress
+from typing import Any, final
 
 
 @final

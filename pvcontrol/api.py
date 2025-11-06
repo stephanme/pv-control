@@ -1,5 +1,6 @@
-from typing import Annotated
 import logging
+from typing import Annotated
+
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel
 

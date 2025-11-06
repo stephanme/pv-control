@@ -1,7 +1,8 @@
-from typing import final, override
-import unittest
-from unittest.mock import Mock, patch
 import json
+import unittest
+from typing import final, override
+from unittest.mock import Mock, patch
+
 from pvcontrol.relay import PhaseRelayConfig, SimulatedPhaseRelay
 from pvcontrol.wallbox import CarStatus, GoeWallbox, GoeWallboxConfig, WallboxData, WbError
 

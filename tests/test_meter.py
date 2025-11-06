@@ -1,7 +1,7 @@
-from typing import Any, final, override
-import unittest
 import json
 import os
+import unittest
+from typing import Any, final, override
 
 from pvcontrol.meter import (
     MeterData,
@@ -21,7 +21,7 @@ from pvcontrol.wallbox import SimulatedWallbox, WallboxConfig
 sma_tripower_meter_config_file = f"{os.path.dirname(__file__)}/sma_tripower_meter_test_config.json"
 sma_tripower_meter_config: Any = {}
 if os.path.isfile(sma_tripower_meter_config_file):
-    with open(sma_tripower_meter_config_file, "r") as f:
+    with open(sma_tripower_meter_config_file) as f:
         sma_tripower_meter_config = json.load(f)
 
 
@@ -296,7 +296,7 @@ class SolarWattMeterTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_json_2_meter_data(self):
         dir = os.path.dirname(os.path.abspath(__file__))
-        with open(dir + "/solarwatt-devices.json", "r") as stream:
+        with open(dir + "/solarwatt-devices.json") as stream:
             solarwatt_json = json.load(stream)
         meter_data = self.meter._json_2_meter_data(solarwatt_json)
         self.assertEqual(MeterData(0, 0, 640, 640, 0, 0, 25272547.582334433, 16948644.65421216, 8323902.928122882), meter_data)

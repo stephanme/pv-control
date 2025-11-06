@@ -1,13 +1,13 @@
-import logging
 import argparse
 import json
-import uvicorn
-import uvicorn.config
+import logging
 import platform
 import sys
 
-from pvcontrol import LOG_FORMAT
-from pvcontrol import app, dependencies
+import uvicorn
+import uvicorn.config
+
+from pvcontrol import LOG_FORMAT, app, dependencies
 
 logging.getLogger("pymodbus.logging").setLevel(logging.INFO)
 logging.getLogger("aiohttp.trace").setLevel(logging.INFO)

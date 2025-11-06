@@ -1,8 +1,9 @@
 import enum
 import logging
-from typing import Any, override
-from prometheus_client import Gauge
 from dataclasses import dataclass
+from typing import Any, override
+
+from prometheus_client import Gauge
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
 
