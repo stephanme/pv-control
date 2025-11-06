@@ -1,3 +1,4 @@
+from typing import Any, final, override
 import unittest
 import logging
 import datetime
@@ -12,18 +13,24 @@ from pvcontrol.car import (
     SimulatedCar,
 )
 
+# pyright: reportUninitializedInstanceVariable=false
+# pyright: reportPrivateUsage=false
+
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 # logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 
 # read config file
 car_config_file = f"{os.path.dirname(__file__)}/car_test_config.json"
-car_config = {}
+car_config: Any = {}
 if os.path.isfile(car_config_file):
     with open(car_config_file, "r") as f:
         car_config = json.load(f)
 
 
+@final
 class SimulatedCarTest(unittest.IsolatedAsyncioTestCase):
+    @override
     def setUp(self):
         self.car = SimulatedCar(CarConfig())
 
@@ -62,11 +69,14 @@ class SimulatedCarTest(unittest.IsolatedAsyncioTestCase):
 
 
 @unittest.skipUnless(len(car_config) > 0, "needs car_test_config.json")
+@final
 class SkodaCarTest(unittest.IsolatedAsyncioTestCase):
+    @override
     def setUp(self):
         cfg = SkodaCarConfig(**car_config)
         self.car = SkodaCar(cfg)
 
+    @override
     async def asyncTearDown(self):
         await self.car.disconnect()
 

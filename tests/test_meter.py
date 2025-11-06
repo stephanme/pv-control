@@ -1,3 +1,4 @@
+from typing import Any, final, override
 import unittest
 import json
 import os
@@ -13,19 +14,25 @@ from pvcontrol.meter import (
 )
 from pvcontrol.wallbox import SimulatedWallbox, WallboxConfig
 
+# pyright: reportUninitializedInstanceVariable=false
+# pyright: reportPrivateUsage=false
+
 # read config file
 sma_tripower_meter_config_file = f"{os.path.dirname(__file__)}/sma_tripower_meter_test_config.json"
-sma_tripower_meter_config = {}
+sma_tripower_meter_config: Any = {}
 if os.path.isfile(sma_tripower_meter_config_file):
     with open(sma_tripower_meter_config_file, "r") as f:
         sma_tripower_meter_config = json.load(f)
 
 
+@final
 class TestMeterNoBatteryTest(unittest.IsolatedAsyncioTestCase):
+    @override
     async def asyncSetUp(self) -> None:
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(TestMeterConfig(battery_max=0, battery_capacity=0), self.wallbox)
 
+    @override
     async def asyncTearDown(self):
         await self.meter.close()
 
@@ -90,11 +97,14 @@ class TestMeterNoBatteryTest(unittest.IsolatedAsyncioTestCase):
             )
 
 
+@final
 class TestMeterBatteryTest(unittest.IsolatedAsyncioTestCase):
+    @override
     async def asyncSetUp(self) -> None:
         self.wallbox = SimulatedWallbox(WallboxConfig())
         self.meter = TestMeter(TestMeterConfig(battery_max=1000, battery_capacity=5000 / 120), self.wallbox)
 
+    @override
     async def asyncTearDown(self):
         await self.meter.close()
 
@@ -274,10 +284,13 @@ class TestMeterBatteryTest(unittest.IsolatedAsyncioTestCase):
             )
 
 
+@final
 class SolarWattMeterTest(unittest.IsolatedAsyncioTestCase):
+    @override
     async def asyncSetUp(self) -> None:
         self.meter = SolarWattMeter(SolarWattMeterConfig(location_guid="a7460c34-1f6b-45dc-a909-7341753f9802"))
 
+    @override
     async def asyncTearDown(self):
         await self.meter.close()
 
@@ -291,10 +304,13 @@ class SolarWattMeterTest(unittest.IsolatedAsyncioTestCase):
 
 @unittest.skip("needs access to SMA Tripower Inverter")
 @unittest.skipUnless(len(sma_tripower_meter_config) > 0, "needs sma_tripower_meter_config.json")
+@final
 class SmaTripowerMeterTest(unittest.IsolatedAsyncioTestCase):
+    @override
     async def asyncSetUp(self) -> None:
         self.meter = SmaTripowerMeter(SmaTripowerMeterConfig(**sma_tripower_meter_config))
 
+    @override
     async def asyncTearDown(self):
         await self.meter.close()
 

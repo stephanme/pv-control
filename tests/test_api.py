@@ -1,3 +1,4 @@
+from typing import final, override
 import unittest
 
 from fastapi.encoders import jsonable_encoder
@@ -7,9 +8,11 @@ from pvcontrol import dependencies
 from pvcontrol.app import app
 
 
+@final
 class PvcontrolApiTest(unittest.TestCase):
+    @override
     def setUp(self):
-        self.app = app
+        self.app = app  # pyright: ignore[reportUninitializedInstanceVariable]
 
     def test_get_root(self):
         with TestClient(self.app) as client:

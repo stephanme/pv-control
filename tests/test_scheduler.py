@@ -1,9 +1,14 @@
 import asyncio
+from typing import final, override
 import unittest
 import time
 from pvcontrol.scheduler import AsyncScheduler, Scheduler
 
+# pyright: reportUninitializedInstanceVariable=false
+# pyright: reportPrivateUsage=false
 
+
+@final
 class Task:
     def __init__(self):
         self.call_cnt = 0
@@ -15,7 +20,9 @@ class Task:
         self.fnc()
 
 
+@final
 class SchedulerTest(unittest.TestCase):
+    @override
     def setUp(self):
         self.task = Task()
         self.scheduler = Scheduler(0.1, self.task.fnc)
@@ -36,7 +43,9 @@ class SchedulerTest(unittest.TestCase):
         self.assertLessEqual(self.task.call_cnt, 11)
 
 
+@final
 class AsyncSchedulerTest(unittest.IsolatedAsyncioTestCase):
+    @override
     def setUp(self):
         self.task = Task()
         self.scheduler = AsyncScheduler(0.1, self.task.async_fnc)

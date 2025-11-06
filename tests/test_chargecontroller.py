@@ -1,3 +1,4 @@
+from typing import Any, final, override
 import unittest
 import json
 from pvcontrol.relay import DisabledPhaseRelay, PhaseRelayConfig, SimulatedPhaseRelay
@@ -5,14 +6,19 @@ from pvcontrol.wallbox import CarStatus, SimulatedWallbox, WallboxConfig, Wallbo
 from pvcontrol.meter import TestMeter, MeterData, TestMeterConfig
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerConfig, ChargeMode, PhaseMode, Priority
 
+# pyright: reportUninitializedInstanceVariable=false
+# pyright: reportPrivateUsage=false
+
 
 def reset_controller_metrics():
-    ChargeController._metrics_pvc_controller_total_charged_energy._value.set(0)
-    ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value.set(0)
-    ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value.set(0)
+    ChargeController._metrics_pvc_controller_total_charged_energy._value.set(0)  # pyright: ignore[reportUnknownMemberType]
+    ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value.set(0)  # pyright: ignore[reportUnknownMemberType]
+    ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value.set(0)  # pyright: ignore[reportUnknownMemberType]
 
 
+@final
 class ChargeControllerTest(unittest.IsolatedAsyncioTestCase):
+    @override
     def setUp(self) -> None:
         self.relay = SimulatedPhaseRelay(PhaseRelayConfig())
         self.wallbox = SimulatedWallbox(WallboxConfig())
@@ -291,7 +297,9 @@ class ChargeControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(100, metric_value_charged_energy_pv.get())
 
 
+@final
 class ChargeControllerDisabledPhaseSwitchingTest(unittest.IsolatedAsyncioTestCase):
+    @override
     def setUp(self) -> None:
         self.relay = DisabledPhaseRelay(PhaseRelayConfig(enable_phase_switching=False))
         self.wallbox = SimulatedWallbox(WallboxConfig())
@@ -327,7 +335,9 @@ class ChargeControllerDisabledPhaseSwitchingTest(unittest.IsolatedAsyncioTestCas
         self.assertEqual(1, self.wallbox.get_data().phases_in)
 
 
+@final
 class ChargeControllerManualModeTest(unittest.IsolatedAsyncioTestCase):
+    @override
     async def asyncSetUp(self) -> None:
         self.relay = SimulatedPhaseRelay(PhaseRelayConfig())
         self.wallbox = SimulatedWallbox(WallboxConfig())
@@ -488,7 +498,9 @@ class ChargeControllerManualModeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(1, self.wallbox.trigger_reset_cnt)
 
 
+@final
 class ChargeControllerPVTest(unittest.IsolatedAsyncioTestCase):
+    @override
     async def asyncSetUp(self) -> None:
         self.relay = SimulatedPhaseRelay(PhaseRelayConfig())
         self.wallbox = SimulatedWallbox(WallboxConfig())
@@ -497,7 +509,7 @@ class ChargeControllerPVTest(unittest.IsolatedAsyncioTestCase):
         reset_controller_metrics()
         await self.controller.run()  # init
 
-    async def run_controller_test(self, data: list[dict]):
+    async def run_controller_test(self, data: list[dict[str, Any]]):
         for idx, d in enumerate(data):
             with self.subTest(idx=idx, test=d["test"]):
                 self.meter.set_data(d["pv"], d["home"], d.get("soc", -1))
@@ -1273,9 +1285,9 @@ class ChargeControllerPVTest(unittest.IsolatedAsyncioTestCase):
             },
         ]
         await self.run_controller_test(data)
-        total_charged_energy_metric = ChargeController._metrics_pvc_controller_total_charged_energy._value.get()
-        charged_energy_grid_metric = ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value.get()
-        charged_energy_pv_metric = ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value.get()
+        total_charged_energy_metric = ChargeController._metrics_pvc_controller_total_charged_energy._value.get()  # pyright: ignore[reportUnknownVariableType]
+        charged_energy_grid_metric = ChargeController._metrics_pvc_controller_charged_energy.labels("grid")._value.get()  # pyright: ignore[reportUnknownVariableType]
+        charged_energy_pv_metric = ChargeController._metrics_pvc_controller_charged_energy.labels("pv")._value.get()  # pyright: ignore[reportUnknownVariableType]
         self.assertEqual(5 * energy_inc, total_charged_energy_metric)
         self.assertEqual(5 * (-6000 + pmax) / 120, charged_energy_grid_metric)
         self.assertEqual(5 * 6000 / 120, charged_energy_pv_metric)
