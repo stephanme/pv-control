@@ -254,7 +254,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.120.2"
+version = "0.121.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -262,9 +262,9 @@ dependencies = [
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/fb/79e556bc8f9d360e5cc2fa7364a7ad6bda6f1736938b43a2791fa8baee7b/fastapi-0.120.2.tar.gz", hash = "sha256:4c5ab43e2a90335bbd8326d1b659eac0f3dbcc015e2af573c4f5de406232c4ac", size = 338684, upload-time = "2025-10-29T13:47:35.802Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/a4/29e1b861fc9017488ed02ff1052feffa40940cb355ed632a8845df84ce84/fastapi-0.121.1.tar.gz", hash = "sha256:b6dba0538fd15dab6fe4d3e5493c3957d8a9e1e9257f56446b5859af66f32441", size = 342523, upload-time = "2025-11-08T21:48:14.068Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/cc/1c33d05f62c9349bb80dfe789cc9a7409bdfb337a63fa347fd651d25294a/fastapi-0.120.2-py3-none-any.whl", hash = "sha256:bedcf2c14240e43d56cb9a339b32bcf15104fe6b5897c0222603cb7ec416c8eb", size = 108383, upload-time = "2025-10-29T13:47:32.978Z" },
+    { url = "https://files.pythonhosted.org/packages/94/fd/2e6f7d706899cc08690c5f6641e2ffbfffe019e8f16ce77104caa5730910/fastapi-0.121.1-py3-none-any.whl", hash = "sha256:2c5c7028bc3a58d8f5f09aecd3fd88a000ccc0c5ad627693264181a3c33aa1fc", size = 109192, upload-time = "2025-11-08T21:48:12.458Z" },
 ]
 
 [[package]]
@@ -561,7 +561,7 @@ dev = [
 requires-dist = [
     { name = "aiodns", specifier = "==3.5.0" },
     { name = "aiohttp", specifier = "==3.13.2" },
-    { name = "fastapi", specifier = "==0.120.2" },
+    { name = "fastapi", specifier = "==0.121.1" },
     { name = "myskoda", specifier = "==2.4.4" },
     { name = "prometheus-client", specifier = "==0.23.1" },
     { name = "pymodbus", specifier = "==3.11.3" },
