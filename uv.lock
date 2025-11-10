@@ -565,7 +565,7 @@ requires-dist = [
     { name = "myskoda", specifier = "==2.4.4" },
     { name = "prometheus-client", specifier = "==0.23.1" },
     { name = "pymodbus", specifier = "==3.11.3" },
-    { name = "pysma-plus", specifier = "==0.3.23" },
+    { name = "pysma-plus", specifier = "==0.3.24" },
     { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = "==0.7.1" },
     { name = "uvicorn", specifier = "==0.38.0" },
 ]
@@ -686,7 +686,7 @@ wheels = [
 
 [[package]]
 name = "pysma-plus"
-version = "0.3.23"
+version = "0.3.24"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -697,9 +697,9 @@ dependencies = [
     { name = "untangle" },
     { name = "xmlschema" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/65/e68ac4e1fd6db3bad0bf70f14beae1cfa4ccd77d2ca728b4da93e47978d0/pysma_plus-0.3.23.tar.gz", hash = "sha256:d8b2c01b8dfdc3bc0145076e48aed0cc252f46366be529d881d2d777ec2c2fd0", size = 109640, upload-time = "2025-11-06T08:37:06.108Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/9a/0af52d79ae75dedabe09ff04af14292a47df0b3feff58618979592724767/pysma_plus-0.3.24.tar.gz", hash = "sha256:35c3024cec868f4a99176b29130bb07507d16704c3fce87abfc7295598989194", size = 137422, upload-time = "2025-11-10T14:32:25.353Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/fa/e5b0369af9248eb0915943444b4cb6504b7c4ea810240f04e28b6d934369/pysma_plus-0.3.23-py3-none-any.whl", hash = "sha256:c2f50912a4afd2ed31ec02c8d2f2ddfa7011386ac856060cdd45b05a7e1674b0", size = 83884, upload-time = "2025-11-06T08:37:04.003Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/e4/a6711723fc0a5c18ab9d2efa29cf132843b3656b044f0535d0734d6019f4/pysma_plus-0.3.24-py3-none-any.whl", hash = "sha256:a5ec9c563103f128d88b60d9b73bed18a0cc72d8e775ce30611fedde10d9ae9b", size = 93612, upload-time = "2025-11-10T14:32:23.738Z" },
 ]
 
 [[package]]
