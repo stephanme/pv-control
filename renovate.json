@@ -15,7 +15,8 @@
       "matchPackageNames": [
         "/@angular.*/"
       ],
-      "groupName": "angular"
+      "groupName": "angular",
+      "group:security": false
     },
     {
       "description": "Group UI dev dependency updates",
