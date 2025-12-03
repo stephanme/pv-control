@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14.0-bookworm AS builder
+FROM python:3.14.1-bookworm AS builder
 
 #renovate: datasource=github-releases depName=astral-sh/uv
 ARG UV_VERSION=0.9.15
@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 
-FROM python:3.14.0-slim-bookworm
+FROM python:3.14.1-slim-bookworm
 ARG VCS_REF
 LABEL org.opencontainers.image.revision=$VCS_REF
 WORKDIR /app
