@@ -7,7 +7,7 @@ requires-python = ">=3.14"
 license-files = ["LICENSE"]
 classifiers = ["Private :: Do Not Upload"]
 dependencies = [
-    "aiodns==3.5.0",
+    "aiodns==3.6.1",
     "aiohttp==3.13.2",
     "fastapi==0.124.2",
     "myskoda==2.5.0",
