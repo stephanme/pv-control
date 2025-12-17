@@ -10,7 +10,7 @@ dependencies = [
     "aiodns==3.6.1",
     "aiohttp==3.13.2",
     "fastapi==0.124.2",
-    "myskoda==2.5.0",
+    "myskoda==2.5.1",
     "prometheus-client==0.23.1",
     "pymodbus==3.11.4",
     "pysma-plus==0.3.24",
