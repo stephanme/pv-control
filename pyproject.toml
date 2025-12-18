@@ -20,7 +20,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.14.9",
+    "ruff==0.14.10",
     "httpx==0.28.1",
     "basedpyright==1.36.1",
 ]
