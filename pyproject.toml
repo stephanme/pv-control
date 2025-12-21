@@ -15,7 +15,7 @@ dependencies = [
     "pymodbus==3.11.4",
     "pysma-plus==0.3.24",
     "rpi-gpio==0.7.1 ; ('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)",
-    "uvicorn==0.38.0",
+    "uvicorn==0.40.0",
 ]
 
 [dependency-groups]
