@@ -4,8 +4,9 @@
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
     "types": [
-      "jasmine"
-    ]
+      "vitest/globals"
+    ],
+    "skipLibCheck": true // https://github.com/nrwl/nx/issues/34164
   },
   "include": [
     "src/**/*.spec.ts",
