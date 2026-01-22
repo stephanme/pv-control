@@ -39,6 +39,6 @@
     "eslint-plugin-unused-imports": "4.3.0",
     "jsdom": "27.4.0",
     "typescript": "5.9.3",
-    "vitest": "4.0.17"
+    "vitest": "4.0.18"
   }
 }
