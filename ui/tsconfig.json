@@ -16,7 +16,10 @@
     "importHelpers": true,
     "target": "ES2022",
     "module": "preserve",
-    "useDefineForClassFields": true
+    "useDefineForClassFields": true,
+    "types": [
+      "vitest/globals"
+    ]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
