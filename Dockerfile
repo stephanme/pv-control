@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14.2-bookworm AS builder
+FROM python:3.14.3-bookworm AS builder
 
 # cmake needed for pycares on arm7
 RUN apt-get update && apt-get install -y cmake && rm -rf /var/lib/apt/lists/* 
@@ -32,7 +32,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 
-FROM python:3.14.2-slim-bookworm
+FROM python:3.14.3-slim-bookworm
 ARG VCS_REF
 LABEL org.opencontainers.image.revision=$VCS_REF
 WORKDIR /app
