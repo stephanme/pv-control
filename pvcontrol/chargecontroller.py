@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @enum.unique
-class ChargeMode(str, enum.Enum):
+class ChargeMode(enum.StrEnum):
     """
     Charge Controller operation mode:
 
@@ -38,7 +38,7 @@ class ChargeMode(str, enum.Enum):
 
 
 @enum.unique
-class PhaseMode(str, enum.Enum):
+class PhaseMode(enum.StrEnum):
     DISABLED = "DISABLED"  # phase relay is not in operation
     AUTO = "AUTO"  # PV switches between 1 and 3 phases
     CHARGE_1P = "CHARGE_1P"
@@ -46,7 +46,7 @@ class PhaseMode(str, enum.Enum):
 
 
 @enum.unique
-class Priority(str, enum.Enum):
+class Priority(enum.StrEnum):
     AUTO = "AUTO"  # balance between home battery and car
     HOME_BATTERY = "HOME_BATTERY"  # load home battery before car
     CAR = "CAR"  # load car before home battery
