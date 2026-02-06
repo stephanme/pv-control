@@ -10,7 +10,7 @@ from pvcontrol.service import BaseConfig, BaseData, BaseService
 logger = logging.getLogger(__name__)
 
 
-class RelayType(str, enum.Enum):
+class RelayType(enum.StrEnum):
     NO = "NO"  # normally open
     NC = "NC"  # normally closed
 
