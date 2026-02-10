@@ -5,7 +5,7 @@ FROM python:3.14.3-bookworm AS builder
 RUN apt-get update && apt-get install -y cmake && rm -rf /var/lib/apt/lists/* 
 
 #renovate: datasource=github-releases depName=astral-sh/uv
-ARG UV_VERSION=0.10.0
+ARG UV_VERSION=0.10.2
 RUN curl -fsSL https://astral.sh/uv/${UV_VERSION}/install.sh | sh
 
 ENV \
