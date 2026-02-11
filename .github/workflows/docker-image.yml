@@ -50,7 +50,7 @@ jobs:
         run: |
           uv run ruff check
           uv run ruff format --check
-          uv run basedpyright
+          uv run ty check
       - name: Run Python tests
         run: uv run -m unittest discover -s ./tests
 

@@ -26,8 +26,14 @@ class AngularAppStaticFiles(StaticFiles):
         super().__init__(*args, **kwargs)
 
     @override
-    def file_response(self, full_path: PathLike, *args: Any, **kwargs: dict[str, Any]) -> Response:
-        resp: Response = super().file_response(full_path, *args, **kwargs)
+    def file_response(
+        self,
+        full_path: PathLike,
+        stat_result: Any,
+        scope: Any,
+        status_code: int = 200,
+    ) -> Response:
+        resp: Response = super().file_response(full_path, stat_result, scope, status_code)
         if AngularAppStaticFiles.is_immutable_resource(full_path.__str__()):
             resp.headers.setdefault("Cache-Control", self.cachecontrol)
         return resp

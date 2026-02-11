@@ -93,13 +93,13 @@ class Wallbox[C: WallboxConfig](BaseService[C, WallboxData]):
 
     # set wallbox registers
 
-    async def set_phases_in(self, _phases: int):
+    async def set_phases_in(self, phases: int):
         pass
 
-    async def set_max_current(self, _max_current: int):
+    async def set_max_current(self, max_current: int):
         pass
 
-    async def allow_charging(self, _f: bool):
+    async def allow_charging(self, f: bool):
         pass
 
     async def trigger_reset(self):

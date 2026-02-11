@@ -20,13 +20,13 @@ except Exception:
     pass
 
 # Initialize the components in async funtion as some need a running event loop
-relay: PhaseRelay = None  # pyright: ignore[reportAssignmentType]
-wallbox: Wallbox[Any] = None  # pyright: ignore[reportAssignmentType]
-meter: Meter[Any] = None  # pyright: ignore[reportAssignmentType]
-controller: ChargeController = None  # pyright: ignore[reportAssignmentType]
-car: Car[Any] = None  # pyright: ignore[reportAssignmentType]
-controller_scheduler: AsyncScheduler = None  # pyright: ignore[reportAssignmentType]
-car_scheduler: AsyncScheduler = None  # pyright: ignore[reportAssignmentType]
+relay: PhaseRelay = None  # ty:ignore[invalid-assignment]
+wallbox: Wallbox[Any] = None  # ty:ignore[invalid-assignment]
+meter: Meter[Any] = None  # ty:ignore[invalid-assignment]
+controller: ChargeController = None  # ty:ignore[invalid-assignment]
+car: Car[Any] = None  # ty:ignore[invalid-assignment]
+controller_scheduler: AsyncScheduler = None  # ty:ignore[invalid-assignment]
+car_scheduler: AsyncScheduler = None  # ty:ignore[invalid-assignment]
 
 
 async def init(args: Namespace, config: dict[str, Any]) -> None:
