@@ -155,7 +155,7 @@ How to run Python tests:
 ```
 uv run ruff check
 uv run ruff format --check
-uv run basedpyright
+uv run ty check
 uv run -m unittest discover -s ./tests
 ```
 

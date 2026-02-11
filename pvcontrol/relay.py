@@ -42,7 +42,7 @@ class PhaseRelay(BaseService[PhaseRelayConfig, PhaseRelayData]):
     def get_phases(self):
         return self.get_data().phases
 
-    def set_phases(self, _phases: int):
+    def set_phases(self, phases: int):
         pass
 
     def _update_relay_state(self, ch: bool):
