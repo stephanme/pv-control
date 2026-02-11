@@ -22,7 +22,7 @@ dependencies = [
 dev = [
     "ruff==0.15.0",
     "httpx==0.28.1",
-    "basedpyright==1.37.4",
+    "basedpyright==1.38.0",
 ]
 
 [build-system]
