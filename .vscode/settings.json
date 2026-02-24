@@ -11,5 +11,6 @@
   "python.testing.unittestEnabled": true,
   "cSpell.words": [
     "aiohappyeyeballs"
-  ]
+  ],
+  "makefile.configureOnOpen": false
 }
