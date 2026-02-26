@@ -59,7 +59,7 @@ jobs:
           echo -n ${{ github.sha }} > version
           tar --exclude ./pvcontrol/__pycache__ -zcv -f pv-control.tar.gz ./pvcontrol/ ./ui/dist/ui/ pyproject.toml uv.lock *.md LICENSE version pvcontrol.nginx pvcontrol.service
       - name: Archive distribution
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: pv-control.tar.gz
           path: pv-control.tar.gz
