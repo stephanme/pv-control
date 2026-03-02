@@ -13,7 +13,7 @@ dependencies = [
     "myskoda==2.6.0",
     "prometheus-client==0.24.1",
     "pymodbus==3.12.1",
-    "pysma-plus==0.3.24",
+    "pysma-plus==0.4",
     "rpi-gpio==0.7.1 ; ('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)",
     "uvicorn==0.41.0",
 ]
