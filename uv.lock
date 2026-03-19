@@ -418,7 +418,7 @@ wheels = [
 
 [[package]]
 name = "myskoda"
-version = "2.7.2"
+version = "2.7.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -428,9 +428,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/5d/32b60675f3f565704dd381ff26b20d781e63bb6d1c8073cef298106599fa/myskoda-2.7.2.tar.gz", hash = "sha256:0c284b0602d025aa71f5d531ea85ee5f6c4541f04d4c4278b2b5299cbe600a0c", size = 343746, upload-time = "2026-03-16T08:40:15.355Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/5c/ac1cba5c7d03684d1ab098f43fdd28806ea8a3d0d7348d8db96c1fc28ef4/myskoda-2.7.4.tar.gz", hash = "sha256:7823924bceba1460c1fd6b252dd8c04a429a8c5152b42187f24bb11952ed12df", size = 345674, upload-time = "2026-03-19T08:39:54.05Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/fc/f4f5ca35a6c579e75a1f38fbece9ac480b744d2a6400d379441ca0796710/myskoda-2.7.2-py3-none-any.whl", hash = "sha256:3a82076d75d217dac872473e083266e43589957f910c9b0693c4ce4c4ad38d7c", size = 71019, upload-time = "2026-03-16T08:40:14.367Z" },
+    { url = "https://files.pythonhosted.org/packages/93/7a/f98f86115141e2aebbd8a26a0997546d3925ce832f1a540b912447cf671a/myskoda-2.7.4-py3-none-any.whl", hash = "sha256:ea2f251e8c3c600f75eb75c9b6126ad31d19431220ae7bc67c8b60afaf767613", size = 71017, upload-time = "2026-03-19T08:39:52.724Z" },
 ]
 
 [[package]]
@@ -541,7 +541,7 @@ requires-dist = [
     { name = "aiodns", specifier = "==4.0.0" },
     { name = "aiohttp", specifier = "==3.13.3" },
     { name = "fastapi", specifier = "==0.135.1" },
-    { name = "myskoda", specifier = "==2.7.2" },
+    { name = "myskoda", specifier = "==2.7.4" },
     { name = "prometheus-client", specifier = "==0.24.1" },
     { name = "pymodbus", specifier = "==3.12.1" },
     { name = "pysma-plus", specifier = "==0.4" },
@@ -656,11 +656,11 @@ wheels = [
 
 [[package]]
 name = "pyjwt"
-version = "2.12.1"
+version = "2.10.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c2/27/a3b6e5bf6ff856d2509292e95c8f57f0df7017cf5394921fc4e4ef40308a/pyjwt-2.12.1.tar.gz", hash = "sha256:c74a7a2adf861c04d002db713dd85f84beb242228e671280bf709d765b03672b", size = 102564, upload-time = "2026-03-13T19:27:37.25Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/46/bd74733ff231675599650d3e47f361794b22ef3e3770998dda30d3b63726/pyjwt-2.10.1.tar.gz", hash = "sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953", size = 87785, upload-time = "2024-11-28T03:43:29.933Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/7a/8dd906bd22e79e47397a61742927f6747fe93242ef86645ee9092e610244/pyjwt-2.12.1-py3-none-any.whl", hash = "sha256:28ca37c070cad8ba8cd9790cd940535d40274d22f80ab87f3ac6a713e6e8454c", size = 29726, upload-time = "2026-03-13T19:27:35.677Z" },
+    { url = "https://files.pythonhosted.org/packages/61/ad/689f02752eeec26aed679477e80e632ef1b682313be70793d798c1d5fc8f/PyJWT-2.10.1-py3-none-any.whl", hash = "sha256:dcdd193e30abefd5debf142f9adfcdd2b58004e644f25406ffaebd50bd98dacb", size = 22997, upload-time = "2024-11-28T03:43:27.893Z" },
 ]
 
 [[package]]
