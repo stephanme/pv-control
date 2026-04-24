@@ -534,7 +534,7 @@ requires-dist = [
     { name = "myskoda", specifier = "==2.9.1" },
     { name = "prometheus-client", specifier = "==0.25.0" },
     { name = "pymodbus", specifier = "==3.13.0" },
-    { name = "pysma-plus", specifier = "==0.4" },
+    { name = "pysma-plus", specifier = "==0.4.1" },
     { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = "==0.7.1" },
     { name = "uvicorn", specifier = "==0.44.0" },
 ]
@@ -664,7 +664,7 @@ wheels = [
 
 [[package]]
 name = "pysma-plus"
-version = "0.4"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -675,9 +675,9 @@ dependencies = [
     { name = "untangle" },
     { name = "xmlschema" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/d2/2bf8ca632e8549853b06f75baf0106079d00ff6a29cab9f06b8540702e1d/pysma_plus-0.4.tar.gz", hash = "sha256:6cbc4e3b8575f176dd7a20cde63bab70c717d0f2e8325873ae9132a06ddb9715", size = 137566, upload-time = "2026-03-02T07:47:28.36Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/07/05/a8fd064d83ff6df3ce95884681cc6121f4d891e08c87fedbc97a83351447/pysma_plus-0.4.1.tar.gz", hash = "sha256:774995208d5b6bbd6e472936086469a2f2667ae5ea8721d0dbeacf9fd92076a9", size = 140814, upload-time = "2026-04-24T16:34:12.787Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9b/1e/344e7498a89690b9734303f0840d2ae1225c8f0ba213f951f7b4a628fe30/pysma_plus-0.4-py3-none-any.whl", hash = "sha256:2dd12686431213a5ad0f893206aaa778e59e8e3bb16c815f4e5763a5a018fba0", size = 93628, upload-time = "2026-03-02T07:47:26.11Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/84/f2a72e633c5dec95acb6cd6d6350841c1caf1990717b02e9f1f94a15cf4d/pysma_plus-0.4.1-py3-none-any.whl", hash = "sha256:b352c8dc6fff350bb8d2014f155bf07db69eed106100703ddac4b3c7e72bf9ba", size = 97070, upload-time = "2026-04-24T16:34:10.619Z" },
 ]
 
 [[package]]
