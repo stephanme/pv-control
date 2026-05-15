@@ -21,6 +21,7 @@ parser.add_argument("-w", "--wallbox", default="SimulatedWallbox")
 parser.add_argument("-r", "--relay", default="SimulatedPhaseRelay")
 parser.add_argument("-a", "--car", default="SimulatedCar")
 parser.add_argument("-c", "--config", default="{}")
+parser.add_argument("--mqtt", action="store_true", default=False, help="enable MQTT publishing")
 parser.add_argument("--hostname", default="", help="server hostname, can be used to enable/disable phase relay on k8s")
 parser.add_argument("--host", default="0.0.0.0", help="server host (default: 0.0.0.0)")
 parser.add_argument("--port", type=int, default=8080, help="server port (default: 8080)")
@@ -35,7 +36,7 @@ logger.info(f"config:  {args.config}")
 logger.info(f"hostname:{args.hostname}")
 logger.info(f"Running on {platform.machine()} / {sys.platform}")
 config = json.loads(args.config)
-for c in ["wallbox", "meter", "car", "controller", "relay"]:
+for c in ["wallbox", "meter", "car", "controller", "relay", "mqtt"]:
     if c not in config:
         config[c] = {}
 

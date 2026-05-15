@@ -57,6 +57,7 @@ args = Namespace(
     relay="SimulatedPhaseRelay",
     car="SimulatedCar",
     hostname="",
+    mqtt=False,
 )
 config: dict[str, Any] = {"wallbox": {}, "meter": {}, "car": {}, "controller": {}, "relay": {}}
 
