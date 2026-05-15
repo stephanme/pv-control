@@ -617,6 +617,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiodns" },
     { name = "aiohttp" },
+    { name = "aiomqtt" },
     { name = "fastapi" },
     { name = "myskoda" },
     { name = "prometheus-client" },
@@ -637,6 +638,7 @@ dev = [
 requires-dist = [
     { name = "aiodns", specifier = "==4.0.0" },
     { name = "aiohttp", specifier = "==3.13.5" },
+    { name = "aiomqtt", specifier = "==2.5.1" },
     { name = "fastapi", specifier = "==0.136.1" },
     { name = "myskoda", specifier = "==2.11.0" },
     { name = "prometheus-client", specifier = "==0.25.0" },

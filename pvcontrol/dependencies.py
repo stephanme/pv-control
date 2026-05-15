@@ -5,6 +5,7 @@ from typing import Any
 from pvcontrol.car import Car, CarFactory
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerFactory
 from pvcontrol.meter import Meter, MeterFactory
+from pvcontrol.mqtt import MqttConfig, MqttPublisher
 from pvcontrol.relay import PhaseRelay, PhaseRelayFactory
 from pvcontrol.scheduler import AsyncScheduler
 from pvcontrol.wallbox import Wallbox, WallboxFactory
@@ -27,11 +28,13 @@ controller: ChargeController = None  # ty:ignore[invalid-assignment]
 car: Car[Any] = None  # ty:ignore[invalid-assignment]
 controller_scheduler: AsyncScheduler = None  # ty:ignore[invalid-assignment]
 car_scheduler: AsyncScheduler = None  # ty:ignore[invalid-assignment]
+mqtt_publisher: MqttPublisher | None = None
+mqtt_scheduler: AsyncScheduler | None = None
 
 
 async def init(args: Namespace, config: dict[str, Any]) -> None:
     logger.info("Initializing depencencies.")
-    global controller_scheduler, car_scheduler, relay, wallbox, meter, car, controller
+    global controller_scheduler, car_scheduler, relay, wallbox, meter, car, controller, mqtt_publisher, mqtt_scheduler
     relay = PhaseRelayFactory.newPhaseRelay(args.relay, args.hostname, **config["relay"])
     wallbox = WallboxFactory.newWallbox(args.wallbox, relay, **config["wallbox"])
     meter = MeterFactory.newMeter(args.meter, wallbox, **config["meter"])
@@ -43,9 +46,20 @@ async def init(args: Namespace, config: dict[str, Any]) -> None:
     await controller_scheduler.start()
     await car_scheduler.start()
 
+    if args.mqtt:
+        mqtt_config = MqttConfig(**config["mqtt"])
+        mqtt_publisher = MqttPublisher(mqtt_config, version)
+        await mqtt_publisher.start()
+        mqtt_scheduler = AsyncScheduler(controller.get_config().cycle_time, mqtt_publisher.publish_state)
+        await mqtt_scheduler.start()
+
 
 # shutdown components and event loop
 async def shutdown():
+    if mqtt_scheduler:
+        await mqtt_scheduler.stop()
+    if mqtt_publisher:
+        await mqtt_publisher.stop()
     await controller_scheduler.stop()
     await car_scheduler.stop()
     # disable charging to play it safe
