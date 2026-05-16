@@ -205,3 +205,61 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         will = call_kwargs["will"]
         self.assertEqual("pvcontrol/status", str(will.topic))
         self.assertEqual("offline", will.payload)
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_restore_state_applies_retained_values(self, mock_client_cls: Any):
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client.unsubscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        retained_payload = json.dumps(
+            {
+                "controller": {
+                    "desired_mode": "PV_ONLY",
+                    "phase_mode": "CHARGE_1P",
+                    "desired_priority": "CAR",
+                }
+            }
+        )
+        mock_msg = MagicMock()
+        mock_msg.payload = retained_payload
+
+        messages_iter = AsyncMock()
+        messages_iter.__anext__ = AsyncMock(return_value=mock_msg)
+        mock_client.messages = messages_iter
+
+        await self.publisher.start()
+
+        with patch("pvcontrol.dependencies.controller") as mock_controller:
+            await self.publisher.restore_state()
+
+        mock_controller.set_desired_mode.assert_called_once_with(ChargeMode.PV_ONLY)
+        mock_controller.set_phase_mode.assert_called_once_with(PhaseMode.CHARGE_1P)
+        mock_controller.set_desired_priority.assert_called_once_with(Priority.CAR)
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_restore_state_timeout_does_not_crash(self, mock_client_cls: Any):
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client.unsubscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        messages_iter = AsyncMock()
+        messages_iter.__anext__ = AsyncMock(side_effect=TimeoutError)
+        mock_client.messages = messages_iter
+
+        await self.publisher.start()
+        await self.publisher.restore_state()
+        # Should not raise — just logs and continues
+
+    async def test_restore_state_without_connection(self):
+        self.publisher._client = None
+        await self.publisher.restore_state()
+        # Should not raise

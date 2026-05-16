@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
@@ -405,3 +406,46 @@ class MqttPublisher:
             return
         self._next_reconnect_at = now + 60
         await self.start()
+
+    async def restore_state(self) -> None:
+        if self._client is None:
+            return
+        topic = f"{self._config.topic_prefix}/state"
+        try:
+            await self._client.subscribe(topic)
+            msg = await asyncio.wait_for(anext(self._client.messages), timeout=2.0)
+            payload = json.loads(msg.payload)
+            self._apply_controller_state(payload)
+        except TimeoutError:
+            logger.info("No retained MQTT state found, starting with defaults")
+        except Exception:
+            logger.exception("Failed to restore state from MQTT")
+        finally:
+            try:
+                if self._client is not None:
+                    await self._client.unsubscribe(topic)
+            except Exception:
+                pass
+
+    def _apply_controller_state(self, payload: dict[str, Any]) -> None:
+        from pvcontrol import dependencies
+
+        controller_state = payload.get("controller", {})
+        if desired_mode := controller_state.get("desired_mode"):
+            try:
+                dependencies.controller.set_desired_mode(ChargeMode(desired_mode))
+                logger.info(f"Restored desired_mode: {desired_mode}")
+            except ValueError:
+                logger.warning(f"Ignoring invalid desired_mode from retained state: {desired_mode!r}")
+        if phase_mode := controller_state.get("phase_mode"):
+            try:
+                dependencies.controller.set_phase_mode(PhaseMode(phase_mode))
+                logger.info(f"Restored phase_mode: {phase_mode}")
+            except ValueError:
+                logger.warning(f"Ignoring invalid phase_mode from retained state: {phase_mode!r}")
+        if desired_priority := controller_state.get("desired_priority"):
+            try:
+                dependencies.controller.set_desired_priority(Priority(desired_priority))
+                logger.info(f"Restored desired_priority: {desired_priority}")
+            except ValueError:
+                logger.warning(f"Ignoring invalid desired_priority from retained state: {desired_priority!r}")

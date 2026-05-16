@@ -50,6 +50,7 @@ async def init(args: Namespace, config: dict[str, Any]) -> None:
         mqtt_config = MqttConfig(**config["mqtt"])
         mqtt_publisher = MqttPublisher(mqtt_config, version)
         await mqtt_publisher.start()
+        await mqtt_publisher.restore_state()
         mqtt_scheduler = AsyncScheduler(controller.get_config().cycle_time, mqtt_publisher.publish_state)
         await mqtt_scheduler.start()
 
