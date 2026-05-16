@@ -3,9 +3,12 @@ import unittest
 from typing import Any, final, override
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from pvcontrol.chargecontroller import ChargeMode, PhaseMode, Priority
+from pvcontrol.car import CarData
+from pvcontrol.chargecontroller import ChargeControllerData, ChargeMode, PhaseMode, Priority
+from pvcontrol.meter import MeterData
 from pvcontrol.mqtt import ENTITY_DEFINITIONS, MqttConfig, MqttPublisher
-from pvcontrol.wallbox import CarStatus, WbError
+from pvcontrol.relay import PhaseRelayData
+from pvcontrol.wallbox import CarStatus, WallboxData, WbError
 
 
 @final
@@ -63,7 +66,25 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
     @override
     def setUp(self):
         self.config = MqttConfig(broker="testhost", port=1883)
-        self.publisher = MqttPublisher(self.config, "1.0.0")
+        self.mock_controller = MagicMock()
+        self.mock_meter = MagicMock()
+        self.mock_wallbox = MagicMock()
+        self.mock_relay = MagicMock()
+        self.mock_car = MagicMock()
+        self.mock_controller.get_data.return_value = ChargeControllerData()
+        self.mock_meter.get_data.return_value = MeterData()
+        self.mock_wallbox.get_data.return_value = WallboxData()
+        self.mock_relay.get_data.return_value = PhaseRelayData()
+        self.mock_car.get_data.return_value = CarData()
+        self.publisher = MqttPublisher(
+            self.config,
+            "1.0.0",
+            controller=self.mock_controller,
+            meter=self.mock_meter,
+            wallbox=self.mock_wallbox,
+            relay=self.mock_relay,
+            car=self.mock_car,
+        )
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_start_connects_and_publishes_discovery(self, mock_client_cls: Any):
@@ -151,18 +172,9 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         await self.publisher.start()
         mock_client.publish.reset_mock()
 
-        mock_response = MagicMock()
-        mock_response.model_dump.return_value = {
-            "version": "1.0.0",
-            "meter": {"power_pv": 1000},
-            "wallbox": {"car_status": CarStatus.Charging, "wb_error": WbError.OK, "power": 3000},
-            "relay": {},
-            "controller": {},
-            "car": {},
-        }
+        self.mock_wallbox.get_data.return_value = WallboxData(car_status=CarStatus.Charging, wb_error=WbError.OK, power=3000)
 
-        with patch("pvcontrol.api.get_root", new_callable=AsyncMock, return_value=mock_response):
-            await self.publisher.publish_state()
+        await self.publisher.publish_state()
 
         mock_client.publish.assert_called_once()
         call_kwargs = mock_client.publish.call_args.kwargs
@@ -219,17 +231,11 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         mock_client.messages = messages_iter
 
         await self.publisher.start()
+        await self.publisher.restore_state()
 
-        with (
-            patch("pvcontrol.api.put_controller_desired_mode", new_callable=AsyncMock) as mock_mode,
-            patch("pvcontrol.api.put_controller_phase_mode", new_callable=AsyncMock) as mock_phase,
-            patch("pvcontrol.api.put_controller_desired_priority", new_callable=AsyncMock) as mock_prio,
-        ):
-            await self.publisher.restore_state()
-
-        mock_mode.assert_called_once_with(ChargeMode.PV_ONLY)
-        mock_phase.assert_called_once_with(PhaseMode.CHARGE_1P)
-        mock_prio.assert_called_once_with(Priority.CAR)
+        self.mock_controller.set_desired_mode.assert_called_once_with(ChargeMode.PV_ONLY)
+        self.mock_controller.set_phase_mode.assert_called_once_with(PhaseMode.CHARGE_1P)
+        self.mock_controller.set_desired_priority.assert_called_once_with(Priority.CAR)
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_restore_state_timeout_does_not_crash(self, mock_client_cls: Any):
