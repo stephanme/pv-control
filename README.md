@@ -39,34 +39,41 @@ Restarting pv-control (e.g. for updates) doesn't change the state of the relay. 
 
 ![wallbox and phase switching relay](wallbox.png)
 
+## MQTT
+
+PV-control can optionally publish its state to an MQTT broker including Home Assistant MQTT discovery info.
+
+On startup, pv-control reads the (retained) state from the MQTT broker and initializes charge mode etc. This improves resiliency and e.g. 
+allows to continue car charging after a pv-control update or crash.
+
 ## Configuration
 
 ```
 python -m pvcontrol --help
-usage: __main__.py [-h] [-m METER] [-w WALLBOX] [-r RELAY] [-a CAR] [-c CONFIG] [--hostname HOSTNAME] [--host HOST] [--port PORT] [--basehref BASEHREF]
+usage: python -m pvcontrol [-h] [-m METER] [-w WALLBOX] [-r RELAY] [-a CAR] [-c CONFIG] [--mqtt] [--hostname HOSTNAME] [--host HOST] [--port PORT]
 
 PV Control
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -m METER, --meter METER
-  -w WALLBOX, --wallbox WALLBOX
-  -r RELAY, --relay RELAY
-  -a CAR, --car CAR
-  -c CONFIG, --config CONFIG
+  -m, --meter METER
+  -w, --wallbox WALLBOX
+  -r, --relay RELAY
+  -a, --car CAR
+  -c, --config CONFIG
+  --mqtt                enable MQTT publishing
   --hostname HOSTNAME   server hostname, can be used to enable/disable phase relay on k8s
   --host HOST           server host (default: 0.0.0.0)
-  --port PORT           server port (default: 8080)
-```
+  --port PORT           server port (default: 8080)```
 
 METER, WALLBOX and CAR refer to implementation classes for the energy meter, the wallbox and the car:
-- METER = KostalMeter|FroniusMeter|SimulatedMeter
+- METER = KostalMeter|SolarWattMeter|SmaTripowerMeter|SimulatedMeter
 - WALLBOX = GoeWallbox|SimulatedWallbox|SimulatedWallboxWithRelay
 - RELAY = RaspiPhaseRelay|SimulatedPhaseRelay
 - CAR = VolkswagenIDCar|SimulatedCar|NoCar
 
-CONFIG is a json with 'meter', 'wallbox', 'relay', 'car' and 'controller' configuration structures. The config parameters depend on the METER, WALLBOX, RELAY and CAR type. See the corresponding ...Config data classes
-in the source files `meter.py`, `wallbox.py`, `car.py` and `chargecontroller.py`.
+CONFIG is a json with 'meter', 'wallbox', 'relay', 'car', 'controller', and 'mqtt' configuration structures. The config parameters depend on the METER, WALLBOX, RELAY and CAR type. See the corresponding ...Config data classes
+in the source files `meter.py`, `wallbox.py`, `car.py`, `chargecontroller.py` and `mqtt.py`.
 
 HOST, PORT and BASEHREF configure the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s.
 

@@ -1,13 +1,19 @@
 import asyncio
+import dataclasses
+import enum
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 import aiomqtt
 
-from pvcontrol.chargecontroller import ChargeMode, PhaseMode, Priority
-from pvcontrol.wallbox import CarStatus, WbError
+from pvcontrol.car import Car
+from pvcontrol.chargecontroller import ChargeController, ChargeMode, PhaseMode, Priority
+from pvcontrol.meter import Meter
+from pvcontrol.relay import PhaseRelay
+from pvcontrol.wallbox import CarStatus, Wallbox, WbError
 
 logger = logging.getLogger(__name__)
 
@@ -282,10 +288,32 @@ ENTITY_DEFINITIONS: list[EntityDef] = [
 ]
 
 
+def _json_default(o: Any) -> Any:
+    if isinstance(o, datetime):
+        return o.isoformat()
+    if isinstance(o, enum.Enum):
+        return o.value
+    raise TypeError(repr(o))
+
+
 class MqttPublisher:
-    def __init__(self, config: MqttConfig, version: str):
+    def __init__(
+        self,
+        config: MqttConfig,
+        version: str,
+        controller: ChargeController,
+        meter: Meter,
+        wallbox: Wallbox,
+        relay: PhaseRelay,
+        car: Car,
+    ):
         self._config = config
         self._version = version
+        self._controller = controller
+        self._meter = meter
+        self._wallbox = wallbox
+        self._relay = relay
+        self._car = car
         self._client: aiomqtt.Client | None = None
         self._next_reconnect_at: float = 0
 
@@ -326,14 +354,18 @@ class MqttPublisher:
         if self._client is None:
             return
         try:
-            import pvcontrol.api as api
-
-            response = await api.get_root()
-            state = response.model_dump(mode="json")
+            state = {
+                "version": self._version,
+                "controller": dataclasses.asdict(self._controller.get_data()),
+                "meter": dataclasses.asdict(self._meter.get_data()),
+                "wallbox": dataclasses.asdict(self._wallbox.get_data()),
+                "relay": dataclasses.asdict(self._relay.get_data()),
+                "car": dataclasses.asdict(self._car.get_data()),
+            }
             state["wallbox"]["car_status"] = CarStatus(state["wallbox"]["car_status"]).name
             state["wallbox"]["wb_error"] = WbError(state["wallbox"]["wb_error"]).name
 
-            payload = json.dumps(state)
+            payload = json.dumps(state, default=_json_default)
             await self._client.publish(f"{self._config.topic_prefix}/state", payload=payload, retain=True)
         except aiomqtt.MqttError as e:
             logger.warning(f"MQTT publish failed: {e}")
@@ -403,7 +435,7 @@ class MqttPublisher:
             await self._client.subscribe(topic)
             msg = await asyncio.wait_for(anext(self._client.messages), timeout=2.0)
             payload = json.loads(msg.payload)
-            await self._apply_controller_state(payload)
+            self._apply_controller_state(payload)
         except TimeoutError:
             logger.info("No retained MQTT state found, starting with defaults")
         except Exception:
@@ -415,25 +447,23 @@ class MqttPublisher:
             except Exception:
                 pass
 
-    async def _apply_controller_state(self, payload: dict[str, Any]) -> None:
-        import pvcontrol.api as api
-
+    def _apply_controller_state(self, payload: dict[str, Any]) -> None:
         controller_state = payload.get("controller", {})
         if desired_mode := controller_state.get("desired_mode"):
             try:
-                await api.put_controller_desired_mode(ChargeMode(desired_mode))
+                self._controller.set_desired_mode(ChargeMode(desired_mode))
                 logger.info(f"Restored desired_mode: {desired_mode}")
             except ValueError:
                 logger.warning(f"Ignoring invalid desired_mode from retained state: {desired_mode!r}")
         if phase_mode := controller_state.get("phase_mode"):
             try:
-                await api.put_controller_phase_mode(PhaseMode(phase_mode))
+                self._controller.set_phase_mode(PhaseMode(phase_mode))
                 logger.info(f"Restored phase_mode: {phase_mode}")
             except ValueError:
                 logger.warning(f"Ignoring invalid phase_mode from retained state: {phase_mode!r}")
         if desired_priority := controller_state.get("desired_priority"):
             try:
-                await api.put_controller_desired_priority(Priority(desired_priority))
+                self._controller.set_desired_priority(Priority(desired_priority))
                 logger.info(f"Restored desired_priority: {desired_priority}")
             except ValueError:
                 logger.warning(f"Ignoring invalid desired_priority from retained state: {desired_priority!r}")

@@ -48,7 +48,7 @@ async def init(args: Namespace, config: dict[str, Any]) -> None:
 
     if args.mqtt:
         mqtt_config = MqttConfig(**config["mqtt"])
-        mqtt_publisher = MqttPublisher(mqtt_config, version)
+        mqtt_publisher = MqttPublisher(mqtt_config, version, controller=controller, meter=meter, wallbox=wallbox, relay=relay, car=car)
         await mqtt_publisher.start()
         await mqtt_publisher.restore_state()
         mqtt_scheduler = AsyncScheduler(controller.get_config().cycle_time, mqtt_publisher.publish_state)
