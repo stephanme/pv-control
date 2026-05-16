@@ -326,9 +326,13 @@ class MqttPublisher:
         if self._client is None:
             return
         try:
-            from pvcontrol import dependencies
+            import pvcontrol.api as api
 
-            state = self._build_state(dependencies)
+            response = await api.get_root()
+            state = response.model_dump(mode="json")
+            state["wallbox"]["car_status"] = CarStatus(state["wallbox"]["car_status"]).name
+            state["wallbox"]["wb_error"] = WbError(state["wallbox"]["wb_error"]).name
+
             payload = json.dumps(state)
             await self._client.publish(f"{self._config.topic_prefix}/state", payload=payload, retain=True)
         except aiomqtt.MqttError as e:
@@ -336,22 +340,6 @@ class MqttPublisher:
             await self._disconnect()
         except Exception:
             logger.exception("MQTT publish error")
-
-    def _build_state(self, deps: Any) -> dict[str, Any]:
-        from pvcontrol.api import PvcontrolResponse
-
-        response = PvcontrolResponse(
-            version=deps.version,
-            controller=deps.controller.get_data(),
-            meter=deps.meter.get_data(),
-            wallbox=deps.wallbox.get_data(),
-            relay=deps.relay.get_data(),
-            car=deps.car.get_data(),
-        )
-        state = response.model_dump(mode="json")
-        state["wallbox"]["car_status"] = CarStatus(state["wallbox"]["car_status"]).name
-        state["wallbox"]["wb_error"] = WbError(state["wallbox"]["wb_error"]).name
-        return state
 
     async def _disconnect(self) -> None:
         if self._client:
@@ -415,7 +403,7 @@ class MqttPublisher:
             await self._client.subscribe(topic)
             msg = await asyncio.wait_for(anext(self._client.messages), timeout=2.0)
             payload = json.loads(msg.payload)
-            self._apply_controller_state(payload)
+            await self._apply_controller_state(payload)
         except TimeoutError:
             logger.info("No retained MQTT state found, starting with defaults")
         except Exception:
@@ -427,25 +415,25 @@ class MqttPublisher:
             except Exception:
                 pass
 
-    def _apply_controller_state(self, payload: dict[str, Any]) -> None:
-        from pvcontrol import dependencies
+    async def _apply_controller_state(self, payload: dict[str, Any]) -> None:
+        import pvcontrol.api as api
 
         controller_state = payload.get("controller", {})
         if desired_mode := controller_state.get("desired_mode"):
             try:
-                dependencies.controller.set_desired_mode(ChargeMode(desired_mode))
+                await api.put_controller_desired_mode(ChargeMode(desired_mode))
                 logger.info(f"Restored desired_mode: {desired_mode}")
             except ValueError:
                 logger.warning(f"Ignoring invalid desired_mode from retained state: {desired_mode!r}")
         if phase_mode := controller_state.get("phase_mode"):
             try:
-                dependencies.controller.set_phase_mode(PhaseMode(phase_mode))
+                await api.put_controller_phase_mode(PhaseMode(phase_mode))
                 logger.info(f"Restored phase_mode: {phase_mode}")
             except ValueError:
                 logger.warning(f"Ignoring invalid phase_mode from retained state: {phase_mode!r}")
         if desired_priority := controller_state.get("desired_priority"):
             try:
-                dependencies.controller.set_desired_priority(Priority(desired_priority))
+                await api.put_controller_desired_priority(Priority(desired_priority))
                 logger.info(f"Restored desired_priority: {desired_priority}")
             except ValueError:
                 logger.warning(f"Ignoring invalid desired_priority from retained state: {desired_priority!r}")

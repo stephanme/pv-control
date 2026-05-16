@@ -140,56 +140,42 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("pvcontrol/status", mock_client.publish.call_args.args[0])
         self.assertEqual("offline", call_kwargs["payload"])
 
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_publish_state_converts_enums_to_names(self, mock_client_cls: Any):
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        await self.publisher.start()
+        mock_client.publish.reset_mock()
+
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {
+            "version": "1.0.0",
+            "meter": {"power_pv": 1000},
+            "wallbox": {"car_status": CarStatus.Charging, "wb_error": WbError.OK, "power": 3000},
+            "relay": {},
+            "controller": {},
+            "car": {},
+        }
+
+        with patch("pvcontrol.api.get_root", new_callable=AsyncMock, return_value=mock_response):
+            await self.publisher.publish_state()
+
+        mock_client.publish.assert_called_once()
+        call_kwargs = mock_client.publish.call_args.kwargs
+        payload = json.loads(call_kwargs["payload"])
+        self.assertEqual("Charging", payload["wallbox"]["car_status"])
+        self.assertEqual("OK", payload["wallbox"]["wb_error"])
+        self.assertTrue(call_kwargs["retain"])
+
     async def test_publish_state_without_connection_does_not_crash(self):
         self.publisher._client = None
         # Should not raise even without connection (reconnect also fails silently)
         with patch.object(self.publisher, "_try_reconnect", new_callable=AsyncMock):
             await self.publisher.publish_state()
-
-    def test_build_state_converts_int_enums(self):
-        deps = MagicMock()
-        deps.version = "1.0.0"
-
-        controller_data = MagicMock()
-        controller_data.mode = ChargeMode.PV_ONLY
-        controller_data.desired_mode = ChargeMode.PV_ONLY
-        controller_data.phase_mode = PhaseMode.AUTO
-        controller_data.priority = Priority.AUTO
-        controller_data.desired_priority = Priority.AUTO
-        controller_data.error = 0
-        deps.controller.get_data.return_value = controller_data
-
-        meter_data = MagicMock()
-        meter_data.power_pv = 3000.0
-        deps.meter.get_data.return_value = meter_data
-
-        wallbox_data = MagicMock()
-        wallbox_data.car_status = CarStatus.Charging
-        wallbox_data.wb_error = WbError.OK
-        deps.wallbox.get_data.return_value = wallbox_data
-
-        relay_data = MagicMock()
-        deps.relay.get_data.return_value = relay_data
-
-        car_data = MagicMock()
-        deps.car.get_data.return_value = car_data
-
-        with patch("pvcontrol.api.PvcontrolResponse") as mock_response_cls:
-            mock_response = MagicMock()
-            mock_response.model_dump.return_value = {
-                "version": "1.0.0",
-                "controller": {"mode": "PV_ONLY", "error": 0},
-                "meter": {"power_pv": 3000.0},
-                "wallbox": {"car_status": 2, "wb_error": 0},
-                "relay": {},
-                "car": {},
-            }
-            mock_response_cls.return_value = mock_response
-
-            state = self.publisher._build_state(deps)
-
-        self.assertEqual("Charging", state["wallbox"]["car_status"])
-        self.assertEqual("OK", state["wallbox"]["wb_error"])
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_lwt_configured(self, mock_client_cls: Any):
@@ -234,12 +220,16 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
 
         await self.publisher.start()
 
-        with patch("pvcontrol.dependencies.controller") as mock_controller:
+        with (
+            patch("pvcontrol.api.put_controller_desired_mode", new_callable=AsyncMock) as mock_mode,
+            patch("pvcontrol.api.put_controller_phase_mode", new_callable=AsyncMock) as mock_phase,
+            patch("pvcontrol.api.put_controller_desired_priority", new_callable=AsyncMock) as mock_prio,
+        ):
             await self.publisher.restore_state()
 
-        mock_controller.set_desired_mode.assert_called_once_with(ChargeMode.PV_ONLY)
-        mock_controller.set_phase_mode.assert_called_once_with(PhaseMode.CHARGE_1P)
-        mock_controller.set_desired_priority.assert_called_once_with(Priority.CAR)
+        mock_mode.assert_called_once_with(ChargeMode.PV_ONLY)
+        mock_phase.assert_called_once_with(PhaseMode.CHARGE_1P)
+        mock_prio.assert_called_once_with(Priority.CAR)
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_restore_state_timeout_does_not_crash(self, mock_client_cls: Any):
