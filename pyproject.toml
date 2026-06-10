@@ -8,7 +8,7 @@ license-files = ["LICENSE"]
 classifiers = ["Private :: Do Not Upload"]
 dependencies = [
     "aiodns==4.0.4",
-    "aiohttp==3.14.0",
+    "aiohttp==3.14.1",
     "aiomqtt==2.5.1",
     "fastapi==0.136.1",
     "myskoda==2.11.1",
