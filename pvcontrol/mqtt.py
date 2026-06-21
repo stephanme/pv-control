@@ -457,8 +457,9 @@ class MqttPublisher:
                 logger.warning(f"Ignoring invalid desired_mode from retained state: {desired_mode!r}")
         if phase_mode := controller_state.get("phase_mode"):
             try:
-                self._controller.set_phase_mode(PhaseMode(phase_mode))
-                logger.info(f"Restored phase_mode: {phase_mode}")
+                if phase_mode != PhaseMode.DISABLED:
+                    self._controller.set_phase_mode(PhaseMode(phase_mode))
+                    logger.info(f"Restored phase_mode: {phase_mode}")
             except ValueError:
                 logger.warning(f"Ignoring invalid phase_mode from retained state: {phase_mode!r}")
         if desired_priority := controller_state.get("desired_priority"):
