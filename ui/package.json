@@ -30,7 +30,6 @@
     "@angular/build": "21.2.16",
     "@angular/cli": "21.2.16",
     "@angular/compiler-cli": "21.2.17",
-    "@types/node": "^20.19.43",
     "@typescript-eslint/eslint-plugin": "8.61.1",
     "@typescript-eslint/parser": "8.61.1",
     "eslint": "9.39.4",
