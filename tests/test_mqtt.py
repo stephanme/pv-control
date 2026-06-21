@@ -259,3 +259,38 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         self.publisher._client = None
         await self.publisher.restore_state()
         # Should not raise
+
+    # Don't restore phase_mode if it's DISABLED. DISABLED is set only if phase switching relay is not available
+    # when pvcontrol was deployed on a node without it.
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_restore_state_ignore_disabled_phase_mode(self, mock_client_cls: Any):
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client.unsubscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        retained_payload = json.dumps(
+            {
+                "controller": {
+                    "desired_mode": "PV_ONLY",
+                    "phase_mode": "DISABLED",
+                    "desired_priority": "CAR",
+                }
+            }
+        )
+        mock_msg = MagicMock()
+        mock_msg.payload = retained_payload
+
+        messages_iter = AsyncMock()
+        messages_iter.__anext__ = AsyncMock(return_value=mock_msg)
+        mock_client.messages = messages_iter
+
+        await self.publisher.start()
+        await self.publisher.restore_state()
+
+        self.mock_controller.set_desired_mode.assert_called_once_with(ChargeMode.PV_ONLY)
+        self.mock_controller.set_phase_mode.assert_not_called()
+        self.mock_controller.set_desired_priority.assert_called_once_with(Priority.CAR)
