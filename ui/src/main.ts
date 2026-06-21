@@ -1,6 +1,6 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideZonelessChangeDetection, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 
 import { AppComponent } from './app/app.component';
 import { statusInterceptor } from './app/http-status.service';
@@ -10,7 +10,7 @@ bootstrapApplication(AppComponent, {
   providers: [
     provideZonelessChangeDetection(),
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([statusInterceptor])),
+    provideHttpClient(withXhr(), withInterceptors([statusInterceptor])),
     provideAppInitializer(() => {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
         const defaultFontSetClasses = iconRegistry.getDefaultFontSetClass();
