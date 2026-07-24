@@ -23,7 +23,7 @@ dependencies = [
 dev = [
     "ruff==0.16.0",
     "httpx==0.28.1",
-    "ty==0.0.59",
+    "ty==0.0.63",
 ]
 
 [build-system]
