@@ -141,8 +141,44 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         mock_client.__aenter__ = AsyncMock(side_effect=OSError("Connection refused"))
         mock_client_cls.return_value = mock_client
 
+        self.publisher._retry_window_s = 0  # skip retry loop immediately
         await self.publisher.start()
         self.assertIsNone(self.publisher._client)
+
+    @patch("pvcontrol.mqtt.asyncio.sleep", new_callable=AsyncMock)
+    @patch("pvcontrol.mqtt.time.time")
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_start_retry_exhaustion_logs_error(self, mock_client_cls: Any, mock_time: MagicMock, mock_sleep: AsyncMock):
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(side_effect=OSError("Connection refused"))
+        mock_client_cls.return_value = mock_client
+
+        # Drive the clock: set deadline at t=0, allow one retry at t=0, then jump past the window.
+        mock_time.side_effect = [0.0, 0.0, 100.0]
+        self.publisher._retry_window_s = 60
+
+        with self.assertLogs("pvcontrol.mqtt", level="ERROR") as logs:
+            await self.publisher.start()
+
+        self.assertIsNone(self.publisher._client)
+        self.assertEqual(mock_client_cls.call_count, 2)  # initial attempt + one retry
+        mock_sleep.assert_awaited_once()
+        self.assertTrue(any("retry window" in msg for msg in logs.output))
+
+    @patch("pvcontrol.mqtt.asyncio.sleep", new_callable=AsyncMock)
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_start_eventually_succeeds(self, mock_client_cls: Any, mock_sleep: AsyncMock):
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        # First call fails, second call succeeds
+        mock_client.__aenter__.side_effect = [OSError("Connection refused"), mock_client]
+        await self.publisher.start()
+        self.assertIsNotNone(self.publisher._client)
+        self.assertEqual(mock_client_cls.call_count, 2)
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_stop_publishes_offline(self, mock_client_cls: Any):
