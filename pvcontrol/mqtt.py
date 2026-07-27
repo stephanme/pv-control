@@ -3,6 +3,8 @@ import dataclasses
 import enum
 import json
 import logging
+import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -316,15 +318,19 @@ class MqttPublisher:
         self._car = car
         self._client: aiomqtt.Client | None = None
         self._next_reconnect_at: float = 0
+        self._client_id: str = uuid.uuid4().hex[:8]
+        # Retry window (seconds) for the initial connect; tests set it to 0 to disable retrying.
+        self._retry_window_s: float = 300
 
-    async def start(self) -> None:
+    async def _connect_once(self) -> bool:
+        """Attempt a single connection. Returns True on success, False on failure."""
         try:
             self._client = aiomqtt.Client(
                 hostname=self._config.broker,
                 port=self._config.port,
                 username=self._config.username or None,
                 password=self._config.password or None,
-                identifier="pvcontrol",
+                identifier=f"pvcontrol-{self._client_id}",
                 will=aiomqtt.Will(
                     topic=f"{self._config.topic_prefix}/status",
                     payload="offline",
@@ -335,10 +341,22 @@ class MqttPublisher:
             await self._client.publish(f"{self._config.topic_prefix}/status", payload="online", retain=True)
             await self._publish_discovery()
             self._next_reconnect_at = 0
-            logger.info(f"MQTT connected to {self._config.broker}:{self._config.port}")
+            logger.info("MQTT connected to %s:%d", self._config.broker, self._config.port)
+            return True
         except Exception:
-            logger.exception("MQTT connection failed")
             await self._disconnect()
+            return False
+
+    async def start(self) -> None:
+        """Connect to the broker, retrying failed attempts until the retry window expires."""
+        deadline = time.time() + self._retry_window_s
+        while not await self._connect_once():
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                logger.error("MQTT connection failed after %.0fs retry window", self._retry_window_s)
+                return
+            logger.warning("MQTT connection attempt failed, %.0fs remaining of retry window", remaining)
+            await asyncio.sleep(min(remaining, 10))
 
     async def stop(self) -> None:
         if self._client:
@@ -419,13 +437,11 @@ class MqttPublisher:
             await self._client.publish(topic, payload=json.dumps(payload), retain=True)
 
     async def _try_reconnect(self) -> None:
-        import time
-
-        now = time.monotonic()
+        now = time.time()
         if now < self._next_reconnect_at:
             return
         self._next_reconnect_at = now + 60
-        await self.start()
+        await self._connect_once()
 
     async def restore_state(self) -> None:
         if self._client is None:
