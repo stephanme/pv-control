@@ -1,3 +1,4 @@
+import asyncio
 import json
 import unittest
 from typing import Any, final, override
@@ -34,7 +35,7 @@ class MqttConfigTest(unittest.TestCase):
 class EntityDefinitionsTest(unittest.TestCase):
     def test_all_entities_have_required_fields(self):
         for entity in ENTITY_DEFINITIONS:
-            self.assertIn(entity.component, ("sensor", "binary_sensor"))
+            self.assertIn(entity.component, ("sensor", "binary_sensor", "select"))
             self.assertTrue(entity.object_id)
             self.assertTrue(entity.name)
             self.assertTrue(entity.value_template)
@@ -330,3 +331,274 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         self.mock_controller.set_desired_mode.assert_called_once_with(ChargeMode.PV_ONLY)
         self.mock_controller.set_phase_mode.assert_not_called()
         self.mock_controller.set_desired_priority.assert_called_once_with(Priority.CAR)
+
+
+@final
+class EntityDefinitionsSelectTest(unittest.TestCase):
+    """Tests for the new select entities for MQTT control."""
+
+    def test_select_entities_exist_and_have_command_topic(self):
+        """Verify the three select entities are defined."""
+        select_entities = [e for e in ENTITY_DEFINITIONS if e.component == "select"]
+        self.assertEqual(len(select_entities), 3)
+
+        object_ids = {e.object_id for e in select_entities}
+        self.assertIn("controller_desired_mode", object_ids)
+        self.assertIn("controller_phase_mode", object_ids)
+        self.assertIn("controller_desired_priority", object_ids)
+        for entity in select_entities:
+            self.assertIsNotNone(entity.command_topic, f"{entity.object_id} missing command_topic")
+            assert entity.command_topic is not None
+            self.assertTrue(entity.command_topic.startswith("controller/"))
+
+    def test_desired_mode_select_options(self):
+        """Desired mode select should have all ChargeMode values as options."""
+        entity = next(e for e in ENTITY_DEFINITIONS if e.object_id == "controller_desired_mode")
+        self.assertEqual(entity.options, [m.value for m in ChargeMode])
+        self.assertEqual(entity.command_topic, "controller/desired_mode/set")
+
+    def test_phase_mode_select_options(self):
+        """Phase mode select should have all PhaseMode values as options."""
+        entity = next(e for e in ENTITY_DEFINITIONS if e.object_id == "controller_phase_mode")
+        self.assertEqual(entity.options, [m.value for m in PhaseMode])
+        self.assertEqual(entity.command_topic, "controller/phase_mode/set")
+
+    def test_desired_priority_select_options(self):
+        """Desired priority select should have all Priority values as options."""
+        entity = next(e for e in ENTITY_DEFINITIONS if e.object_id == "controller_desired_priority")
+        self.assertEqual(entity.options, [m.value for m in Priority])
+        self.assertEqual(entity.command_topic, "controller/desired_priority/set")
+
+
+@final
+class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
+    """Tests for MQTT command handling functionality."""
+
+    @override
+    def setUp(self):
+        self.config = MqttConfig(broker="testhost", port=1883)
+        self.mock_controller = MagicMock()
+        self.mock_meter = MagicMock()
+        self.mock_wallbox = MagicMock()
+        self.mock_relay = MagicMock()
+        self.mock_car = MagicMock()
+        self.mock_controller.get_data.return_value = ChargeControllerData()
+        self.mock_meter.get_data.return_value = MeterData()
+        self.mock_wallbox.get_data.return_value = WallboxData()
+        self.mock_relay.get_data.return_value = PhaseRelayData()
+        self.mock_car.get_data.return_value = CarData()
+        self.publisher = MqttPublisher(
+            self.config,
+            "1.0.0",
+            controller=self.mock_controller,
+            meter=self.mock_meter,
+            wallbox=self.mock_wallbox,
+            relay=self.mock_relay,
+            car=self.mock_car,
+        )
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_start_subscribes_to_command_topics(self, mock_client_cls: Any):
+        """Verify command topics are subscribed on connect."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        await self.publisher.start()
+
+        # Should subscribe to all 3 command topics
+        expected_topics = [
+            "pvcontrol/controller/desired_mode/set",
+            "pvcontrol/controller/phase_mode/set",
+            "pvcontrol/controller/desired_priority/set",
+        ]
+        subscribed_topics = [call.args[0] for call in mock_client.subscribe.call_args_list]
+        for topic in expected_topics:
+            self.assertIn(topic, subscribed_topics, f"Topic {topic} not subscribed")
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_discovery_includes_command_topic_for_select(self, mock_client_cls: Any):
+        """Discovery payload for select entities should include command_topic."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        await self.publisher.start()
+
+        # Find select entity discovery calls
+        select_discovery_calls = []
+        for call in mock_client.publish.call_args_list[1:]:  # skip online status
+            topic = call.args[0] if call.args else call.kwargs.get("topic", "")
+            if "/select/" in topic:
+                payload_str = call.kwargs.get("payload") or call.args[1]
+                payload = json.loads(payload_str)
+                select_discovery_calls.append(payload)
+
+        self.assertEqual(len(select_discovery_calls), 3)
+        for payload in select_discovery_calls:
+            self.assertIn("command_topic", payload)
+            self.assertTrue(payload["command_topic"].startswith("pvcontrol/controller/"))
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_message_handler_sets_desired_mode(self, mock_client_cls: Any):
+        """Message handler should call set_desired_mode for desired_mode command."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        # Simulate receiving a message on the desired_mode command topic
+        async def mock_messages():
+            # First yield simulates the restore_state message (if any), then our command
+            yield MagicMock(payload=b'{"controller": {"desired_mode": "OFF"}}', topic="pvcontrol/state")
+            yield MagicMock(payload=b"PV_ONLY", topic="pvcontrol/controller/desired_mode/set")
+
+        mock_client.messages = mock_messages()
+
+        await self.publisher.start()
+        # Give message handler time to process
+        await asyncio.sleep(0.01)
+
+        self.mock_controller.set_desired_mode.assert_called_with(ChargeMode.PV_ONLY)
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_message_handler_sets_phase_mode(self, mock_client_cls: Any):
+        """Message handler should call set_phase_mode for phase_mode command."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        async def mock_messages():
+            yield MagicMock(payload=b'{"controller": {"phase_mode": "AUTO"}}', topic="pvcontrol/state")
+            yield MagicMock(payload=b"CHARGE_1P", topic="pvcontrol/controller/phase_mode/set")
+
+        mock_client.messages = mock_messages()
+
+        await self.publisher.start()
+        await asyncio.sleep(0.01)
+
+        self.mock_controller.set_phase_mode.assert_called_with(PhaseMode.CHARGE_1P)
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_message_handler_sets_desired_priority(self, mock_client_cls: Any):
+        """Message handler should call set_desired_priority for desired_priority command."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        async def mock_messages():
+            yield MagicMock(payload=b'{"controller": {"desired_priority": "AUTO"}}', topic="pvcontrol/state")
+            yield MagicMock(payload=b"CAR", topic="pvcontrol/controller/desired_priority/set")
+
+        mock_client.messages = mock_messages()
+
+        await self.publisher.start()
+        await asyncio.sleep(0.01)
+
+        self.mock_controller.set_desired_priority.assert_called_with(Priority.CAR)
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_message_handler_ignores_disabled_phase_mode(self, mock_client_cls: Any):
+        """Message handler should ignore DISABLED phase_mode (consistent with restore_state)."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        async def mock_messages():
+            yield MagicMock(payload=b"DISABLED", topic="pvcontrol/controller/phase_mode/set")
+
+        mock_client.messages = mock_messages()
+
+        await self.publisher.start()
+        await asyncio.sleep(0.01)
+
+        self.mock_controller.set_phase_mode.assert_not_called()
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_message_handler_invalid_value_logs_warning(self, mock_client_cls: Any):
+        """Message handler should log warning for invalid enum values."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        async def mock_messages():
+            yield MagicMock(payload=b"INVALID_MODE", topic="pvcontrol/controller/desired_mode/set")
+
+        mock_client.messages = mock_messages()
+
+        with self.assertLogs("pvcontrol.mqtt", level="WARNING") as logs:
+            await self.publisher.start()
+            await asyncio.sleep(0.01)
+
+        # Log includes the full topic suffix as prefix
+        self.assertTrue(any("Invalid controller/desired_mode/set value" in msg for msg in logs.output))
+        self.mock_controller.set_desired_mode.assert_not_called()
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_stop_cancels_message_handler(self, mock_client_cls: Any):
+        """Stop should cancel the message handler scheduler."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.publish = AsyncMock()
+        mock_client.subscribe = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
+        await self.publisher.start()
+        self.assertTrue(self.publisher._message_scheduler.is_started())
+
+        await self.publisher.stop()
+
+        self.assertFalse(self.publisher._message_scheduler.is_started())
+
+    @patch("pvcontrol.mqtt.aiomqtt.Client")
+    async def test_reconnect_restarts_message_handler(self, mock_client_cls: Any):
+        """Message handler should restart after reconnection."""
+        # Create two different mock clients to simulate disconnect/reconnect
+        mock_client1 = AsyncMock()
+        mock_client1.__aenter__ = AsyncMock(return_value=mock_client1)
+        mock_client1.__aexit__ = AsyncMock(return_value=None)
+        mock_client1.publish = AsyncMock()
+        mock_client1.subscribe = AsyncMock()
+        mock_client1.messages = AsyncMock()  # empty async iterator
+
+        mock_client2 = AsyncMock()
+        mock_client2.__aenter__ = AsyncMock(return_value=mock_client2)
+        mock_client2.__aexit__ = AsyncMock(return_value=None)
+        mock_client2.publish = AsyncMock()
+        mock_client2.subscribe = AsyncMock()
+        mock_client2.messages = AsyncMock()
+
+        # First call returns client1, second returns client2
+        mock_client_cls.side_effect = [mock_client1, mock_client2]
+
+        await self.publisher.start()
+        self.assertTrue(self.publisher._message_scheduler.is_started())
+
+        # Simulate disconnection and reconnection
+        self.publisher._client = None
+        self.publisher._next_reconnect_at = 0  # Force immediate retry
+
+        await self.publisher._try_reconnect()
+
+        # Scheduler should still be running (same task, but coroutine will run again on reconnect)
+        self.assertTrue(self.publisher._message_scheduler.is_started())

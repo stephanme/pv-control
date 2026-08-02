@@ -5,6 +5,7 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -15,6 +16,7 @@ from pvcontrol.car import Car
 from pvcontrol.chargecontroller import ChargeController, ChargeMode, PhaseMode, Priority
 from pvcontrol.meter import Meter
 from pvcontrol.relay import PhaseRelay
+from pvcontrol.scheduler import AsyncScheduler
 from pvcontrol.wallbox import CarStatus, Wallbox, WbError
 
 logger = logging.getLogger(__name__)
@@ -41,6 +43,8 @@ class EntityDef:
     unit_of_measurement: str | None = None
     entity_category: str | None = None
     options: list[str] = field(default_factory=list)
+    command_topic: str | None = None
+    handler: Callable[[ChargeController, str], None] | None = None
 
 
 ENTITY_DEFINITIONS: list[EntityDef] = [
@@ -187,20 +191,26 @@ ENTITY_DEFINITIONS: list[EntityDef] = [
         options=[m.value for m in ChargeMode],
     ),
     EntityDef(
-        "sensor",
+        "select",
         "controller_desired_mode",
         "Desired Charge Mode",
         "{{ value_json.controller.desired_mode }}",
         device_class="enum",
         options=[m.value for m in ChargeMode],
+        command_topic="controller/desired_mode/set",
+        handler=lambda c, v: _validate_enum_and_set(v, ChargeMode, c.set_desired_mode, "controller/desired_mode/set"),
     ),
     EntityDef(
-        "sensor",
+        "select",
         "controller_phase_mode",
         "Phase Mode",
         "{{ value_json.controller.phase_mode }}",
         device_class="enum",
         options=[m.value for m in PhaseMode],
+        command_topic="controller/phase_mode/set",
+        handler=lambda c, v: _validate_enum_and_set(
+            v, PhaseMode, c.set_phase_mode, "controller/phase_mode/set", lambda m: m != PhaseMode.DISABLED
+        ),
     ),
     EntityDef(
         "sensor",
@@ -211,12 +221,14 @@ ENTITY_DEFINITIONS: list[EntityDef] = [
         options=[m.value for m in Priority],
     ),
     EntityDef(
-        "sensor",
+        "select",
         "controller_desired_priority",
         "Desired Priority",
         "{{ value_json.controller.desired_priority }}",
         device_class="enum",
         options=[m.value for m in Priority],
+        command_topic="controller/desired_priority/set",
+        handler=lambda c, v: _validate_enum_and_set(v, Priority, c.set_desired_priority, "controller/desired_priority/set"),
     ),
     # Car
     EntityDef(
@@ -290,6 +302,32 @@ ENTITY_DEFINITIONS: list[EntityDef] = [
 ]
 
 
+def _validate_enum_and_set(
+    value_str: str,
+    enum_cls: type[enum.Enum],
+    setter: Callable[[Any], None],
+    log_prefix: str,
+    filter_fn: Callable[[enum.Enum], bool] | None = None,
+) -> None:
+    """Validate string as enum, apply optional filter, and call setter."""
+    try:
+        value = enum_cls(value_str)
+    except ValueError:
+        logger.warning("Invalid %s value: %r", log_prefix, value_str)
+        return
+    if filter_fn is not None and not filter_fn(value):
+        logger.info("Ignoring %s for %s (filtered)", value, log_prefix)
+        return
+    setter(value)
+
+
+# Command topic handlers for live MQTT commands and state restore
+# Maps command topic (e.g., "controller/desired_mode/set") to handler function
+_COMMAND_HANDLERS: dict[str, Callable[[ChargeController, str], None]] = {
+    e.command_topic: e.handler for e in ENTITY_DEFINITIONS if e.command_topic and e.handler
+}
+
+
 def _json_default(o: Any) -> Any:
     if isinstance(o, datetime):
         return o.isoformat()
@@ -319,6 +357,12 @@ class MqttPublisher:
         self._client: aiomqtt.Client | None = None
         self._next_reconnect_at: float = 0
         self._client_id: str = uuid.uuid4().hex[:8]
+        self._connected = asyncio.Event()  # signals when client is connected
+        # Use module-level command handlers (single source of truth)
+        self._command_handlers = _COMMAND_HANDLERS
+        # Internal message handler scheduler, minor interval to avoid CPU starvation when mqtt broker is not available
+        # _message_handler waits for incoming messages and dispatches them to the appropriate command handler
+        self._message_scheduler = AsyncScheduler(0.1, self._message_handler)
         # Retry window (seconds) for the initial connect; tests set it to 0 to disable retrying.
         self._retry_window_s: float = 300
 
@@ -340,7 +384,11 @@ class MqttPublisher:
             await self._client.__aenter__()
             await self._client.publish(f"{self._config.topic_prefix}/status", payload="online", retain=True)
             await self._publish_discovery()
+            # Subscribe to command topics for MQTT control
+            for topic in self._command_handlers:
+                await self._client.subscribe(f"{self._config.topic_prefix}/{topic}")
             self._next_reconnect_at = 0
+            self._connected.set()  # Signal that we're connected
             logger.info("MQTT connected to %s:%d", self._config.broker, self._config.port)
             return True
         except Exception:
@@ -357,8 +405,13 @@ class MqttPublisher:
                 return
             logger.warning("MQTT connection attempt failed, %.0fs remaining of retry window", remaining)
             await asyncio.sleep(min(remaining, 10))
+        # Start message handler scheduler after successful connection
+        await self._message_scheduler.start()
 
     async def stop(self) -> None:
+        # Stop message handler scheduler
+        await self._message_scheduler.stop()
+
         if self._client:
             try:
                 await self._client.publish(f"{self._config.topic_prefix}/status", payload="offline", retain=True)
@@ -386,7 +439,7 @@ class MqttPublisher:
             payload = json.dumps(state, default=_json_default)
             await self._client.publish(f"{self._config.topic_prefix}/state", payload=payload, retain=True)
         except aiomqtt.MqttError as e:
-            logger.warning(f"MQTT publish failed: {e}")
+            logger.warning("MQTT publish failed: %s", e)
             await self._disconnect()
         except Exception:
             logger.exception("MQTT publish error")
@@ -398,6 +451,7 @@ class MqttPublisher:
             except Exception:
                 pass
             self._client = None
+        self._connected.clear()  # Signal that we're disconnected
 
     async def _publish_discovery(self) -> None:
         if self._client is None:
@@ -434,6 +488,8 @@ class MqttPublisher:
                 payload["entity_category"] = entity.entity_category
             if entity.options:
                 payload["options"] = entity.options
+            if entity.command_topic:
+                payload["command_topic"] = f"{self._config.topic_prefix}/{entity.command_topic}"
             await self._client.publish(topic, payload=json.dumps(payload), retain=True)
 
     async def _try_reconnect(self) -> None:
@@ -442,6 +498,32 @@ class MqttPublisher:
             return
         self._next_reconnect_at = now + 60
         await self._connect_once()
+
+    async def _message_handler(self) -> None:
+        """Handle incoming MQTT command messages."""
+        # Wait until connected
+        await self._connected.wait()
+        assert self._client is not None  # _connected.set() only called after successful connect
+        # Hoist prefix computation outside the hot loop
+        prefix = f"{self._config.topic_prefix}/"
+        prefix_len = len(prefix)
+        try:
+            async for msg in self._client.messages:
+                topic = str(msg.topic)
+                payload = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
+                logger.info("Received MQTT command: %s = %s", topic, payload)
+
+                # Extract topic suffix (after prefix/)
+                if topic.startswith(prefix):
+                    topic_suffix = topic[prefix_len:]
+                    handler = self._command_handlers.get(topic_suffix)
+                    if handler:
+                        handler(self._controller, payload)
+        except asyncio.CancelledError:
+            logger.debug("MQTT message handler cancelled")
+            raise
+        except Exception:
+            logger.exception("MQTT message handler error")
 
     async def restore_state(self) -> None:
         if self._client is None:
@@ -465,22 +547,9 @@ class MqttPublisher:
 
     def _apply_controller_state(self, payload: dict[str, Any]) -> None:
         controller_state = payload.get("controller", {})
-        if desired_mode := controller_state.get("desired_mode"):
-            try:
-                self._controller.set_desired_mode(ChargeMode(desired_mode))
-                logger.info(f"Restored desired_mode: {desired_mode}")
-            except ValueError:
-                logger.warning(f"Ignoring invalid desired_mode from retained state: {desired_mode!r}")
-        if phase_mode := controller_state.get("phase_mode"):
-            try:
-                if phase_mode != PhaseMode.DISABLED:
-                    self._controller.set_phase_mode(PhaseMode(phase_mode))
-                    logger.info(f"Restored phase_mode: {phase_mode}")
-            except ValueError:
-                logger.warning(f"Ignoring invalid phase_mode from retained state: {phase_mode!r}")
-        if desired_priority := controller_state.get("desired_priority"):
-            try:
-                self._controller.set_desired_priority(Priority(desired_priority))
-                logger.info(f"Restored desired_priority: {desired_priority}")
-            except ValueError:
-                logger.warning(f"Ignoring invalid desired_priority from retained state: {desired_priority!r}")
+        for key, value_str in controller_state.items():
+            topic = f"controller/{key}/set"
+            handler = _COMMAND_HANDLERS.get(topic)
+            if handler:
+                handler(self._controller, value_str)
+                logger.info("Restored %s: %s", key, value_str)
