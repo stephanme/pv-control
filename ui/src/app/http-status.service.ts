@@ -1,11 +1,9 @@
 import { HttpRequest, HttpEvent, HttpErrorResponse, HttpHandlerFn } from '@angular/common/http';
-import { inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { inject, signal, WritableSignal, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { tap, finalize } from 'rxjs/operators';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class HttpStatusService {
   private busyCnt = 0;
 
