@@ -6,6 +6,7 @@ import logging
 import time
 import uuid
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -16,7 +17,6 @@ from pvcontrol.car import Car
 from pvcontrol.chargecontroller import ChargeController, ChargeMode, PhaseMode, Priority
 from pvcontrol.meter import Meter
 from pvcontrol.relay import PhaseRelay
-from pvcontrol.scheduler import AsyncScheduler
 from pvcontrol.wallbox import CarStatus, Wallbox, WbError
 
 logger = logging.getLogger(__name__)
@@ -358,11 +358,13 @@ class MqttPublisher:
         self._next_reconnect_at: float = 0
         self._client_id: str = uuid.uuid4().hex[:8]
         self._connected = asyncio.Event()  # signals when client is connected
+        self._retained_state: dict[str, Any] | None = None
+        self._state_received = asyncio.Event()  # signals when retained state message received
+        self._state_restore_timeout_s: float = 2.0  # tests can set to 0 to skip waiting
         # Use module-level command handlers (single source of truth)
         self._command_handlers = _COMMAND_HANDLERS
-        # Internal message handler scheduler, minor interval to avoid CPU starvation when mqtt broker is not available
-        # _message_handler waits for incoming messages and dispatches them to the appropriate command handler
-        self._message_scheduler = AsyncScheduler(0.1, self._message_handler)
+        # Message handler runs as background task after connection
+        self._message_task: asyncio.Task | None = None
         # Retry window (seconds) for the initial connect; tests set it to 0 to disable retrying.
         self._retry_window_s: float = 300
 
@@ -405,12 +407,33 @@ class MqttPublisher:
                 return
             logger.warning("MQTT connection attempt failed, %.0fs remaining of retry window", remaining)
             await asyncio.sleep(min(remaining, 10))
-        # Start message handler scheduler after successful connection
-        await self._message_scheduler.start()
+        # Subscribe to state topic BEFORE starting message handler to catch retained message
+        if self._client:
+            await self._client.subscribe(f"{self._config.topic_prefix}/state")
+        # Start message handler as background task
+        self._message_task = asyncio.create_task(self._message_handler())
+        # Wait for retained state message (configurable timeout; 0 = skip waiting)
+        if self._state_restore_timeout_s > 0:
+            try:
+                await asyncio.wait_for(self._state_received.wait(), timeout=self._state_restore_timeout_s)
+                if self._retained_state is not None:
+                    self._apply_controller_state(self._retained_state)
+            except TimeoutError:
+                logger.info("No retained MQTT state found, starting with defaults")
+        # Unsubscribe from state topic - we only needed it for the retained message at startup
+        if self._client:
+            try:
+                await self._client.unsubscribe(f"{self._config.topic_prefix}/state")
+            except Exception:
+                logger.debug("Failed to unsubscribe from state topic")
 
     async def stop(self) -> None:
-        # Stop message handler scheduler
-        await self._message_scheduler.stop()
+        # Stop message handler task
+        if self._message_task:
+            self._message_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._message_task
+            self._message_task = None
 
         if self._client:
             try:
@@ -497,7 +520,13 @@ class MqttPublisher:
         if now < self._next_reconnect_at:
             return
         self._next_reconnect_at = now + 60
-        await self._connect_once()
+        if await self._connect_once():
+            # Restart message handler after successful reconnection
+            if self._message_task and not self._message_task.done():
+                self._message_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._message_task
+            self._message_task = asyncio.create_task(self._message_handler())
 
     async def _message_handler(self) -> None:
         """Handle incoming MQTT command messages."""
@@ -507,13 +536,24 @@ class MqttPublisher:
         # Hoist prefix computation outside the hot loop
         prefix = f"{self._config.topic_prefix}/"
         prefix_len = len(prefix)
+        state_topic = f"{self._config.topic_prefix}/state"
         try:
             async for msg in self._client.messages:
                 topic = str(msg.topic)
                 payload = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
                 logger.info("Received MQTT command: %s = %s", topic, payload)
 
-                # Extract topic suffix (after prefix/)
+                # Handle retained state message for startup restore
+                if topic == state_topic:
+                    try:
+                        self._retained_state = json.loads(payload)
+                    except json.JSONDecodeError:
+                        logger.warning("Failed to parse retained state payload: %s", payload)
+                    # Signal that retained state was received
+                    self._state_received.set()
+                    continue  # Don't process state topic as command
+
+                # Extract topic suffix (after prefix/) for command topics
                 if topic.startswith(prefix):
                     topic_suffix = topic[prefix_len:]
                     handler = self._command_handlers.get(topic_suffix)
@@ -524,26 +564,6 @@ class MqttPublisher:
             raise
         except Exception:
             logger.exception("MQTT message handler error")
-
-    async def restore_state(self) -> None:
-        if self._client is None:
-            return
-        topic = f"{self._config.topic_prefix}/state"
-        try:
-            await self._client.subscribe(topic)
-            msg = await asyncio.wait_for(anext(self._client.messages), timeout=2.0)
-            payload = json.loads(msg.payload)
-            self._apply_controller_state(payload)
-        except TimeoutError:
-            logger.info("No retained MQTT state found, starting with defaults")
-        except Exception:
-            logger.exception("Failed to restore state from MQTT")
-        finally:
-            try:
-                if self._client is not None:
-                    await self._client.unsubscribe(topic)
-            except Exception:
-                pass
 
     def _apply_controller_state(self, payload: dict[str, Any]) -> None:
         controller_state = payload.get("controller", {})
