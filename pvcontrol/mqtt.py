@@ -302,6 +302,14 @@ ENTITY_DEFINITIONS: list[EntityDef] = [
 ]
 
 
+def _json_default(o: Any) -> Any:
+    if isinstance(o, datetime):
+        return o.isoformat()
+    if isinstance(o, enum.Enum):
+        return o.value
+    raise TypeError(repr(o))
+
+
 def _validate_enum_and_set(
     value_str: str,
     enum_cls: type[enum.Enum],
@@ -326,14 +334,6 @@ def _validate_enum_and_set(
 _COMMAND_HANDLERS: dict[str, Callable[[ChargeController, str], None]] = {
     e.command_topic: e.handler for e in ENTITY_DEFINITIONS if e.command_topic and e.handler
 }
-
-
-def _json_default(o: Any) -> Any:
-    if isinstance(o, datetime):
-        return o.isoformat()
-    if isinstance(o, enum.Enum):
-        return o.value
-    raise TypeError(repr(o))
 
 
 class MqttPublisher:
@@ -367,35 +367,6 @@ class MqttPublisher:
         self._message_task: asyncio.Task | None = None
         # Retry window (seconds) for the initial connect; tests set it to 0 to disable retrying.
         self._retry_window_s: float = 300
-
-    async def _connect_once(self) -> bool:
-        """Attempt a single connection. Returns True on success, False on failure."""
-        try:
-            self._client = aiomqtt.Client(
-                hostname=self._config.broker,
-                port=self._config.port,
-                username=self._config.username or None,
-                password=self._config.password or None,
-                identifier=f"pvcontrol-{self._client_id}",
-                will=aiomqtt.Will(
-                    topic=f"{self._config.topic_prefix}/status",
-                    payload="offline",
-                    retain=True,
-                ),
-            )
-            await self._client.__aenter__()
-            await self._client.publish(f"{self._config.topic_prefix}/status", payload="online", retain=True)
-            await self._publish_discovery()
-            # Subscribe to command topics for MQTT control
-            for topic in self._command_handlers:
-                await self._client.subscribe(f"{self._config.topic_prefix}/{topic}")
-            self._next_reconnect_at = 0
-            self._connected.set()  # Signal that we're connected
-            logger.info("MQTT connected to %s:%d", self._config.broker, self._config.port)
-            return True
-        except Exception:
-            await self._disconnect()
-            return False
 
     async def start(self) -> None:
         """Connect to the broker, retrying failed attempts until the retry window expires."""
@@ -467,6 +438,48 @@ class MqttPublisher:
         except Exception:
             logger.exception("MQTT publish error")
 
+    async def _connect_once(self) -> bool:
+        """Attempt a single connection. Returns True on success, False on failure."""
+        try:
+            self._client = aiomqtt.Client(
+                hostname=self._config.broker,
+                port=self._config.port,
+                username=self._config.username or None,
+                password=self._config.password or None,
+                identifier=f"pvcontrol-{self._client_id}",
+                will=aiomqtt.Will(
+                    topic=f"{self._config.topic_prefix}/status",
+                    payload="offline",
+                    retain=True,
+                ),
+            )
+            await self._client.__aenter__()
+            await self._client.publish(f"{self._config.topic_prefix}/status", payload="online", retain=True)
+            await self._publish_discovery()
+            # Subscribe to command topics for MQTT control
+            for topic in self._command_handlers:
+                await self._client.subscribe(f"{self._config.topic_prefix}/{topic}")
+            self._next_reconnect_at = 0
+            self._connected.set()  # Signal that we're connected
+            logger.info("MQTT connected to %s:%d", self._config.broker, self._config.port)
+            return True
+        except Exception:
+            await self._disconnect()
+            return False
+
+    async def _try_reconnect(self) -> None:
+        now = time.time()
+        if now < self._next_reconnect_at:
+            return
+        self._next_reconnect_at = now + 60
+        if await self._connect_once():
+            # Restart message handler after successful reconnection
+            if self._message_task and not self._message_task.done():
+                self._message_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._message_task
+            self._message_task = asyncio.create_task(self._message_handler())
+
     async def _disconnect(self) -> None:
         if self._client:
             try:
@@ -514,19 +527,6 @@ class MqttPublisher:
             if entity.command_topic:
                 payload["command_topic"] = f"{self._config.topic_prefix}/{entity.command_topic}"
             await self._client.publish(topic, payload=json.dumps(payload), retain=True)
-
-    async def _try_reconnect(self) -> None:
-        now = time.time()
-        if now < self._next_reconnect_at:
-            return
-        self._next_reconnect_at = now + 60
-        if await self._connect_once():
-            # Restart message handler after successful reconnection
-            if self._message_task and not self._message_task.done():
-                self._message_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await self._message_task
-            self._message_task = asyncio.create_task(self._message_handler())
 
     async def _message_handler(self) -> None:
         """Handle incoming MQTT command messages."""
