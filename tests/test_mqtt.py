@@ -86,6 +86,7 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
             relay=self.mock_relay,
             car=self.mock_car,
         )
+        self.publisher._state_restore_timeout_s = 0  # skip wait in tests
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_start_connects_and_publishes_discovery(self, mock_client_cls: Any):
@@ -260,19 +261,23 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
                 }
             }
         )
-        mock_msg = MagicMock()
-        mock_msg.payload = retained_payload
 
-        messages_iter = AsyncMock()
-        messages_iter.__anext__ = AsyncMock(return_value=mock_msg)
-        mock_client.messages = messages_iter
+        async def mock_messages():
+            yield MagicMock(payload=retained_payload.encode(), topic="pvcontrol/state")
+            # Don't exhaust - wait forever like a real MQTT connection
+            await asyncio.Event().wait()
 
+        mock_client.messages = mock_messages()
+
+        self.publisher._state_restore_timeout_s = 0.5  # short timeout for this test
         await self.publisher.start()
-        await self.publisher.restore_state()
 
         self.mock_controller.set_desired_mode.assert_called_once_with(ChargeMode.PV_ONLY)
         self.mock_controller.set_phase_mode.assert_called_once_with(PhaseMode.CHARGE_1P)
         self.mock_controller.set_desired_priority.assert_called_once_with(Priority.CAR)
+
+        # unsubscribed after processing retained message
+        mock_client.unsubscribe.assert_called_once_with("pvcontrol/state")
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_restore_state_timeout_does_not_crash(self, mock_client_cls: Any):
@@ -284,18 +289,16 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
         mock_client.unsubscribe = AsyncMock()
         mock_client_cls.return_value = mock_client
 
-        messages_iter = AsyncMock()
-        messages_iter.__anext__ = AsyncMock(side_effect=TimeoutError)
-        mock_client.messages = messages_iter
+        async def mock_messages():
+            # No messages - wait forever (simulates timeout)
+            await asyncio.Event().wait()
+            yield  # make it a generator
 
+        mock_client.messages = mock_messages()
+
+        self.publisher._state_restore_timeout_s = 0.1  # short timeout
         await self.publisher.start()
-        await self.publisher.restore_state()
-        # Should not raise — just logs and continues
-
-    async def test_restore_state_without_connection(self):
-        self.publisher._client = None
-        await self.publisher.restore_state()
-        # Should not raise
+        mock_client.unsubscribe.assert_called_once_with("pvcontrol/state")
 
     # Don't restore phase_mode if it's DISABLED. DISABLED is set only if phase switching relay is not available
     # when pvcontrol was deployed on a node without it.
@@ -318,15 +321,16 @@ class MqttPublisherTest(unittest.IsolatedAsyncioTestCase):
                 }
             }
         )
-        mock_msg = MagicMock()
-        mock_msg.payload = retained_payload
 
-        messages_iter = AsyncMock()
-        messages_iter.__anext__ = AsyncMock(return_value=mock_msg)
-        mock_client.messages = messages_iter
+        async def mock_messages():
+            yield MagicMock(payload=retained_payload.encode(), topic="pvcontrol/state")
+            # Don't exhaust - wait forever like a real MQTT connection
+            await asyncio.Event().wait()
 
+        mock_client.messages = mock_messages()
+
+        self.publisher._state_restore_timeout_s = 0.5  # short timeout for this test
         await self.publisher.start()
-        await self.publisher.restore_state()
 
         self.mock_controller.set_desired_mode.assert_called_once_with(ChargeMode.PV_ONLY)
         self.mock_controller.set_phase_mode.assert_not_called()
@@ -396,6 +400,7 @@ class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
             relay=self.mock_relay,
             car=self.mock_car,
         )
+        self.publisher._state_restore_timeout_s = 0  # skip wait in tests
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_start_subscribes_to_command_topics(self, mock_client_cls: Any):
@@ -454,10 +459,8 @@ class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
         mock_client.subscribe = AsyncMock()
         mock_client_cls.return_value = mock_client
 
-        # Simulate receiving a message on the desired_mode command topic
+        # Simulate receiving a message on the desired_mode command topic (no state message)
         async def mock_messages():
-            # First yield simulates the restore_state message (if any), then our command
-            yield MagicMock(payload=b'{"controller": {"desired_mode": "OFF"}}', topic="pvcontrol/state")
             yield MagicMock(payload=b"PV_ONLY", topic="pvcontrol/controller/desired_mode/set")
 
         mock_client.messages = mock_messages()
@@ -479,7 +482,6 @@ class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
         mock_client_cls.return_value = mock_client
 
         async def mock_messages():
-            yield MagicMock(payload=b'{"controller": {"phase_mode": "AUTO"}}', topic="pvcontrol/state")
             yield MagicMock(payload=b"CHARGE_1P", topic="pvcontrol/controller/phase_mode/set")
 
         mock_client.messages = mock_messages()
@@ -500,7 +502,6 @@ class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
         mock_client_cls.return_value = mock_client
 
         async def mock_messages():
-            yield MagicMock(payload=b'{"controller": {"desired_priority": "AUTO"}}', topic="pvcontrol/state")
             yield MagicMock(payload=b"CAR", topic="pvcontrol/controller/desired_priority/set")
 
         mock_client.messages = mock_messages()
@@ -555,7 +556,7 @@ class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_stop_cancels_message_handler(self, mock_client_cls: Any):
-        """Stop should cancel the message handler scheduler."""
+        """Stop should cancel the message handler task."""
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -563,12 +564,22 @@ class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
         mock_client.subscribe = AsyncMock()
         mock_client_cls.return_value = mock_client
 
+        # Create an async generator that waits forever (like a real MQTT connection)
+        async def mock_messages():
+            await asyncio.Event().wait()
+            yield  # make it a generator
+
+        mock_client.messages = mock_messages()
+
         await self.publisher.start()
-        self.assertTrue(self.publisher._message_scheduler.is_started())
+        message_task = self.publisher._message_task
+        self.assertIsNotNone(message_task)
+        assert message_task is not None
+        self.assertFalse(message_task.done())
 
         await self.publisher.stop()
 
-        self.assertFalse(self.publisher._message_scheduler.is_started())
+        self.assertTrue(message_task.done())
 
     @patch("pvcontrol.mqtt.aiomqtt.Client")
     async def test_reconnect_restarts_message_handler(self, mock_client_cls: Any):
@@ -592,13 +603,14 @@ class MqttPublisherCommandTest(unittest.IsolatedAsyncioTestCase):
         mock_client_cls.side_effect = [mock_client1, mock_client2]
 
         await self.publisher.start()
-        self.assertTrue(self.publisher._message_scheduler.is_started())
+        self.assertIsNotNone(self.publisher._message_task)
 
         # Simulate disconnection and reconnection
         self.publisher._client = None
+        await self.publisher.publish_state()
         self.publisher._next_reconnect_at = 0  # Force immediate retry
 
         await self.publisher._try_reconnect()
 
-        # Scheduler should still be running (same task, but coroutine will run again on reconnect)
-        self.assertTrue(self.publisher._message_scheduler.is_started())
+        # Message handler task should be restarted (new task)
+        self.assertIsNotNone(self.publisher._message_task)
