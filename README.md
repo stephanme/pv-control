@@ -19,17 +19,18 @@ PV-Control implements the following charge modes/strategies:
 - Max - Charge with full power, i.e. 11 kW (3x 16A).
 - Manual - Wallbox is manually controlled e.g. by the go-e app.
 
-'PV only' and 'PV all' use different strategies when working around the limitations of the wallbox and electric car, i.e. the minimal charging current of 6A and the charging current steps of 1A. Additionally, PV-Control allows to prioritize between car charging and home battery charging:
+'PV only' and 'PV all' use different strategies when working around the limitations of the wallbox and electric car, i.e. the minimal charging current of 6A and the charging current steps of 1A.
+Automatic phase switching between 1 and 3 phases for the PV modes is implemented but not yet tested in practice because my 7 kW peak solar power system gives little opportunity of 3 phase charging. Currently, the 'Auto' mode selects 1-phase charging for 'PV only' and 'PV all' and 3-phase charging for 'Max'.
+
+Additionally, PV-Control allows to prioritize between car charging and home battery charging:
 - Auto -  charge home battery until 50% (configurable), then charge car before home battery
 - Home - charge home battery before car
 - Car - charge car before home battery
 The home battery is not used for charging the car in the 'PV' modi.
 
-Automatic phase switching between 1 and 3 phases for the PV modes is implemented but not yet tested in practice because my 7 kW peak solar power system gives little opportunity of 3 phase charging. Currently, the 'Auto' mode selects 1-phase charging for 'PV only' and 'PV all' and 3-phase charging for 'Max'.
-
 ## UI
 
-![pv-control screen shot](pvcontrol-screenshot.jpg)
+![pv-control screen shot](pvcontrol-screenshot.png)
 
 ## Wiring of Wallbox and Phase Switching Relay
 
@@ -71,6 +72,7 @@ METER, WALLBOX and CAR refer to implementation classes for the energy meter, the
 - WALLBOX = GoeWallbox|SimulatedWallbox|SimulatedWallboxWithRelay
 - RELAY = RaspiPhaseRelay|SimulatedPhaseRelay
 - CAR = VolkswagenIDCar|SimulatedCar|NoCar
+```
 
 CONFIG is a json with 'meter', 'wallbox', 'relay', 'car', 'controller', and 'mqtt' configuration structures. The config parameters depend on the METER, WALLBOX, RELAY and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py`, `chargecontroller.py` and `mqtt.py`.
