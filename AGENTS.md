@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents (Pi) when working with code in this repository.
 
 ## Project Overview
 
@@ -40,7 +40,14 @@ pvcontrol/
 **Priority modes**: AUTO (balance home battery vs car), HOME_BATTERY, CAR
 **Phase modes**: DISABLED, AUTO, CHARGE_1P, CHARGE_3P
 
-**Frontend**: Single-page Angular app (`ui/`), built to `ui/dist/ui/browser/`, served as static files by the FastAPI app. See [.github/instructions/angular.instructions.md](.github/instructions/angular.instructions.md) for Angular 20+ conventions (signals, standalone components, new control flow, `input()`/`output()` APIs).
+**Frontend**: Single-page Angular **v22** app (`ui/` — Angular 22.1.x, TypeScript 6.0, zoneless, no router, Angular Material 22, Vitest), built to `ui/dist/ui/browser/`, served as static files by the FastAPI app. The v22 conventions and the Angular CLI/MCP workflow are in the `angular-ui` skill (`.pi/skills/angular-ui/SKILL.md`).
+
+## Agent tooling
+
+Pi only. Sources of agent truth: **this file** (project-wide), **`.mcp.json`** (MCP servers), **`.pi/skills/`** (framework/repo skills).
+
+- `.vscode/mcp.json` is a hand-maintained mirror of `.mcp.json` (VS Code can't read the latter) — keep both in sync when adding a server, or delete it if VS Code is no longer used here.
+- Do **not** reintroduce other agents' config files (`.claude/`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.cursor/`, `.cursorrules`). Pi ignores them and they silently go stale.
 
 ## Development Commands
 
@@ -58,6 +65,9 @@ All Python commands use `uv run`. Install with `make install` (runs `uv sync` + 
 | Build UI | `(cd ui && ng build --configuration production)` |
 | Build package | `make build` or `uv build` |
 | Full dev cycle | `make` (default: install + lint + test) |
+| Angular dev server (MCP) | `mcp` tool → `angular-cli` `devserver_start` / `devserver_wait_for_build` / `devserver_stop` |
+| Angular docs lookup (MCP) | `mcp` tool → `angular-cli` `search_documentation` / `get_best_practices` |
+| UI unit tests | `(cd ui && npm test)` (Vitest) |
 | Clean | `make clean` |
 | Upgrade deps | `make upgrade` or `uv sync --upgrade --all-extras --dev` |
 
