@@ -5,7 +5,7 @@ description: pv-control frontend specifics for the Angular v22 app in ui/ (stack
 
 # Angular UI — `ui/`
 
-Angular **22.1** + TypeScript 6, standalone bootstrap, **zoneless**, **no router and no `NgModule`**
+Angular **22.2** + TypeScript 6 (`>=6.0 <6.1`), standalone bootstrap, **zoneless**, **no router and no `NgModule`**
 (one root `AppComponent` + services), Angular Material/CDK 22, Vitest, SCSS, `strictTemplates`.
 Commands live in `AGENTS.md`; only Angular-specific decisions are recorded here.
 
@@ -17,11 +17,9 @@ reality differs from generic advice or where a generic default would be wrong.
 
 - **Do not add `changeDetection: ChangeDetectionStrategy.OnPush`** to new components — it is the v22
   default (the old `Default` was renamed `Eager`). Existing explicit `OnPush` is harmless; don't churn it.
-- **Never add `provideZoneChangeDetection()`.** The app is zoneless; `provideZonelessChangeDetection()`
-  in `src/main.ts` is explicit-but-redundant (zoneless is default since v21). State must flow through
-  signals/inputs/events — there is no zone to trigger change detection.
-- **Keep `withXhr()` in `src/main.ts`.** v22 switched HttpClient to Fetch by default; this project has
-  deliberately not migrated. Generic tooling may suggest removing it — don't, unless the user asks.
+- **`strictUnclaimedEventNames` is enabled** in `tsconfig.json` — a camelCase `(someEvent)` binding that no
+  directive emits and that is not a native DOM event fails compilation. Use kebab-case for custom events
+  or wire the binding to a real `@Output()`/listener.
 - **Existing legacy forms stay legacy unless asked.** `AppComponent`'s `FormBuilder` controls
   (`chargeModeControl`, `phaseModeControl`, `priorityControl`) are `ReactiveFormsModule`, not signal
   forms. New forms: signal forms. Do not mix migrations into unrelated changes.
