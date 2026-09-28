@@ -5,8 +5,7 @@
     "outDir": "./out-tsc/spec",
     "types": [
       "vitest/globals"
-    ],
-    "skipLibCheck": true // https://github.com/nrwl/nx/issues/34164
+    ]
   },
   "include": [
     "src/**/*.spec.ts",

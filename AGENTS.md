@@ -40,7 +40,7 @@ pvcontrol/
 **Priority modes**: AUTO (balance home battery vs car), HOME_BATTERY, CAR
 **Phase modes**: DISABLED, AUTO, CHARGE_1P, CHARGE_3P
 
-**Frontend**: Single-page Angular **v22** app (`ui/` — Angular 22.1.x, TypeScript 6.0, zoneless, no router, Angular Material 22, Vitest), built to `ui/dist/ui/browser/`, served as static files by the FastAPI app. The v22 conventions and the Angular CLI/MCP workflow are in the `angular-ui` skill (`.pi/skills/angular-ui/SKILL.md`).
+**Frontend**: Single-page Angular **v22** app (`ui/` — Angular 22.2.x, TypeScript 6.0 (Angular 22.2 requires `>=6.0 <6.1` — do not jump to TS 7), zoneless, no router, Angular Material 22, Vitest 5), built to `ui/dist/ui/browser/`, served as static files by the FastAPI app. The v22 conventions and the Angular CLI/MCP workflow are in the `angular-ui` skill (`.pi/skills/angular-ui/SKILL.md`).
 
 ## Agent tooling
 
