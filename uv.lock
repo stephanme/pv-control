@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.14"
 
 [manifest]
@@ -753,7 +753,7 @@ requires-dist = [
     { name = "myskoda", specifier = "==2.17.1" },
     { name = "prometheus-client", specifier = "==0.26.0" },
     { name = "pymodbus", specifier = "==3.15.0" },
-    { name = "pysma-plus", specifier = "==0.5.0" },
+    { name = "pysma-plus", specifier = "==0.5.3" },
     { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = "==0.7.1" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
@@ -885,7 +885,7 @@ wheels = [
 
 [[package]]
 name = "pysma-plus"
-version = "0.5.0"
+version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -896,9 +896,9 @@ dependencies = [
     { name = "untangle" },
     { name = "xmlschema" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/e4/a95e9f1c2d92e555151ce121d573cdd000a978f4559128ff8d3c38115516/pysma_plus-0.5.0.tar.gz", hash = "sha256:640a4678015149c62ea975e28dc7836d4be911d2b2d2c4cdad4dad98fb396d15", size = 142701, upload-time = "2026-07-29T08:00:00.501Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/08/0dd5c09b6fc20146159eab2fcff5fa35fe88d733bc5b51b516bf991069a5/pysma_plus-0.5.3.tar.gz", hash = "sha256:1ecf9232599621c4b8015325bdbc3498203cd28c4c68c5eb2cf152420f1329a4", size = 149250, upload-time = "2026-10-07T05:16:04.077Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/72/de29f0aab4bed345586a7beb58956322043cc78c3d737b0fb9d572305f3c/pysma_plus-0.5.0-py3-none-any.whl", hash = "sha256:3de4a86fd64a497c45dcc7d43cec7d9a0ba2940489c6f5a6b5021e3ac34abe09", size = 98164, upload-time = "2026-07-29T07:59:58.11Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/bc/66916671705dce33597a03f01632ac876034c27ecabac90b4feaac337a7b/pysma_plus-0.5.3-py3-none-any.whl", hash = "sha256:b0c2df9acc93f6fd6b7da9b9153e9defacb45f1d7db2047bbe161adc483e09be", size = 102812, upload-time = "2026-10-07T05:16:01.336Z" },
 ]
 
 [[package]]
