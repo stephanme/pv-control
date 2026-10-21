@@ -32,7 +32,7 @@ jobs:
           enable-cache: true
 
       - name: Install UI dependencies
-        run: npm install -g @angular/cli && npm ci --legacy-peer-deps
+        run: npm install -g @angular/cli && npm ci
         working-directory: ./ui
       - name: Lint UI
         run: ng lint
