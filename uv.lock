@@ -808,7 +808,7 @@ requires-dist = [
     { name = "myskoda", specifier = "==2.17.2" },
     { name = "prometheus-client", specifier = "==0.26.0" },
     { name = "pymodbus", specifier = "==3.16.1" },
-    { name = "pysma-plus", specifier = "==0.5.3" },
+    { name = "pysma-plus", specifier = "==0.5.4" },
     { name = "rpi-gpio", marker = "(platform_machine == 'aarch64' and 'linux' in sys_platform) or ('arm' in platform_machine and 'linux' in sys_platform)", specifier = "==0.7.1" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
@@ -940,7 +940,7 @@ wheels = [
 
 [[package]]
 name = "pysma-plus"
-version = "0.5.3"
+version = "0.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -951,9 +951,9 @@ dependencies = [
     { name = "untangle" },
     { name = "xmlschema" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/08/0dd5c09b6fc20146159eab2fcff5fa35fe88d733bc5b51b516bf991069a5/pysma_plus-0.5.3.tar.gz", hash = "sha256:1ecf9232599621c4b8015325bdbc3498203cd28c4c68c5eb2cf152420f1329a4", size = 149250, upload-time = "2026-10-07T05:16:04.077Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/d3/c9520d8edaa751157b581e0888c58c1020368ba9c23471cf1538fa7faef8/pysma_plus-0.5.4.tar.gz", hash = "sha256:0dcfc476cfad87d5a9c8c8a598c81ea858a970dadbc6136ada8e52e0b6d09e1f", size = 151149, upload-time = "2026-10-19T17:03:27.139Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/bc/66916671705dce33597a03f01632ac876034c27ecabac90b4feaac337a7b/pysma_plus-0.5.3-py3-none-any.whl", hash = "sha256:b0c2df9acc93f6fd6b7da9b9153e9defacb45f1d7db2047bbe161adc483e09be", size = 102812, upload-time = "2026-10-07T05:16:01.336Z" },
+    { url = "https://files.pythonhosted.org/packages/97/c4/249eb5fb56aeab6c8ff576193b5fe77a88191fd80b98de0faad6d2e44bf0/pysma_plus-0.5.4-py3-none-any.whl", hash = "sha256:3304b97a67340096a93e11bdadc7ac56be0345e97cc23c82c09934276a781ebb", size = 104901, upload-time = "2026-10-19T17:03:24.396Z" },
 ]
 
 [[package]]
