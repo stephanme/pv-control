@@ -358,7 +358,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.143.2"
+version = "0.156.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -368,9 +368,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/19/f5/4bbb2df9bb6f365151f2c02795ca3f17f78d08e670a394df963f3d8881ce/fastapi-0.143.2.tar.gz", hash = "sha256:e9e6d97018dcfd748da7d9e7c61cedefbe9eb91b1a3288e45b13fbae76df2d54", size = 468920, upload-time = "2026-10-15T13:34:21.679Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/93/6e785df7ec0bdbfef9d7bf1044bc7bfabd6d22641d147e8326a1f2ba210b/fastapi-0.156.8.tar.gz", hash = "sha256:cee65bba7890cd85264b3b06c7fdf88e84ca3510d00d4018cdbc2ce629e1ff22", size = 504768, upload-time = "2026-10-21T08:45:18.817Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/5a/9a5fd06659a63e13e876dd660347c044b3954ede3db928c69df879fac02c/fastapi-0.143.2-py3-none-any.whl", hash = "sha256:da2fe9893b7392ebce76d8c8511e3fa43e5a25f5852103aa2eee7cff3ab80b75", size = 144690, upload-time = "2026-10-15T13:34:19.861Z" },
+    { url = "https://files.pythonhosted.org/packages/21/93/b87423a73fad5b3b1de4f14a680a2d2344c442d5a1f297a0eb413b7572a3/fastapi-0.156.8-py3-none-any.whl", hash = "sha256:d5f2e052a5f985fb0bbe1114527938c25fedbe198a8197faae71c3d38851b7c3", size = 147358, upload-time = "2026-10-21T08:45:17.278Z" },
 ]
 
 [[package]]
@@ -788,7 +788,7 @@ dependencies = [
     { name = "prometheus-client" },
     { name = "pymodbus" },
     { name = "pysma-plus" },
-    { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)" },
+    { name = "rpi-gpio", marker = "(platform_machine == 'aarch64' and 'linux' in sys_platform) or ('arm' in platform_machine and 'linux' in sys_platform)" },
     { name = "uvicorn" },
 ]
 
@@ -804,12 +804,12 @@ requires-dist = [
     { name = "aiodns", specifier = "==4.0.4" },
     { name = "aiohttp", specifier = "==3.14.5" },
     { name = "aiomqtt", specifier = "==2.5.1" },
-    { name = "fastapi", specifier = "==0.143.2" },
+    { name = "fastapi", specifier = "==0.156.8" },
     { name = "myskoda", specifier = "==2.17.2" },
     { name = "prometheus-client", specifier = "==0.26.0" },
     { name = "pymodbus", specifier = "==3.16.1" },
     { name = "pysma-plus", specifier = "==0.5.3" },
-    { name = "rpi-gpio", marker = "('arm' in platform_machine and 'linux' in sys_platform) or (platform_machine == 'aarch64' and 'linux' in sys_platform)", specifier = "==0.7.1" },
+    { name = "rpi-gpio", marker = "(platform_machine == 'aarch64' and 'linux' in sys_platform) or ('arm' in platform_machine and 'linux' in sys_platform)", specifier = "==0.7.1" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
 
