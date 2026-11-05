@@ -4,7 +4,7 @@ import logging
 from typing import final, override
 
 # GPIO is only awailable on raspi
-import RPi.GPIO as GPIO  # ty:ignore[unresolved-import]
+import RPi.GPIO as GPIO  # ty:ignore[import-not-found]
 
 from pvcontrol.relay import PhaseRelay, PhaseRelayConfig, PhaseRelayData
 
