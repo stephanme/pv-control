@@ -71,11 +71,13 @@ METER, WALLBOX and CAR refer to implementation classes for the energy meter, the
 - METER = KostalMeter|SolarWattMeter|SmaTripowerMeter|SimulatedMeter
 - WALLBOX = GoeWallbox|SimulatedWallbox|SimulatedWallboxWithRelay
 - RELAY = RaspiPhaseRelay|SimulatedPhaseRelay
-- CAR = VolkswagenIDCar|SimulatedCar|NoCar
+- CAR = SkodaCar|SimulatedCar|NoCar
 ```
 
 CONFIG is a json with 'meter', 'wallbox', 'relay', 'car', 'controller', and 'mqtt' configuration structures. The config parameters depend on the METER, WALLBOX, RELAY and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py`, `chargecontroller.py` and `mqtt.py`.
+
+The `SkodaCar` API key is created and managed in the MyŠkoda app (it replaces the former user/password login). Keys expire and have to be renewed there. The API is rate limited to roughly 20 requests per hour and vehicle, so the car `cycle_time` should not be lower than 180s.
 
 HOST, PORT and BASEHREF configure the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s.
 

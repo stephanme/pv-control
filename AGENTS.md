@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents (Pi) when working with code in t
 
 ## Project Overview
 
-pv-control is an electric car charging controller for photovoltaic (PV) systems. It controls a go-e wallbox to charge an EV using solar power as efficiently as possible, with optional phase switching (1P/3P) via a GPIO relay on Raspberry Pi and vehicle SOC monitoring via the MySkoda API (Skoda cars).
+pv-control is an electric car charging controller for photovoltaic (PV) systems. It controls a go-e wallbox to charge an EV using solar power as efficiently as possible, with optional phase switching (1P/3P) via a GPIO relay on Raspberry Pi and vehicle SOC monitoring via the Škoda Public API (API key, Skoda cars).
 
 ## Architecture
 
@@ -20,7 +20,7 @@ pvcontrol/
   chargecontroller.py  # Core control loop: read meter/wallbox, calculate setpoints, control charging power and phase switching
   meter.py             # Meter implementations: KostalMeter (Modbus TCP), SolarWattMeter (REST), SmaTripowerMeter (webconnect), SimulatedMeter, TestMeter
   wallbox.py           # Wallbox implementations: GoeWallbox (REST/MQTT to go-e), SimulatedWallbox, SimulatedWallboxWithRelay
-  car.py               # Car implementations: SkodaCar (MySkoda API), SimulatedCar, NoCar
+  car.py               # Car implementations: SkodaCar (Škoda Public API via skoda-public-api), SimulatedCar, NoCar
   relay.py             # Phase relay: PhaseRelay base, DisabledPhaseRelay, SimulatedPhaseRelay, PhaseRelayFactory
   raspi_relay.py       # Real GPIO relay driver (RPi.GPIO) — only loaded when configured and on Pi
   scheduler.py         # Scheduler (threading.Timer), AsyncScheduler (asyncio.gather + sleep)
@@ -92,7 +92,7 @@ Configuration is JSON passed via `--config` or service file. The structure maps 
   "meter": { "host": "scb.fritz.box", ... },
   "wallbox": { "url": "http://go-echarger.fritz.box", ... },
   "relay": { "enable_phase_switching": true, "installed_on_host": "..." },
-  "car": { "user": "...", "password": "...", "vin": "...", ... },
+  "car": { "api_key": "...", "vin": "...", ... },
   "controller": { "cycle_time": 30, "line_voltage": 230, ... },
   "mqtt": { "broker": "localhost", "port": 1883, ... }
 }

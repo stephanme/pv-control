@@ -68,3 +68,4 @@ async def shutdown():
     await wallbox.allow_charging(False)
     await wallbox.close()
     await meter.close()
+    await car.close()
