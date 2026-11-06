@@ -4,6 +4,10 @@ import logging
 import os
 import unittest
 from typing import Any, final, override
+from unittest.mock import AsyncMock, MagicMock
+
+from skoda_public_api.api_layer.exceptions import OpenApiAuthenticationError, OpenApiRateLimitError
+from skoda_public_api.models.vehicle import VehicleResponse
 
 from pvcontrol.car import (
     Car,
@@ -69,7 +73,7 @@ class SimulatedCarTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(2 * 5800, Car._metrics_pvc_car_energy_consumption._value.get())
 
 
-@unittest.skipUnless(len(car_config) > 0, "needs car_test_config.json")
+@unittest.skipUnless(bool(car_config.get("api_key") and car_config.get("vin")), "needs car_test_config.json with api_key and vin")
 @final
 class SkodaCarTest(unittest.IsolatedAsyncioTestCase):
     @override
@@ -95,3 +99,72 @@ class SkodaCarTest(unittest.IsolatedAsyncioTestCase):
         c = await self.car.read_data()
         self.assertEqual(1, c.error)
         self.assertEqual(0, c.soc)
+
+
+@final
+class SkodaCarOfflineTest(unittest.IsolatedAsyncioTestCase):
+    """Verifies the mapping of a Skoda Public API response without network access."""
+
+    response: dict[str, Any] = {
+        "vehicle": {
+            "vin": "TMBNH9NY5SF074743",
+            "odometer": {"mileageInKm": 5395, "carCapturedTimestamp": "2026-06-29T08:00:00Z"},
+            "charging": {
+                "isVehicleInSavedLocation": False,
+                "carCapturedTimestamp": "2026-06-29T08:00:00Z",
+                "status": {"battery": {"remainingCruisingRangeInMeters": 60000, "stateOfChargeInPercent": 20}},
+            },
+        },
+        "errors": [],
+    }
+
+    @override
+    def setUp(self):
+        self.car = SkodaCar(SkodaCarConfig(api_key="test-key", vin="TMBNH9NY5SF074743"))
+        self.client = MagicMock()
+        self.client.api_key_expires_at = None
+        self.client.rate_limit_remaining = 15
+        self.client.rate_limit_reset = 900
+        self.client.get_vehicle = AsyncMock(return_value=VehicleResponse.model_validate(self.response))
+        self.car._client = self.client
+
+    async def test_read_data(self):
+        c = await self.car.read_data()
+        self.assertEqual(0, c.error)
+        self.assertEqual(20, c.soc)
+        self.assertEqual(60, c.cruising_range)
+        self.assertEqual(5395, c.mileage)
+        self.assertEqual(datetime.datetime(2026, 6, 29, 8, 0, tzinfo=datetime.UTC), c.data_captured_at)
+        self.client.get_vehicle.assert_awaited_once_with("TMBNH9NY5SF074743", include=["charging", "odometer"])
+
+    async def test_no_data(self):
+        self.client.get_vehicle = AsyncMock(return_value=VehicleResponse.model_validate({"vehicle": {"vin": "TMBNH9NY5SF074743"}}))
+        c = await self.car.read_data()
+        self.assertGreaterEqual(c.error, 1)
+
+    async def test_expired_api_key(self):
+        self.client.get_vehicle = AsyncMock(side_effect=OpenApiAuthenticationError())
+        c = await self.car.read_data()
+        self.assertGreaterEqual(c.error, 1)
+
+    async def test_rate_limit_exhausted_quota(self):
+        self.client.rate_limit_remaining = 0
+        self.client.rate_limit_reset = 1500
+        c = await self.car.read_data()
+        self.assertEqual(0, c.error)  # the response itself was fine
+        self.assertIsNotNone(self.car._next_request_at)
+
+        c = await self.car.read_data()
+        self.assertGreaterEqual(c.error, 1)  # stale data reported as error while waiting for the new window
+        self.assertEqual(1, self.client.get_vehicle.await_count)  # second cycle skipped the request
+
+    async def test_rate_limit_backoff(self):
+        self.client.rate_limit_remaining = None  # no quota headers
+        self.client.get_vehicle = AsyncMock(side_effect=OpenApiRateLimitError())
+        c = await self.car.read_data()
+        self.assertGreaterEqual(c.error, 1)
+        self.assertIsNotNone(self.car._next_request_at)
+
+        c = await self.car.read_data()
+        self.assertGreaterEqual(c.error, 2)
+        self.assertEqual(1, self.client.get_vehicle.await_count)  # second cycle skipped the request
