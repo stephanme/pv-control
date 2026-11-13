@@ -2,7 +2,7 @@ import logging
 from argparse import Namespace
 from typing import Any
 
-from pvcontrol.car import Car, CarFactory
+from pvcontrol.car import POLL_CHECK_INTERVAL, Car, CarFactory, CarPoller
 from pvcontrol.chargecontroller import ChargeController, ChargeControllerFactory
 from pvcontrol.meter import Meter, MeterFactory
 from pvcontrol.mqtt import MqttConfig, MqttPublisher
@@ -28,13 +28,14 @@ controller: ChargeController = None  # ty:ignore[invalid-assignment]
 car: Car[Any] = None  # ty:ignore[invalid-assignment]
 controller_scheduler: AsyncScheduler = None  # ty:ignore[invalid-assignment]
 car_scheduler: AsyncScheduler = None  # ty:ignore[invalid-assignment]
+car_poller: CarPoller = None  # ty:ignore[invalid-assignment]
 mqtt_publisher: MqttPublisher | None = None
 mqtt_scheduler: AsyncScheduler | None = None
 
 
 async def init(args: Namespace, config: dict[str, Any]) -> None:
     logger.info("Initializing depencencies.")
-    global controller_scheduler, car_scheduler, relay, wallbox, meter, car, controller, mqtt_publisher, mqtt_scheduler
+    global controller_scheduler, car_scheduler, car_poller, relay, wallbox, meter, car, controller, mqtt_publisher, mqtt_scheduler
     relay = PhaseRelayFactory.newPhaseRelay(args.relay, args.hostname, **config["relay"])
     wallbox = WallboxFactory.newWallbox(args.wallbox, relay, **config["wallbox"])
     meter = MeterFactory.newMeter(args.meter, wallbox, **config["meter"])
@@ -42,7 +43,9 @@ async def init(args: Namespace, config: dict[str, Any]) -> None:
     controller = ChargeControllerFactory.newController(meter, wallbox, relay, **config["controller"])
 
     controller_scheduler = AsyncScheduler(controller.get_config().cycle_time, controller.run)
-    car_scheduler = AsyncScheduler(car.get_config().cycle_time, car.read_data)
+    # the scheduler only ticks the due check of CarPoller, which reads car data at its charging/idle cycle times
+    car_poller = CarPoller(car, wallbox)
+    car_scheduler = AsyncScheduler(POLL_CHECK_INTERVAL, car_poller.poll_if_due)
     await controller_scheduler.start()
     await car_scheduler.start()
 

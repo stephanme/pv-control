@@ -10,13 +10,16 @@ from skoda_public_api.api_layer.exceptions import OpenApiAuthenticationError, Op
 from skoda_public_api.models.vehicle import VehicleResponse
 
 from pvcontrol.car import (
+    POLL_CHECK_INTERVAL,
     Car,
     CarConfig,
     CarData,
+    CarPoller,
     SimulatedCar,
     SkodaCar,
     SkodaCarConfig,
 )
+from pvcontrol.wallbox import CarStatus, SimulatedWallbox, WallboxConfig
 
 # pyright: reportUninitializedInstanceVariable=false
 # pyright: reportPrivateUsage=false
@@ -31,6 +34,130 @@ car_config: Any = {}
 if os.path.isfile(car_config_file):
     with open(car_config_file) as f:
         car_config = json.load(f)
+
+
+@final
+class FakeClock:
+    """Stand-in for the wall clock, so the poller schedule can be tested without waiting."""
+
+    def __init__(self, now: datetime.datetime):
+        self.now = now
+
+    def __call__(self) -> datetime.datetime:
+        return self.now
+
+    def advance(self, seconds: int) -> None:
+        self.now += datetime.timedelta(seconds=seconds)
+
+
+@final
+class CountingCar(Car[CarConfig]):
+    """Car that counts reads and can simulate a provider backoff like the Skoda rate limit."""
+
+    def __init__(self, config: CarConfig):
+        super().__init__(config)
+        self.read_cnt = 0
+        self.backoff_until: datetime.datetime | None = None
+
+    @override
+    async def _read_data(self) -> CarData:
+        self.read_cnt += 1
+        return CarData(data_captured_at=datetime.datetime.now(datetime.UTC), soc=50)
+
+    @override
+    def earliest_request_at(self) -> datetime.datetime | None:
+        return self.backoff_until
+
+
+@final
+class CarPollerTest(unittest.IsolatedAsyncioTestCase):
+    """Verifies the cycle times of CarPoller: fast while charging, slow when idle."""
+
+    CYCLE_TIME = 900
+    CYCLE_TIME_IDLE = 3600
+
+    @override
+    def setUp(self):
+        self.clock = FakeClock(datetime.datetime(2026, 6, 29, 12, 0, tzinfo=datetime.UTC))
+        self.car = CountingCar(CarConfig(cycle_time=self.CYCLE_TIME, cycle_time_idle=self.CYCLE_TIME_IDLE))
+        self.wallbox = SimulatedWallbox(WallboxConfig())
+        self.poller = CarPoller(self.car, self.wallbox, self.clock)
+
+    def _set_charging(self, charging: bool) -> None:
+        self.wallbox.set_car_status(CarStatus.Charging if charging else CarStatus.NoVehicle)
+
+    async def _ticks(self, count: int) -> None:
+        """Simulate count scheduler ticks of POLL_CHECK_INTERVAL seconds each."""
+        for _ in range(count):
+            await self.poller.poll_if_due()
+            self.clock.advance(POLL_CHECK_INTERVAL)
+
+    def _assert_next_poll_in(self, cycle_time: int) -> None:
+        self.assertEqual(self.clock.now + datetime.timedelta(seconds=cycle_time), self.poller.next_poll_at)
+
+    async def test_first_read_is_immediate(self):
+        await self.poller.poll_if_due()
+        self.assertEqual(1, self.car.read_cnt)
+
+    async def test_idle_cycle_time(self):
+        await self._ticks(60)  # t0 until t0 + 59 min
+        self.assertEqual(1, self.car.read_cnt)
+
+        await self.poller.poll_if_due()  # t0 + 60 min
+        self.assertEqual(2, self.car.read_cnt)
+        self._assert_next_poll_in(self.CYCLE_TIME_IDLE)
+
+    async def test_charging_cycle_time(self):
+        self._set_charging(True)
+        await self._ticks(15)  # t0 until t0 + 14 min
+        self.assertEqual(1, self.car.read_cnt)
+
+        await self.poller.poll_if_due()  # t0 + 15 min
+        self.assertEqual(2, self.car.read_cnt)
+        self._assert_next_poll_in(self.CYCLE_TIME)
+
+    async def test_read_immediately_on_charging_start(self):
+        await self.poller.poll_if_due()  # idle read at t0, next one only at t0 + 60 min
+        self.assertEqual(1, self.car.read_cnt)
+
+        self.clock.advance(POLL_CHECK_INTERVAL)
+        self._set_charging(True)
+        await self.poller.poll_if_due()
+        self.assertEqual(2, self.car.read_cnt)
+        self._assert_next_poll_in(self.CYCLE_TIME)
+
+    async def test_wallbox_error_is_not_charging(self):
+        self.wallbox.inc_error_counter()  # wallbox data is not trusted, as in the charge controller
+        self._set_charging(True)
+        await self.poller.poll_if_due()
+        self.assertEqual(1, self.car.read_cnt)
+        self._assert_next_poll_in(self.CYCLE_TIME_IDLE)
+
+    async def test_charging_stop_returns_to_idle_cycle_time(self):
+        self._set_charging(True)
+        await self._ticks(16)  # reads at t0 and t0 + 15 min
+        self.assertEqual(2, self.car.read_cnt)
+
+        self._set_charging(False)
+        self.clock.advance(self.CYCLE_TIME - POLL_CHECK_INTERVAL)  # back at the scheduled read time
+        await self.poller.poll_if_due()  # read and reschedule on the idle cycle time
+        self.assertEqual(3, self.car.read_cnt)
+        self._assert_next_poll_in(self.CYCLE_TIME_IDLE)
+
+    async def test_no_read_and_no_error_when_not_due(self):
+        await self._ticks(1)  # first read
+        await self._ticks(10)
+        self.assertEqual(1, self.car.read_cnt)
+        self.assertEqual(0, self.car.get_error_counter())  # stale data on purpose is not an error
+
+    async def test_provider_backoff_is_honored(self):
+        self.car.backoff_until = self.clock.now + datetime.timedelta(seconds=30 * 60)
+        await self._ticks(30)  # t0 until t0 + 29 min
+        self.assertEqual(0, self.car.read_cnt)
+
+        self.car.backoff_until = None
+        await self.poller.poll_if_due()  # t0 + 30 min, backoff elapsed
+        self.assertEqual(1, self.car.read_cnt)
 
 
 @final
@@ -146,6 +273,15 @@ class SkodaCarOfflineTest(unittest.IsolatedAsyncioTestCase):
         self.client.get_vehicle = AsyncMock(side_effect=OpenApiAuthenticationError())
         c = await self.car.read_data()
         self.assertGreaterEqual(c.error, 1)
+
+    async def test_earliest_request_at(self):
+        """CarPoller asks for this to keep away from rate limit backoffs."""
+        self.assertIsNone(self.car.earliest_request_at())
+
+        self.client.rate_limit_remaining = 0
+        self.client.rate_limit_reset = 1500
+        await self.car.read_data()
+        self.assertEqual(self.car._next_request_at, self.car.earliest_request_at())
 
     async def test_rate_limit_exhausted_quota(self):
         self.client.rate_limit_remaining = 0

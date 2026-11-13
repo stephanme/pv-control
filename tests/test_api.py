@@ -113,4 +113,7 @@ class PvcontrolApiTest(unittest.TestCase):
             json = response.json()
             self.assertEqual("SimulatedCar", json["type"])
             self.assertEqual(jsonable_encoder(dependencies.car.get_config()), json["config"])
+            # both poll intervals used by CarPoller must stay visible in the config
+            self.assertIn("cycle_time", json["config"])
+            self.assertIn("cycle_time_idle", json["config"])
             self.assertEqual(jsonable_encoder(dependencies.car.get_data()), json["data"])

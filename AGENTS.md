@@ -20,7 +20,7 @@ pvcontrol/
   chargecontroller.py  # Core control loop: read meter/wallbox, calculate setpoints, control charging power and phase switching
   meter.py             # Meter implementations: KostalMeter (Modbus TCP), SolarWattMeter (REST), SmaTripowerMeter (webconnect), SimulatedMeter, TestMeter
   wallbox.py           # Wallbox implementations: GoeWallbox (REST/MQTT to go-e), SimulatedWallbox, SimulatedWallboxWithRelay
-  car.py               # Car implementations: SkodaCar (Škoda Public API via skoda-public-api), SimulatedCar, NoCar
+  car.py               # Car implementations: SkodaCar (Škoda Public API via skoda-public-api), SimulatedCar, NoCar; CarPoller controls the read cadence
   relay.py             # Phase relay: PhaseRelay base, DisabledPhaseRelay, SimulatedPhaseRelay, PhaseRelayFactory
   raspi_relay.py       # Real GPIO relay driver (RPi.GPIO) — only loaded when configured and on Pi
   scheduler.py         # Scheduler (threading.Timer), AsyncScheduler (asyncio.gather + sleep)
@@ -33,6 +33,7 @@ pvcontrol/
 - Every hardware abstraction (meter, wallbox, car, relay) extends `BaseService[Config, Data]` with `read_data()`, error counting, and Prometheus Gauges.
 - Factory classes (`MeterFactory`, `WallboxFactory`, `CarFactory`, `PhaseRelayFactory`) instantiate the correct implementation from a type string.
 - `ChargeController.run()` is the core control loop, scheduled via `AsyncScheduler` at configurable cycle intervals (default 30s).
+- Car data is read by `CarPoller(car, wallbox)`, ticked every `POLL_CHECK_INTERVAL` (60s) but only requesting new data every `cycle_time` (15 min) while the wallbox reports charging and every `cycle_time_idle` (60 min) otherwise. `Car.earliest_request_at()` (Skoda rate limit backoff) can push a read back further.
 - Global dependencies are resolved in `dependencies.init()` and stored as module-level variables in `dependencies.py`.
 - CLI args (`--meter`, `--wallbox`, `--relay`, `--car`, `--config JSON`) control which implementations are used — enabling simulation without code changes.
 
@@ -92,7 +93,7 @@ Configuration is JSON passed via `--config` or service file. The structure maps 
   "meter": { "host": "scb.fritz.box", ... },
   "wallbox": { "url": "http://go-echarger.fritz.box", ... },
   "relay": { "enable_phase_switching": true, "installed_on_host": "..." },
-  "car": { "api_key": "...", "vin": "...", ... },
+  "car": { "api_key": "...", "vin": "...", "cycle_time": 900, "cycle_time_idle": 3600, ... },
   "controller": { "cycle_time": 30, "line_voltage": 230, ... },
   "mqtt": { "broker": "localhost", "port": 1883, ... }
 }

@@ -1,7 +1,8 @@
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any, override
+from typing import Any, final, override
 
 from aiohttp import ClientSession, ClientTimeout
 from prometheus_client import Counter, Gauge
@@ -11,11 +12,14 @@ from skoda_public_api.api_layer.open_api_client import OpenAPIClient
 from skoda_public_api.models.vehicle import VehicleResponse
 
 from pvcontrol.service import BaseConfig, BaseData, BaseService
+from pvcontrol.wallbox import CarStatus, Wallbox
 
 logger = logging.getLogger(__name__)
 
-# one request per cycle fetches everything we need: the Skoda Public API is rate limited to ~20 requests per hour and vehicle
+# one request per read fetches everything we need: the Skoda Public API is rate limited per vehicle
 _API_INCLUDES = ["charging", "odometer"]
+# [s] how often CarPoller checks whether car data is due - a local check, not a request rate
+POLL_CHECK_INTERVAL = 60
 _API_KEY_HELP = "Create a new API key in the MySkoda app (https://go.skoda.eu/api-keys) and update the car configuration."
 _API_KEY_WARNING_DAYS = 7
 
@@ -27,9 +31,14 @@ def _parse_timestamp(timestamp: str | None) -> datetime | None:
     try:
         parsed = datetime.fromisoformat(timestamp)
     except ValueError:
-        logger.warning(f"Could not parse Skoda API timestamp: {timestamp}")
+        logger.warning("Could not parse Skoda API timestamp: %s", timestamp)
         return None
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+def _to_utc(timestamp: datetime) -> datetime:
+    """Treat naive timestamps as UTC, so scheduled times can always be compared."""
+    return timestamp if timestamp.tzinfo is not None else timestamp.replace(tzinfo=UTC)
 
 
 type CarConfigTypes = CarConfig | SkodaCarConfig
@@ -45,8 +54,8 @@ class CarData(BaseData):
 
 @dataclass
 class CarConfig(BaseConfig):
-    # the Skoda Public API allows only ~20 requests per hour and vehicle, so cycle_time should not be lower than 180s
-    cycle_time: int = 5 * 60  # [s] cycle time for reading car data, used by scheduler
+    cycle_time: int = 15 * 60  # [s] cycle time for reading car data while the car is charging
+    cycle_time_idle: int = 60 * 60  # [s] cycle time for reading car data in all other cases
     energy_one_percent_soc: int = 580  # [Wh]
 
 
@@ -75,11 +84,78 @@ class Car[C: CarConfig](BaseService[C, CarData]):
         self._last_soc = d.soc
         return d
 
+    def earliest_request_at(self) -> datetime | None:
+        """Earliest time this implementation may send a new request to its provider, None if unconstrained."""
+        return None
+
     async def close(self) -> None:
         """Close connections. Overridden by implementations which hold resources."""
 
     async def _read_data(self) -> CarData:
         return self.get_data()
+
+
+@final
+class CarPoller:
+    """Reads car data with a cycle time that depends on whether the wallbox reports the car as charging.
+
+    While nothing is charging, car data is only of cosmetic interest, every request uses up the request quota the
+    provider grants per vehicle and a resting vehicle hardly reports new data anyway. So reads happen every
+    cycle_time while charging and every cycle_time_idle otherwise. The due check is local and runs every
+    POLL_CHECK_INTERVAL seconds, which also picks up a charging session that started right after an idle read -
+    ideally while the vehicle is still awake.
+    """
+
+    def __init__(
+        self,
+        car: Car[Any],
+        wallbox: Wallbox[Any],
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ):
+        self._car = car
+        self._wallbox: Wallbox[Any] = wallbox
+        self._clock = clock
+        self._next_poll_at: datetime = _to_utc(datetime.min)  # read immediately after startup
+        self._was_charging = False
+
+    @property
+    def next_poll_at(self) -> datetime:
+        """Time the next car read is scheduled for."""
+        return self._next_poll_at
+
+    def _is_charging(self) -> bool:
+        """Whether the wallbox reports that the car is charging. Data with errors is not trusted, as in the charge controller."""
+        wb = self._wallbox.get_data()
+        return wb.error == 0 and wb.car_status == CarStatus.Charging
+
+    async def poll_if_due(self) -> None:
+        """Read car data if it is due, otherwise keep the cached data without reporting an error."""
+        now = _to_utc(self._clock())
+        charging = self._is_charging()
+        if charging and not self._was_charging:
+            # start of a charging session: read right away, the vehicle is usually still awake
+            self._next_poll_at = now
+        self._was_charging = charging
+
+        # never read earlier than the provider allows, e.g. during a rate limit backoff. Log it once per deferral,
+        # not on every tick, because pvcontrol logs on DEBUG by default.
+        earliest_request_at = self._car.earliest_request_at()
+        if earliest_request_at is not None:
+            earliest_request_at = _to_utc(earliest_request_at)
+            if earliest_request_at > self._next_poll_at:
+                self._next_poll_at = earliest_request_at
+                logger.debug("Car data read deferred by the provider until %s.", self._next_poll_at)
+
+        if now < self._next_poll_at:
+            return
+
+        await self._car.read_data()
+
+        config = self._car.get_config()
+        cycle_time = config.cycle_time if charging else config.cycle_time_idle
+        self._next_poll_at = now + timedelta(seconds=cycle_time)
+        mode = "charging" if charging else "idle"
+        logger.info("Read car data (%s), next read in %ss at %s.", mode, cycle_time, self._next_poll_at)
 
 
 class SimulatedCar(Car[CarConfig]):
@@ -119,7 +195,8 @@ class SkodaCar(Car[SkodaCarConfig]):
     """Reads car data from the Skoda Public API (https://public.api.connect.skoda-auto.cz/docs).
 
     The API authenticates with an API key instead of user credentials and is rate limited per vehicle,
-    therefore a single request per cycle fetches charging and odometer data at once.
+    therefore a single request per read fetches charging and odometer data at once, and reads are further
+    spaced out by CarPoller (cycle_time / cycle_time_idle) and by the rate limit backoff below.
     """
 
     def __init__(self, config: SkodaCarConfig):
@@ -142,7 +219,7 @@ class SkodaCar(Car[SkodaCarConfig]):
             return self.get_data()
 
         if self._next_request_at is not None and datetime.now(UTC) < self._next_request_at:
-            logger.info(f"Skipping Skoda API request because of rate limit backoff, retrying after {self._next_request_at}.")
+            logger.info("Skipping Skoda API request because of rate limit backoff, retrying after %s.", self._next_request_at)
             self.inc_error_counter()
             return self.get_data()
 
@@ -159,7 +236,9 @@ class SkodaCar(Car[SkodaCarConfig]):
             odometer = response.vehicle.odometer
             if charging is None and odometer is None:
                 logger.error(
-                    f"Skoda API returned neither charging nor odometer data for VIN {cfg.vin}: {[e.type for e in response.errors]}"
+                    "Skoda API returned neither charging nor odometer data for VIN %s: %s",
+                    cfg.vin,
+                    [e.type for e in response.errors],
                 )
                 self.inc_error_counter()
                 return self.get_data()
@@ -188,11 +267,11 @@ class SkodaCar(Car[SkodaCarConfig]):
                 mileage=mileage,
             )
         except OpenApiAuthenticationError as e:
-            logger.error(f"Skoda API rejected the API key: {e} {_API_KEY_HELP}")
+            logger.error("Skoda API rejected the API key: %s %s", e, _API_KEY_HELP)
             self.inc_error_counter()
         except OpenApiRateLimitError as e:
             self._set_next_request_at(timedelta(seconds=cfg.rate_limit_backoff))
-            logger.warning(f"Skoda API rate limit exceeded: {e} Requesting car data again after {self._next_request_at}.")
+            logger.warning("Skoda API rate limit exceeded: %s Requesting car data again after %s.", e, self._next_request_at)
             self.inc_error_counter()
         except OpenApiError as e:
             logger.error(repr(e))
@@ -205,17 +284,22 @@ class SkodaCar(Car[SkodaCarConfig]):
 
         return self.get_data()
 
+    @override
+    def earliest_request_at(self) -> datetime | None:
+        """Rate limit backoff: no new request before this time."""
+        return self._next_request_at
+
     def _connect(self) -> OpenAPIClient:
         cfg = self.get_config()
         self._session = ClientSession(timeout=ClientTimeout(total=cfg.timeout))
-        logger.info(f"Connecting to Skoda Public API at {cfg.endpoint} for VIN {cfg.vin}.")
+        logger.info("Connecting to Skoda Public API at %s for VIN %s.", cfg.endpoint, cfg.vin)
         return OpenAPIClient(api_key=cfg.api_key, session=self._session, base_url=cfg.endpoint)
 
     @staticmethod
     def _log_api_errors(response: VehicleResponse) -> None:
         """The API reports data it could not deliver as informational errors, the request itself succeeded."""
         for error in response.errors:
-            logger.warning(f"Skoda API reported {error.type}: {error.description}")
+            logger.warning("Skoda API reported %s: %s", error.type, error.description)
 
     def _track_rate_limit(self) -> None:
         """Schedule the next request from the RateLimit headers of the last successful response.
@@ -228,11 +312,11 @@ class SkodaCar(Car[SkodaCarConfig]):
             return
         remaining = self._client.rate_limit_remaining
         reset = self._client.rate_limit_reset
-        logger.debug(f"Skoda API quota: {remaining} requests left, window resets in {reset}s.")
+        logger.debug("Skoda API quota: %s requests left, window resets in %ss.", remaining, reset)
         if remaining is None or reset is None or remaining > 0 or reset <= 0:
             return
         self._set_next_request_at(timedelta(seconds=reset))
-        logger.warning(f"Skoda API request quota exhausted, requesting car data again after {self._next_request_at}.")
+        logger.warning("Skoda API request quota exhausted, requesting car data again after %s.", self._next_request_at)
 
     def _set_next_request_at(self, pause: timedelta) -> None:
         """Remember the earliest time to request car data again, never shortening a pending pause."""
@@ -245,7 +329,7 @@ class SkodaCar(Car[SkodaCarConfig]):
             return
         expires_at = _parse_timestamp(self._client.api_key_expires_at)
         if expires_at is not None and expires_at <= datetime.now(UTC) + timedelta(days=_API_KEY_WARNING_DAYS):
-            logger.warning(f"The Skoda API key expires at {expires_at}. {_API_KEY_HELP}")
+            logger.warning("The Skoda API key expires at %s. %s", expires_at, _API_KEY_HELP)
             self._key_expiry_warning_logged = True
 
     async def close(self) -> None:
