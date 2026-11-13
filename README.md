@@ -77,7 +77,7 @@ METER, WALLBOX and CAR refer to implementation classes for the energy meter, the
 CONFIG is a json with 'meter', 'wallbox', 'relay', 'car', 'controller', and 'mqtt' configuration structures. The config parameters depend on the METER, WALLBOX, RELAY and CAR type. See the corresponding ...Config data classes
 in the source files `meter.py`, `wallbox.py`, `car.py`, `chargecontroller.py` and `mqtt.py`.
 
-The `SkodaCar` API key is created and managed in the MyŠkoda app (it replaces the former user/password login). Keys expire and have to be renewed there. The API is rate limited to roughly 20 requests per hour and vehicle, so the car `cycle_time` should not be lower than 180s.
+The `SkodaCar` API key is created and managed in the MyŠkoda app. Keys expire and have to be renewed there. The API is rate limited per vehicle and a parked car does not need frequent updates. So pv-control reads car data every `cycle_time` (default 15 min) while the wallbox reports that the car is charging, and every `cycle_time_idle` (default 60 min) otherwise - unplugged, connected but not charging, or charging somewhere else. Set both to the same value to poll at a constant interval.
 
 HOST, PORT and BASEHREF configure the web server. BASEHREF can be used to add a prefix to the web server url so that it matches `ng build --base-href BASEHREF/` if not running behind an ingres on k8s.
 
