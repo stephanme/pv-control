@@ -6,7 +6,13 @@ import unittest
 from typing import Any, final, override
 from unittest.mock import AsyncMock, MagicMock
 
-from skoda_public_api.api_layer.exceptions import OpenApiAuthenticationError, OpenApiRateLimitError
+from skoda_public_api.api_layer.exceptions import (
+    OpenApiAuthenticationError,
+    OpenApiRateLimitError,
+    OpenApiResponseValidationError,
+    OpenApiServerError,
+    OpenApiTimeoutError,
+)
 from skoda_public_api.models.vehicle import VehicleResponse
 
 from pvcontrol.car import (
@@ -263,3 +269,55 @@ class SkodaCarOfflineTest(unittest.IsolatedAsyncioTestCase):
         c = await self.car.read_data()
         self.assertGreaterEqual(c.error, 2)
         self.assertEqual(1, self.client.get_vehicle.await_count)  # second cycle skipped the request
+
+    def _request_count(self, status: str) -> float:
+        return SkodaCar._metrics_pvc_car_api_requests.labels(status)._value.get()
+
+    async def test_api_request_metrics_success(self):
+        before = self._request_count("200")
+        await self.car.read_data()
+        self.assertEqual(before + 1, self._request_count("200"))
+
+    async def test_api_request_metrics_error_codes(self):
+        cases: list[tuple[Exception, str]] = [
+            (OpenApiAuthenticationError(), "401"),
+            (OpenApiRateLimitError(), "429"),
+            (OpenApiServerError("server went away", status_code=503), "503"),
+            (OpenApiTimeoutError(), "timeout"),
+            (OpenApiResponseValidationError("could not parse the response"), "invalid_response"),
+            (ConnectionError("no route to host"), "network"),
+        ]
+        for error, status in cases:
+            with self.subTest(error=type(error).__name__, status=status):
+                self.car._client = self.client  # error handlers close the client to force reconnects
+                self.car._next_request_at = None  # a 429 schedules a rate limit backoff
+                self.client.get_vehicle = AsyncMock(side_effect=error)
+                before = self._request_count(status)
+                await self.car.read_data()
+                self.assertEqual(before + 1, self._request_count(status))
+
+    async def test_api_request_metrics_skip_backoff(self):
+        """Reads skipped during a rate limit backoff never hit the network and are not counted."""
+        self.client.rate_limit_remaining = 0
+        self.client.rate_limit_reset = 1500
+        before_200 = self._request_count("200")
+        before_timeout = self._request_count("timeout")
+        await self.car.read_data()  # real request, quota now exhausted
+        await self.car.read_data()  # skipped because of the backoff
+        self.assertEqual(1, self.client.get_vehicle.await_count)
+        self.assertEqual(before_200 + 1, self._request_count("200"))
+        self.assertEqual(before_timeout, self._request_count("timeout"))
+
+    async def test_api_request_metrics_not_counted_when_not_requested(self):
+        """Disabled config and missing credentials must not count any request."""
+        self.car.get_config().disabled = True
+        before = self._request_count("200")
+        await self.car.read_data()
+        self.assertEqual(before, self._request_count("200"))
+
+        car = SkodaCar(SkodaCarConfig(api_key="", vin=""))
+        try:
+            await car.read_data()
+        finally:
+            await car.close()
+        self.assertEqual(before, self._request_count("200"))
