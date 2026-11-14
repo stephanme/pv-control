@@ -5,9 +5,15 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, final, override
 
 from aiohttp import ClientSession, ClientTimeout
-from prometheus_client import Gauge
+from prometheus_client import Counter, Gauge
 from skoda_public_api.api_layer.const import BETA_URL
-from skoda_public_api.api_layer.exceptions import OpenApiAuthenticationError, OpenApiError, OpenApiRateLimitError
+from skoda_public_api.api_layer.exceptions import (
+    OpenApiAuthenticationError,
+    OpenApiError,
+    OpenApiRateLimitError,
+    OpenApiResponseValidationError,
+    OpenApiTimeoutError,
+)
 from skoda_public_api.api_layer.open_api_client import OpenAPIClient
 from skoda_public_api.models.vehicle import VehicleResponse
 
@@ -39,6 +45,17 @@ def _parse_timestamp(timestamp: str | None) -> datetime | None:
 def _to_utc(timestamp: datetime) -> datetime:
     """Treat naive timestamps as UTC, so scheduled times can always be compared."""
     return timestamp if timestamp.tzinfo is not None else timestamp.replace(tzinfo=UTC)
+
+
+def _status_label(exc: Exception) -> str:
+    """Classify a request failure for the status label of pvcontrol_car_api_requests_total."""
+    if isinstance(exc, OpenApiTimeoutError):
+        return "timeout"
+    if isinstance(exc, OpenApiResponseValidationError):
+        return "invalid_response"
+    if isinstance(exc, OpenApiError):
+        return str(exc.status_code) if exc.status_code else "error"
+    return "network"
 
 
 type CarConfigTypes = CarConfig | SkodaCarConfig
@@ -192,6 +209,8 @@ class SkodaCar(Car[SkodaCarConfig]):
     spaced out by CarPoller (cycle_time / cycle_time_idle) and by the rate limit backoff below.
     """
 
+    _metrics_pvc_car_api_requests: Counter = Counter("pvcontrol_car_api_requests_total", "Skoda Public API requests by outcome", ["status"])
+
     def __init__(self, config: SkodaCarConfig):
         super().__init__(config)
         self._session: ClientSession | None = None
@@ -220,7 +239,7 @@ class SkodaCar(Car[SkodaCarConfig]):
             if self._client is None:
                 self._client = self._connect()
 
-            response: VehicleResponse = await self._client.get_vehicle(cfg.vin, include=_API_INCLUDES)
+            response: VehicleResponse = await self._request_vehicle(self._client, cfg)
             self._log_api_errors(response)
             self._log_key_expiry()
             self._track_rate_limit()
@@ -276,6 +295,20 @@ class SkodaCar(Car[SkodaCarConfig]):
             await self.close()  # enforce reconnection
 
         return self.get_data()
+
+    @staticmethod
+    async def _request_vehicle(client: OpenAPIClient, cfg: SkodaCarConfig) -> VehicleResponse:
+        """Request the vehicle data and count the request with its outcome. Skipped reads never reach this method.
+
+        Exceptions are re-raised unchanged, the error handling in _read_data stays responsible for them.
+        """
+        try:
+            response = await client.get_vehicle(cfg.vin, include=_API_INCLUDES)
+        except Exception as e:
+            SkodaCar._metrics_pvc_car_api_requests.labels(_status_label(e)).inc()
+            raise
+        SkodaCar._metrics_pvc_car_api_requests.labels("200").inc()
+        return response
 
     @override
     def earliest_request_at(self) -> datetime | None:
