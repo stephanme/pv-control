@@ -273,6 +273,46 @@ class SkodaCarOfflineTest(unittest.IsolatedAsyncioTestCase):
     def _request_count(self, status: str) -> float:
         return SkodaCar._metrics_pvc_car_api_requests.labels(status)._value.get()
 
+    def _key_lifetime(self) -> float:
+        return SkodaCar._metrics_pvc_car_api_key_lifetime._value.get()
+
+    async def test_key_lifetime_initial(self):
+        """A fresh SkodaCar reports -1 = unknown until the first response reveals the header."""
+        SkodaCar(SkodaCarConfig(api_key="test-key", vin="TMBNH9NY5SF074743"))  # the constructor resets the gauge to unknown
+        self.assertEqual(-1, self._key_lifetime())
+
+    async def test_key_lifetime_unknown_header(self):
+        self.assertIsNone(self.client.api_key_expires_at)
+        # seed a positive value, so the test fails if a read with unknown header left the gauge stale instead of resetting it
+        SkodaCar._metrics_pvc_car_api_key_lifetime.set(12345)
+        await self.car.read_data()
+        self.assertEqual(-1, self._key_lifetime())
+
+    async def test_key_lifetime_far_future(self):
+        now = datetime.datetime.now(datetime.UTC)
+        self.client.api_key_expires_at = (now + datetime.timedelta(days=365)).isoformat()
+        await self.car.read_data()
+        self.assertGreater(self._key_lifetime(), 300 * 86400)
+
+    async def test_key_lifetime_expired(self):
+        now = datetime.datetime.now(datetime.UTC)
+        self.client.api_key_expires_at = (now - datetime.timedelta(days=1)).isoformat()
+        await self.car.read_data()
+        self.assertLess(self._key_lifetime(), 0)
+
+    async def test_key_expiry_metric_updates_after_warning(self):
+        """The one-time expiry warning must not keep the gauge from updating on later reads."""
+        now = datetime.datetime.now(datetime.UTC)
+        self.client.api_key_expires_at = (now + datetime.timedelta(days=3)).isoformat()
+        with self.assertLogs("pvcontrol.car", level="WARNING") as logs:
+            await self.car.read_data()
+        self.assertEqual(1, len([message for message in logs.output if "expires at" in message]))
+        self.assertLess(self._key_lifetime(), 7 * 86400)
+
+        self.client.api_key_expires_at = (now + datetime.timedelta(days=300)).isoformat()
+        await self.car.read_data()  # no second warning, but the gauge follows the new expiry
+        self.assertGreater(self._key_lifetime(), 299 * 86400)
+
     async def test_api_request_metrics_success(self):
         before = self._request_count("200")
         await self.car.read_data()

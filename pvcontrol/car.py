@@ -210,6 +210,10 @@ class SkodaCar(Car[SkodaCarConfig]):
     """
 
     _metrics_pvc_car_api_requests: Counter = Counter("pvcontrol_car_api_requests_total", "Skoda Public API requests by outcome", ["status"])
+    _metrics_pvc_car_api_key_lifetime: Gauge = Gauge(
+        "pvcontrol_car_api_key_remaining_lifetime_seconds",
+        "Remaining lifetime of the Skoda API key, -1 while unknown",
+    )
 
     def __init__(self, config: SkodaCarConfig):
         super().__init__(config)
@@ -217,6 +221,7 @@ class SkodaCar(Car[SkodaCarConfig]):
         self._client: OpenAPIClient | None = None
         self._next_request_at: datetime | None = None
         self._key_expiry_warning_logged = False
+        SkodaCar._metrics_pvc_car_api_key_lifetime.set(-1)  # -1 = unknown until the first response reveals the header
 
     @override
     async def _read_data(self) -> CarData:
@@ -241,7 +246,7 @@ class SkodaCar(Car[SkodaCarConfig]):
 
             response: VehicleResponse = await self._request_vehicle(self._client, cfg)
             self._log_api_errors(response)
-            self._log_key_expiry()
+            self._track_key_expiry()
             self._track_rate_limit()
 
             charging = response.vehicle.charging
@@ -350,11 +355,19 @@ class SkodaCar(Car[SkodaCarConfig]):
         if self._next_request_at is None or next_request_at > self._next_request_at:
             self._next_request_at = next_request_at
 
-    def _log_key_expiry(self) -> None:
-        if self._key_expiry_warning_logged or self._client is None:
+    def _track_key_expiry(self) -> None:
+        """Publish the remaining API key lifetime and warn once before the key expires.
+
+        The gauge is updated on every successful read, so the one-time warning below must not short-circuit it.
+        A negative value means the key has expired, -1 that the expiry is still unknown (no header parsed yet).
+        """
+        if self._client is None:
             return
+        now = datetime.now(UTC)
         expires_at = _parse_timestamp(self._client.api_key_expires_at)
-        if expires_at is not None and expires_at <= datetime.now(UTC) + timedelta(days=_API_KEY_WARNING_DAYS):
+        lifetime = -1 if expires_at is None else (expires_at - now).total_seconds()
+        SkodaCar._metrics_pvc_car_api_key_lifetime.set(lifetime)
+        if not self._key_expiry_warning_logged and expires_at is not None and lifetime <= _API_KEY_WARNING_DAYS * 86400:
             logger.warning("The Skoda API key expires at %s. %s", expires_at, _API_KEY_HELP)
             self._key_expiry_warning_logged = True
 
