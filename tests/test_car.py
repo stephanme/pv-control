@@ -15,7 +15,6 @@ from pvcontrol.car import (
     CarConfig,
     CarData,
     CarPoller,
-    SimulatedCar,
     SkodaCar,
     SkodaCarConfig,
 )
@@ -158,46 +157,6 @@ class CarPollerTest(unittest.IsolatedAsyncioTestCase):
         self.car.backoff_until = None
         await self.poller.poll_if_due()  # t0 + 30 min, backoff elapsed
         self.assertEqual(1, self.car.read_cnt)
-
-
-@final
-class SimulatedCarTest(unittest.IsolatedAsyncioTestCase):
-    @override
-    def setUp(self):
-        self.car = SimulatedCar(CarConfig())
-
-    async def test_energy_consumption(self):
-        c = await self.car.read_data()
-        self.assertEqual(50, c.soc)
-        self.assertEqual(0, Car._metrics_pvc_car_energy_consumption._value.get())
-
-        # driving
-        self.car.set_data(CarData(soc=49))
-        c = await self.car.read_data()
-        self.assertEqual(49, c.soc)
-        self.assertEqual(580, Car._metrics_pvc_car_energy_consumption._value.get())
-
-        self.car.set_data(CarData(soc=40))
-        c = await self.car.read_data()
-        self.assertEqual(40, c.soc)
-        self.assertEqual(5800, Car._metrics_pvc_car_energy_consumption._value.get())
-
-        # not driving
-        c = await self.car.read_data()
-        self.assertEqual(40, c.soc)
-        self.assertEqual(5800, Car._metrics_pvc_car_energy_consumption._value.get())
-
-        # charging
-        self.car.set_data(CarData(soc=50))
-        c = await self.car.read_data()
-        self.assertEqual(50, c.soc)
-        self.assertEqual(5800, Car._metrics_pvc_car_energy_consumption._value.get())
-
-        # driving
-        self.car.set_data(CarData(soc=40))
-        c = await self.car.read_data()
-        self.assertEqual(40, c.soc)
-        self.assertEqual(2 * 5800, Car._metrics_pvc_car_energy_consumption._value.get())
 
 
 @unittest.skipUnless(bool(car_config.get("api_key") and car_config.get("vin")), "needs car_test_config.json with api_key and vin")

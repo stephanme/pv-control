@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, final, override
 
 from aiohttp import ClientSession, ClientTimeout
-from prometheus_client import Counter, Gauge
+from prometheus_client import Gauge
 from skoda_public_api.api_layer.const import BETA_URL
 from skoda_public_api.api_layer.exceptions import OpenApiAuthenticationError, OpenApiError, OpenApiRateLimitError
 from skoda_public_api.api_layer.open_api_client import OpenAPIClient
@@ -56,7 +56,6 @@ class CarData(BaseData):
 class CarConfig(BaseConfig):
     cycle_time: int = 15 * 60  # [s] cycle time for reading car data while the car is charging
     cycle_time_idle: int = 60 * 60  # [s] cycle time for reading car data in all other cases
-    energy_one_percent_soc: int = 580  # [Wh]
 
 
 class Car[C: CarConfig](BaseService[C, CarData]):
@@ -65,11 +64,9 @@ class Car[C: CarConfig](BaseService[C, CarData]):
     _metrics_pvc_car_soc: Gauge = Gauge("pvcontrol_car_soc_ratio", "State of Charge")
     _metrics_pvc_car_range: Gauge = Gauge("pvcontrol_car_cruising_range_meters", "Remaining cruising range")
     _metrics_pvc_car_mileage: Gauge = Gauge("pvcontrol_car_mileage_meters", "Mileage")
-    _metrics_pvc_car_energy_consumption: Counter = Counter("pvcontrol_car_energy_consumption_wh", "Energy Consumption")
 
     def __init__(self, config: C):
         super().__init__(config, CarData())
-        self._last_soc: float = 0
 
     async def read_data(self) -> CarData:
         """Read meter data and report metrics. The data is cached."""
@@ -78,10 +75,6 @@ class Car[C: CarConfig](BaseService[C, CarData]):
         Car._metrics_pvc_car_soc.set(d.soc / 100)
         Car._metrics_pvc_car_range.set(d.cruising_range * 1000)
         Car._metrics_pvc_car_mileage.set(d.mileage * 1000)
-        if d.soc < self._last_soc:
-            # soc [0..100%], 100% = 58kWh = 58.000 Wh
-            Car._metrics_pvc_car_energy_consumption.inc((self._last_soc - d.soc) * self.get_config().energy_one_percent_soc)
-        self._last_soc = d.soc
         return d
 
     def earliest_request_at(self) -> datetime | None:
