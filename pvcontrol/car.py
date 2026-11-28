@@ -47,6 +47,16 @@ def _to_utc(timestamp: datetime) -> datetime:
     return timestamp if timestamp.tzinfo is not None else timestamp.replace(tzinfo=UTC)
 
 
+def _to_timestamp(timestamp: datetime) -> float:
+    """Unix timestamp for Prometheus, 0 for the datetime.min placeholder of "nothing read yet".
+
+    datetime.timestamp() would overflow for datetime.min, so the placeholder is filtered out beforehand.
+    """
+    if timestamp == datetime.min:
+        return 0.0
+    return timestamp.timestamp()
+
+
 def _status_label(exc: Exception) -> str:
     """Classify a request failure for the status label of pvcontrol_car_api_requests_total."""
     if isinstance(exc, OpenApiTimeoutError):
@@ -81,6 +91,10 @@ class Car[C: CarConfig](BaseService[C, CarData]):
     _metrics_pvc_car_soc: Gauge = Gauge("pvcontrol_car_soc_ratio", "State of Charge")
     _metrics_pvc_car_range: Gauge = Gauge("pvcontrol_car_cruising_range_meters", "Remaining cruising range")
     _metrics_pvc_car_mileage: Gauge = Gauge("pvcontrol_car_mileage_meters", "Mileage")
+    _metrics_pvc_car_data_captured_at: Gauge = Gauge(
+        "pvcontrol_car_data_captured_at_timestamp_seconds",
+        "Unix timestamp of the car data of the last update (timestamp of the vehicle for the Skoda Public API), 0 while unknown",
+    )
 
     def __init__(self, config: C):
         super().__init__(config, CarData())
@@ -92,6 +106,7 @@ class Car[C: CarConfig](BaseService[C, CarData]):
         Car._metrics_pvc_car_soc.set(d.soc / 100)
         Car._metrics_pvc_car_range.set(d.cruising_range * 1000)
         Car._metrics_pvc_car_mileage.set(d.mileage * 1000)
+        Car._metrics_pvc_car_data_captured_at.set(_to_timestamp(d.data_captured_at))
         return d
 
     def earliest_request_at(self) -> datetime | None:

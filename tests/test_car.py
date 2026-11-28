@@ -229,6 +229,18 @@ class SkodaCarOfflineTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(datetime.datetime(2026, 6, 29, 8, 0, tzinfo=datetime.UTC), c.data_captured_at)
         self.client.get_vehicle.assert_awaited_once_with("TMBNH9NY5SF074743", include=["charging", "odometer"])
 
+    async def test_data_captured_at_metric(self):
+        """The gauge reports the car_captured_timestamp of the Skoda API response."""
+        c = await self.car.read_data()
+        self.assertEqual(c.data_captured_at.timestamp(), self._data_captured_at())
+        self.assertGreater(self._data_captured_at(), 0)
+
+    async def test_data_captured_at_metric_unknown(self):
+        """Without data from the API the gauge reports 0 instead of the datetime.min placeholder."""
+        car = SkodaCar(SkodaCarConfig(api_key="test-key", vin="TMBNH9NY5SF074743", disabled=True))
+        self.assertEqual(datetime.datetime.min, (await car.read_data()).data_captured_at)
+        self.assertEqual(0, self._data_captured_at())
+
     async def test_no_data(self):
         self.client.get_vehicle = AsyncMock(return_value=VehicleResponse.model_validate({"vehicle": {"vin": "TMBNH9NY5SF074743"}}))
         c = await self.car.read_data()
@@ -275,6 +287,9 @@ class SkodaCarOfflineTest(unittest.IsolatedAsyncioTestCase):
 
     def _key_lifetime(self) -> float:
         return SkodaCar._metrics_pvc_car_api_key_lifetime._value.get()
+
+    def _data_captured_at(self) -> float:
+        return Car._metrics_pvc_car_data_captured_at._value.get()
 
     async def test_key_lifetime_initial(self):
         """A fresh SkodaCar reports -1 = unknown until the first response reveals the header."""
