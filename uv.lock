@@ -470,7 +470,7 @@ requires-dist = [
     { name = "fastapi", specifier = "==0.165.0" },
     { name = "prometheus-client", specifier = "==0.26.0" },
     { name = "pymodbus", specifier = "==3.16.2" },
-    { name = "pysma-plus", specifier = "==0.5.4" },
+    { name = "pysma-plus", specifier = "==0.5.5" },
     { name = "rpi-gpio", marker = "(platform_machine == 'aarch64' or 'arm' in platform_machine) and 'linux' in sys_platform", specifier = "==0.7.1" },
     { name = "skoda-public-api", specifier = "==1.4.0" },
     { name = "uvicorn", specifier = "==0.54.0" },
@@ -598,7 +598,7 @@ wheels = [
 
 [[package]]
 name = "pysma-plus"
-version = "0.5.4"
+version = "0.5.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -609,9 +609,9 @@ dependencies = [
     { name = "untangle" },
     { name = "xmlschema" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/d3/c9520d8edaa751157b581e0888c58c1020368ba9c23471cf1538fa7faef8/pysma_plus-0.5.4.tar.gz", hash = "sha256:0dcfc476cfad87d5a9c8c8a598c81ea858a970dadbc6136ada8e52e0b6d09e1f", size = 151149, upload-time = "2026-10-19T17:03:27.139Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/4a/98a6d89bbcc332e6b6e16d28a83e18cb997977138e10b7becde057cdd4fd/pysma_plus-0.5.5.tar.gz", hash = "sha256:584f4623747f73dfd8a3707c9f587315b2cd9a6c06d9d7f41e28d52acb1ca5ca", size = 151912, upload-time = "2026-11-28T07:10:31.005Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/c4/249eb5fb56aeab6c8ff576193b5fe77a88191fd80b98de0faad6d2e44bf0/pysma_plus-0.5.4-py3-none-any.whl", hash = "sha256:3304b97a67340096a93e11bdadc7ac56be0345e97cc23c82c09934276a781ebb", size = 104901, upload-time = "2026-10-19T17:03:24.396Z" },
+    { url = "https://files.pythonhosted.org/packages/47/a3/7b1266b094114a124d092287b545ece9c926da572a3f9fc1d7d0bb2bc52e/pysma_plus-0.5.5-py3-none-any.whl", hash = "sha256:7bead92d6a9db287c5885936cafdce1fd39889e0911489a5fb5175a807067a55", size = 105000, upload-time = "2026-11-28T07:10:29.147Z" },
 ]
 
 [[package]]
